@@ -1,0 +1,21 @@
+{
+  "created_utc": "2026-11-02T15:15:47.935702+00:00",
+  "source_commit": "a6760e6c2cdae6f2bc9c0d5063b563703314dc9f",
+  "variants": [
+    "baseline",
+    "independent",
+    "ungated",
+    "adaptive"
+  ],
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "completed_runs": [],
+  "failed_runs": [],
+  "gpu_executed": false,
+  "status": "BLOCKED_EXTERNAL_GPU"
+}

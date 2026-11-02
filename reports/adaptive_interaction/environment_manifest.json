@@ -1,0 +1,9 @@
+{
+  "python": "3.10.11",
+  "torch": "2.5.1+cpu",
+  "cuda_available": false,
+  "gpu": null,
+  "kaggle_cli": false,
+  "host": "Windows",
+  "source_commit": "a6760e6c2cdae6f2bc9c0d5063b563703314dc9f"
+}

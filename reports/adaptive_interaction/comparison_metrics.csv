@@ -1,0 +1,7 @@
+Model,Sentiment Macro-F1,Sentiment Accuracy,Aspect/Topic Macro-F1,Aspect/Topic Accuracy,Parameters,Training Time,status
+baseline,76.6242259238206,82.30455164070771,62.27464347590315,78.79933464388327,,,verified historical 15-seed cohort; 5-seed slice
+independent,,,,,,,GPU not executed
+ungated,,,,,,,GPU not executed
+adaptive,,,,,,,GPU not executed
+CR-SD (selfdistill),,83.3,,79.72,,,secondary; 2 seeds; accuracy only
+CR-SD + D (crsd_ens),,,,,,,no verified metric in committed report

@@ -1,0 +1,5 @@
+variant,parameter_count,training_time_seconds,peak_gpu_memory_gb,inference_latency_ms
+baseline,pending HF encoder run,pending,pending,pending
+independent,pending HF encoder run,pending,pending,pending
+ungated,pending HF encoder run,pending,pending,pending
+adaptive,pending HF encoder run,pending,pending,pending

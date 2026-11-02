@@ -1,0 +1,5 @@
+variant,seeds_declared,completed_reportable,status
+baseline,42 43 44 45 46,0,BLOCKED: no Kaggle GPU execution
+independent,42 43 44 45 46,0,BLOCKED: no Kaggle GPU execution
+ungated,42 43 44 45 46,0,BLOCKED: no Kaggle GPU execution
+adaptive,42 43 44 45 46,0,BLOCKED: no Kaggle GPU execution
