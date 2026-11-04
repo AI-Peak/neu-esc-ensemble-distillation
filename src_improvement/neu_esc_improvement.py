@@ -480,7 +480,8 @@ def train(args):
     ens_probs = None
     if setup.get("ens_kd"):
         targets_file = np.load(args.ens_targets)
-        if str(targets_file["train_csv_sha256"]) != DATA_FILES[data["train"][2]]:
+        # Keyed by the raw train CSV; PhoBERT's _processed.csv is row-aligned with it.
+        if str(targets_file["train_csv_sha256"]) != DATA_FILES["train_set.csv"]:
             raise ValueError(f"{args.ens_targets} was built from another train CSV")
         ens_probs = {task: torch.tensor(targets_file[task], dtype=torch.float32) for task in tasks}
     lengths = np.array([len(s) for s in sequences["train"]])
@@ -786,18 +787,17 @@ def train(args):
 
 def ensemble_targets(args):
     """Average softmax probabilities of out-of-fold predictions per training row (any mix of
-    backbones and seeds). PhoBERT and ViSoBERT read row-aligned CSVs, so rows match across them."""
-    sums, counts, sources, sha = {}, None, [], None
+    backbones and seeds). PhoBERT reads train_set_processed.csv and ViSoBERT train_set.csv; the two are
+    row-aligned, so rows match across them and the targets are keyed by the raw CSV's SHA-256."""
+    train_csvs = {DATA_FILES["train_set.csv"], DATA_FILES["train_set_processed.csv"]}
+    sums, counts, sources = {}, np.zeros(SPLIT_SIZES["train"], dtype=np.int64), []
     for run_dir in args.runs:
         path = Path(run_dir) / "oof.npz"
         if not path.exists():
             raise FileNotFoundError(f"{path}: not a finished --fold run")
         oof = np.load(path)
-        if sha is None:
-            sha = str(oof["train_csv_sha256"])
-            counts = np.zeros(SPLIT_SIZES["train"], dtype=np.int64)
-        elif str(oof["train_csv_sha256"]) != sha:
-            raise ValueError(f"{path}: different train CSV")
+        if str(oof["train_csv_sha256"]) not in train_csvs:
+            raise ValueError(f"{path}: built from an unknown train CSV")
         rows = oof["rows"]
         for task in TASKS:
             logits = oof[f"oof_{task}"].astype(np.float64)
@@ -806,12 +806,13 @@ def ensemble_targets(args):
             sums.setdefault(task, np.zeros((SPLIT_SIZES["train"], NUM_LABELS[task])))[rows] += probs
         counts[rows] += 1
         sources.append(str(Path(run_dir).name))
-    if counts is None or counts.min() == 0:
-        raise ValueError(f"{int((counts == 0).sum()) if counts is not None else 'all'} training rows have no "
+    if counts.min() == 0:
+        raise ValueError(f"{int((counts == 0).sum())} training rows have no "
                          "out-of-fold prediction; pass every fold of at least one fold set")
     out = {task: (sums[task] / counts[:, None]).astype(np.float32) for task in TASKS}
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(args.out, train_csv_sha256=sha, sources=np.array(sources), counts=counts, **out)
+    np.savez_compressed(args.out, train_csv_sha256=DATA_FILES["train_set.csv"], sources=np.array(sources),
+                        counts=counts, **out)
     log(f"wrote {args.out}: {len(sources)} runs, {counts.min()}-{counts.max()} predictions per row")
     return 0
 
