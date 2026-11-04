@@ -58,7 +58,7 @@ Lệnh chạy CR-SD thường và lệnh tổng hợp:
 
 ```bash
 python src_improvement/run_queue.py --setups selfdistill --seeds 42 43 --data-dir DATA --out-dir runs/improvement
-python src_improvement/aggregate_improvement.py runs/improvement runs/s42 runs/s43 runs/s44 runs/s45 runs/s46 runs/gap/a --out reports/improvement
+python src_improvement/aggregate_improvement.py runs/improvement runs/gap/c runs/gap/d runs/gap/e runs/s42 runs/s43 runs/s44 runs/s45 runs/s46 runs/gap/a --out reports/improvement
 ```
 
 ## Test nhanh trên CPU
