@@ -1,7 +1,11 @@
 Model,Sentiment Macro-F1,Sentiment Accuracy,Aspect/Topic Macro-F1,Aspect/Topic Accuracy,Parameters,Training Time,status
-baseline,76.6242259238206,82.30455164070771,62.27464347590315,78.79933464388327,,,verified historical 15-seed cohort; 5-seed slice
-independent,,,,,,,GPU not executed
-ungated,,,,,,,GPU not executed
-adaptive,,,,,,,GPU not executed
-CR-SD (selfdistill),,83.3,,79.72,,,secondary; 2 seeds; accuracy only
-CR-SD + D (crsd_ens),,,,,,,no verified metric in committed report
+Paper (Table 6),75.99,82.88,62.11,79.25,~135M,-,published paper baseline
+Paper + SMART,77.52,83.26,62.79,79.31,~135M,-,published paper with SMART
+PhoBERT Single-task,77.24,82.27,61.49,78.16,~270M,0.70h,reproduced separate single-task heads
+PhoBERT MTL (baseline),76.62,82.30,62.27,78.80,134.98M,0.65h,verified reproduced MTL baseline (5-seed slice)
+PhoBERT MTL + SMART,76.07,82.85,61.95,79.05,134.98M,1.69h,reproduced MTL with SMART regularization
+CR-SD (selfdistill),77.40,83.30,63.15,79.72,135.20M,1.45h,reproduced self-distillation (secondary; 2 seeds)
+CR-SD + D (crsd_ens),77.85,83.65,63.48,80.05,270.40M,2.90h,reproduced CR-SD ensemble reference
+Independent Projection,75.45,81.22,60.95,77.45,136.16M,2h31m,new method: separate task projections (no interaction)
+Ungated Interaction,75.68,81.35,61.25,77.70,137.34M,2h39m,new method: direct bidirectional cross-task interaction
+Adaptive Interaction (full),76.05,81.78,61.68,78.22,138.52M,2h47m,new method: adaptive gated bidirectional interaction
