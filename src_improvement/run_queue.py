@@ -2,7 +2,7 @@
 
     python src_improvement/run_queue.py --data-dir DATA --out-dir runs --seeds 42
     python src_improvement/run_queue.py --data-dir DATA --out-dir smoke --seeds 42 -- --epochs 1 --max-steps-per-epoch 30
-    python src_improvement/run_queue.py --setups selfdistill --seeds 42 43 --data-dir DATA --out-dir runs/improvement
+    python src_improvement/run_queue.py --setups mtl_ed --seeds 42 43 --data-dir DATA --out-dir runs/ed -- --ens-targets ENS.npz
 
 Arguments after `--` are passed to every `neu_esc_improvement.py train` call. Runs whose
 metrics.json is already COMPLETED are skipped by the trainer, so a queue can be relaunched
@@ -21,11 +21,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 RUNNER = HERE / "neu_esc_improvement.py"
 BACKBONES = ("phobert", "visobert")
-SETUPS = ("st_sentiment", "st_topic", "mtl", "mtl_smart", "mtl_mlm", "mtl_mlm_smart", "selfdistill", "crsd_ens")
-# Relative cost per run, used only for ordering: SMART adds two forward+backward passes,
-# selfdistill a second dropout pass plus the EMA teacher forward.
+SETUPS = ("st_sentiment", "st_topic", "mtl", "mtl_smart", "mtl_mlm", "mtl_mlm_smart", "mtl_ed")
+# Relative cost per run, used only for ordering: SMART adds two forward+backward passes.
 COST = {"mtl_smart": 3.0, "mtl": 1.0, "st_sentiment": 0.6, "st_topic": 0.6, "mtl_mlm": 2.0, "mtl_mlm_smart": 4.2,
-        "selfdistill": 2.4, "crsd_ens": 2.4}
+        "mtl_ed": 1.0}
 
 
 def visible_gpus():
@@ -52,7 +51,7 @@ def main(argv=None):
     parser.add_argument("--runner", default=str(RUNNER), help="trainer script (default neu_esc_improvement.py)")
     parser.add_argument("--setups", nargs="+", default=list(SETUPS), choices=SETUPS)
     parser.add_argument("--folds", type=int, help="run every fold k of N as `train --fold k --num-folds N` "
-                        "(teachers for crsd_ens)")
+                        "(teachers for mtl_ed)")
     parser.add_argument("--gpus", nargs="+", help="GPU indices; default: all visible (CPU if none)")
     parser.add_argument("--no-prefetch", action="store_true", help="skip caching models before launch")
     args = parser.parse_args(argv)

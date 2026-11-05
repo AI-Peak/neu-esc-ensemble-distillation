@@ -1,17 +1,15 @@
 """Group 5 improvement runner: src_baseline/neu_esc_kaggle.py (the baseline, left untouched) plus
 
-  selfdistill  CR-SD: R-Drop (two dropout passes of the 2-task model, symmetric KL) + an EMA teacher
-               of the student's weights (decay 0.999) that the student distils from epoch 2 on;
-               selection, test and inference use the EMA weights (the student is scored too).
-  crsd_ens     CR-SD + D: CR-SD plus a second, fixed teacher, an ensemble of out-of-fold predictions
-               on the training set, distilled from epoch 1 on. Its targets come from
-               `train --fold k --num-folds N` runs (each trains on the other folds and predicts its
-               own fold) and `ensemble-targets`, which averages their probabilities per training row.
+  mtl_ed       ED (Ensemble Distillation): plain mtl plus a fixed teacher, an ensemble of out-of-fold
+               predictions on the training set, distilled from epoch 1 on (gamma * KL(ensemble || model)).
+               Its targets come from `train --fold k --num-folds N` runs (each trains on the other folds
+               and predicts its own fold) and `ensemble-targets`, which averages their probabilities
+               per training row.
 
 The baseline setups (st_sentiment, st_topic, mtl, mtl_smart, mtl_mlm, mtl_mlm_smart) run here give
-the same results as in the baseline runner. Changes to the baseline code: the setups and constants
-above, the fold split, the teacher and its loss in train(), predict() restoring the model's mode,
-and the extra outputs (student metrics, oof.npz).
+the same results as in the baseline runner. Changes to the baseline code: the setup and constants
+above, the fold split, the ED loss term in train(), predict() restoring the model's mode,
+and the extra output oof.npz.
 
 Baseline docstring:
 Lean NEU-ESC reproduction runner for Kaggle T4, following the authors' public code.
@@ -31,13 +29,13 @@ Subcommands:
   fetch     download the authors' CSV splits and check SHA-256
   prefetch  download pinned model/tokenizer revisions into the HF cache
   train     one run: --backbone {phobert,visobert} --setup {st_sentiment,st_topic,mtl,mtl_smart,
-            mtl_mlm,mtl_mlm_smart,selfdistill,crsd_ens} --seed N [--fold k --num-folds N]
-  ensemble-targets  average out-of-fold train predictions of fold runs into a crsd_ens target file
+            mtl_mlm,mtl_mlm_smart,mtl_ed} --seed N [--fold k --num-folds N]
+  ensemble-targets  average out-of-fold train predictions of fold runs into an mtl_ed target file
+  --dataset vsfc    run any of the above on UIT-VSFC instead of NEU-ESC (same hyperparameters)
 """
 from __future__ import annotations
 
 import argparse
-import copy
 import csv
 import hashlib
 import json
@@ -73,6 +71,33 @@ DATA_FILES = {
 SPLIT_SIZES = {"train": 23048, "val": 3305, "test": 6613}
 NUM_LABELS = {"sentiment": 4, "topic": 10}
 TASKS = ("sentiment", "topic")
+# Second dataset (generalisation check): UIT-VSFC (Nguyen et al., KSE 2018), official
+# train/dev/test split from the UIT-NLP Google Drive files used by the HF loader
+# uitnlp/vietnamese_students_feedback@7b56c6cb. Built by data/UIT-VSFC/README.md into the same CSV
+# layout (text, sentiment, classification); the _processed copies are word-segmented with
+# underthesea 9.5.0 for PhoBERT. No download URL: the CSVs ship with the repo / kernel.
+DATASETS = {
+    "neu": {"files": DATA_FILES, "url": DATA_URL, "split_sizes": SPLIT_SIZES, "num_labels": NUM_LABELS},
+    "vsfc": {"files": {
+        "train_set.csv": "3d636af567e2ddc2c0aa3f93b7a87755526974a57a070ff15b8fa9512bdbbf50",
+        "val_set.csv": "a5e07e9d95e0b2fa08c033a49d80ca22b2a40e7a122539e92b3674636e0eb801",
+        "test_set.csv": "b3e7a59945d7ca49f135bb857ab01c4ffb5c7c0d73db825ae5a05fed9cc7beb5",
+        "train_set_processed.csv": "9b96dca185a8a54e2073a84762054f0e619e514292adee3b447a687c7af1db5c",
+        "val_set_processed.csv": "e9431f5d3cb577270062816950fd07e611f80f8d6ed53c34205b4c55664730b3",
+        "test_set_processed.csv": "7439de60438951aa9db58ee379d315840c386d070ee259502116c65b1c5c7163",
+    }, "url": None, "split_sizes": {"train": 11426, "val": 1583, "test": 3166},
+        "num_labels": {"sentiment": 3, "topic": 4}},
+}
+DATASET = "neu"
+
+
+def use_dataset(name):
+    """Point the module-level data constants at one dataset (NEU-ESC unless --dataset says otherwise)."""
+    global DATASET, DATA_FILES, DATA_URL, SPLIT_SIZES, NUM_LABELS
+    DATASET = name
+    spec = DATASETS[name]
+    DATA_FILES, DATA_URL, SPLIT_SIZES, NUM_LABELS = (spec["files"], spec["url"], spec["split_sizes"],
+                                                     spec["num_labels"])
 
 # Revisions pinned on 2026-10-11 (docs/FINDINGS.md). PhoBERT reads the authors' pre-segmented CSVs,
 # exactly as train.py / trainmultihead.py do for any model name containing "vinai".
@@ -110,13 +135,9 @@ SMART = {"weight": 0.02, "noise_var": 1e-5, "norm_eps": 1e-6, "num_steps": 1}
 # utils/dataloader.py DataCollatorHandMade + architecture/bert3head_mlm/model.py.
 MLM = {"mask_prob": 0.3, "head_vocab": 64001, "random_ids": 64000}
 
-# CR-SD on the 2-task mtl model. Micro-batch 32 because both dropout passes go through the encoder
-# as one 64-row forward.
-SETUPS["selfdistill"] = {**SETUPS["mtl"], "micro_batch": 32, "self_distill": True}
-SELF_DISTILL = {"rdrop_alpha": 1.0, "kd_beta": 1.0, "ema_decay": 0.999, "kd_start_epoch": 2,
-                "ens_gamma": 1.0}
-# CR-SD + D: the ensemble teacher is ready from the first step, so its KD term runs from epoch 1.
-SETUPS["crsd_ens"] = {**SETUPS["selfdistill"], "ens_kd": True}
+# ED: plain mtl plus the ensemble KD term. The teacher is ready from the first step, so it runs from epoch 1.
+SETUPS["mtl_ed"] = {**SETUPS["mtl"], "ens_kd": True}
+ED = {"gamma": 1.0}
 FOLD_SEED = 2026  # fold assignment is fixed across training seeds and backbones
 
 
@@ -161,6 +182,8 @@ def fetch_data(data_dir):
     for name, expected in DATA_FILES.items():
         target = data_dir / name
         if not target.exists() or sha256_file(target) != expected:
+            if DATA_URL is None:
+                raise RuntimeError(f"{target} missing or changed; {DATASET} has no download URL")
             log(f"download {name}")
             urllib.request.urlretrieve(DATA_URL.format(name=name), target)
         actual = sha256_file(target)
@@ -437,6 +460,8 @@ def train(args):
     if setup.get("ens_kd") and not args.ens_targets:
         raise ValueError(f"{args.setup} needs --ens-targets (see the ensemble-targets command)")
     run_name = f"{args.backbone}-{args.setup}-s{args.seed}"
+    if DATASET != "neu":
+        run_name = f"{DATASET}-{run_name}"
     if args.fold is not None:
         run_name += f"-f{args.fold}of{args.num_folds}"
     run_dir = Path(args.out_dir) / run_name
@@ -447,8 +472,7 @@ def train(args):
             log(f"{run_name} already COMPLETED, skipping (use --force to rerun)")
             return 0
     run_dir.mkdir(parents=True, exist_ok=True)
-    for stale in ("epochs.jsonl", "metrics.json", "logits.npz", "predictions.csv", "oof.npz",
-                  "student_logits.npz"):
+    for stale in ("epochs.jsonl", "metrics.json", "logits.npz", "predictions.csv", "oof.npz"):
         (run_dir / stale).unlink(missing_ok=True)
     code = code_provenance()
 
@@ -502,19 +526,12 @@ def train(args):
                                                   end_factor=setup["lr_end"],
                                                   total_iters=setup["epochs"])
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
-    teacher = None
-    if setup.get("self_distill"):
-        # EMA of the student's weights: never trained, only averaged after each optimizer step.
-        teacher = copy.deepcopy(model).eval()
-        for p in teacher.parameters():
-            p.requires_grad_(False)
-        teacher_params, student_params = list(teacher.parameters()), list(model.parameters())
 
     config = {
-        "run_name": run_name, "backbone": args.backbone, "setup": args.setup, "seed": args.seed,
+        "run_name": run_name, "dataset": DATASET, "backbone": args.backbone, "setup": args.setup, "seed": args.seed,
         "code": code, "model_id": backbone["model_id"], "revision": None if args.model_path else backbone["revision"],
-        "model_path_override": args.model_path, "text_source": "author _processed.csv" if processed
-        else "author raw .csv", "data_files": {data[s][2]: DATA_FILES[data[s][2]] for s in data},
+        "model_path_override": args.model_path, "text_source": ("author " if DATASET == "neu" else f"{DATASET} ")
+        + ("_processed.csv" if processed else "raw .csv"), "data_files": {data[s][2]: DATA_FILES[data[s][2]] for s in data},
         "tasks": list(tasks), "epochs": setup["epochs"], "adam_eps": setup["adam_eps"],
         "lr_end_factor": setup["lr_end"], "early_stopping_patience": setup["patience"],
         "smart": SMART if setup["smart"] else None, **COMMON, "micro_batch": micro_batch,
@@ -526,65 +543,30 @@ def train(args):
         "benchmark_eligible": not debug, "environment": environment(device),
         "loading_info": {k: [str(x) for x in v] for k, v in loading_info.items()},
         "tokenize_seconds": tokenize_seconds,
-        "self_distill": SELF_DISTILL if teacher is not None else None,
-        "ensemble_teacher": {"targets": args.ens_targets,
+        "ensemble_teacher": {"targets": args.ens_targets, "gamma": ED["gamma"],
                              "sources": [str(x) for x in targets_file["sources"]]} if ens_probs else None,
         "fold": {"fold": args.fold, "num_folds": args.num_folds, "fold_seed": FOLD_SEED,
                  "held_out_rows": int(len(held_out))} if args.fold is not None else None,
-        "inference_weights": "EMA teacher" if teacher is not None else "student",
     }
     write_json(run_dir / "config.json", config)
 
     if ens_probs is not None:
         ens_log = {task: probs.clamp_min(1e-8).log().to(device) for task, probs in ens_probs.items()}
 
-    def self_distill_loss(ids, mask, targets, batch_rows, epoch, chunk):
-        """0.5 * sum over tasks of [CE averaged over two dropout passes + alpha * sym-KL(pass1, pass2)
-        + beta * mean KL(teacher || pass) + gamma * mean KL(ensemble || pass)], the EMA term from
-        kd_start_epoch on. Row sums divided by the 128-row batch, so micro-batches add up to the batch mean."""
-        both = model(torch.cat([ids, ids]), torch.cat([mask, mask]))
-        teacher_out = None
-        if epoch >= SELF_DISTILL["kd_start_epoch"]:
-            with torch.no_grad():
-                teacher_out = teacher(ids, mask)
-        total = 0.0
-        for k in range(len(tasks)):
-            first, second = both[k].float().chunk(2)
-            log1, log2 = F.log_softmax(first, dim=-1), F.log_softmax(second, dim=-1)
-            ce = 0.5 * (F.nll_loss(log1, targets[k], reduction="sum")
-                        + F.nll_loss(log2, targets[k], reduction="sum"))
-            cons = 0.5 * (F.kl_div(log1, log2, log_target=True, reduction="sum")
-                          + F.kl_div(log2, log1, log_target=True, reduction="sum"))
-            task_loss = ce + SELF_DISTILL["rdrop_alpha"] * cons
-            if teacher_out is not None:
-                log_t = F.log_softmax(teacher_out[k].float(), dim=-1)
-                task_loss = task_loss + SELF_DISTILL["kd_beta"] * 0.5 * (
-                    F.kl_div(log1, log_t, log_target=True, reduction="sum")
-                    + F.kl_div(log2, log_t, log_target=True, reduction="sum"))
-            if ens_probs is not None:
-                log_e = ens_log[tasks[k]][chunk]
-                task_loss = task_loss + SELF_DISTILL["ens_gamma"] * 0.5 * (
-                    F.kl_div(log1, log_e, log_target=True, reduction="sum")
-                    + F.kl_div(log2, log_e, log_target=True, reduction="sum"))
-            total = total + COMMON["mtl_task_weight"] * task_loss / batch_rows
-        return total
-
     # ---- loop
     task_columns = {task: torch.from_numpy(labels["train"][task]) for task in tasks}
     n_train = len(train_rows)
     generator = torch.Generator().manual_seed(args.seed)
     best = {"score": -math.inf, "epoch": None, "state": None, "val_logits": None}
-    best_student = {"score": -math.inf, "epoch": None, "state": None}
-    selected = teacher if teacher is not None else model
     val_history = {task: [] for task in tasks}
     test_history = {task: [] for task in tasks}
     epochs_without_gain = 0
     step_times = []
     status = "COMPLETED"
 
-    def evaluate(split, net=None):
+    def evaluate(split):
         keep = eval_index[split]
-        logits = predict(net or model, [sequences[split][i] for i in keep], pad_id, device,
+        logits = predict(model, [sequences[split][i] for i in keep], pad_id, device,
                          COMMON["eval_batch_size"], use_amp)
         result = {task: task_metrics(labels[split][task][keep], logits[k])
                   for k, task in enumerate(tasks)}
@@ -623,12 +605,9 @@ def train(args):
                     mlm_target, _ = collate(mlm_labels, local, -100)
                     mlm_ids, mlm_target = mlm_ids.to(device), mlm_target.to(device)
                 with torch.autocast(device.type, dtype=torch.float16, enabled=use_amp):
-                    if teacher is None:
-                        outputs = (model(ids, mask, mlm_ids, mlm_target != -100) if setup.get("mlm")
-                                   else model(ids, mask))
-                    if teacher is not None:
-                        loss = self_distill_loss(ids, mask, targets, len(batch), epoch, chunk)
-                    elif setup.get("mlm"):
+                    outputs = (model(ids, mask, mlm_ids, mlm_target != -100) if setup.get("mlm")
+                               else model(ids, mask))
+                    if setup.get("mlm"):
                         # mlm_3head_trainer.py: L_s + L_t (+ 0.02 * SMART each) + L_MLM / avg_mask.
                         loss = 0.0
                         for k, task in enumerate(tasks):
@@ -654,14 +633,17 @@ def train(args):
                                 # The authors draw independent noise for each task's call.
                                 perturbed = model(author_smart_ids(ids), mask)[k]
                                 task_loss = task_loss + SMART["weight"] * sym_kl_sum(perturbed, outputs[k])
+                            if ens_probs is not None:
+                                # mtl_ed: gamma * KL(ensemble || model), row sums divided by the
+                                # 128-row batch, so micro-batches add up to the batch mean.
+                                task_loss = task_loss + ED["gamma"] * F.kl_div(
+                                    F.log_softmax(outputs[k].float(), dim=-1), ens_log[task][chunk],
+                                    log_target=True, reduction="sum") / len(batch)
                             loss = loss + COMMON["mtl_task_weight"] * task_loss
                 scaler.scale(loss).backward()
                 batch_loss += float(loss.detach())
             scaler.step(optimizer)
             scaler.update()
-            if teacher is not None:
-                with torch.no_grad():
-                    torch._foreach_lerp_(teacher_params, student_params, 1 - SELF_DISTILL["ema_decay"])
             loss_sum += batch_loss
             if device.type == "cuda":
                 torch.cuda.synchronize(device)
@@ -673,16 +655,6 @@ def train(args):
 
         eval_start = time.perf_counter()
         val_logits, val_metrics = evaluate("val")
-        student_val = None
-        if teacher is not None:
-            # The student is scored too (an EMA-free ablation); selection and test use the teacher.
-            student_val = {t: {k: v for k, v in val_metrics[t].items() if k != "confusion_matrix"}
-                           for t in tasks}
-            student_score = float(np.mean([val_metrics[t]["macro_f1"] for t in tasks]))
-            if student_score > best_student["score"]:
-                best_student.update(score=student_score, epoch=epoch, state={
-                    k: v.detach().to("cpu", copy=True) for k, v in model.state_dict().items()})
-            val_logits, val_metrics = evaluate("val", teacher)
         val_seconds = time.perf_counter() - eval_start
         for k, task in enumerate(tasks):
             val_history[task].append(val_logits[k])
@@ -694,10 +666,8 @@ def train(args):
                           for t in tasks},
                   "peak_vram_gb": torch.cuda.max_memory_allocated(device) / 2**30
                   if device.type == "cuda" else None}
-        if student_val is not None:
-            record["student_val"] = student_val
         if args.test_every_epoch:
-            test_logits, test_metrics = evaluate("test", selected)
+            test_logits, test_metrics = evaluate("test")
             for k, task in enumerate(tasks):
                 test_history[task].append(test_logits[k])
             record["test"] = {t: {k: v for k, v in test_metrics[t].items() if k != "confusion_matrix"}
@@ -712,7 +682,7 @@ def train(args):
         # base_trainer.py keeps a checkpoint only when the metric strictly improves.
         if score > best["score"]:
             best.update(score=score, epoch=epoch, val_logits=val_logits,
-                        state={k: v.detach().to("cpu", copy=True) for k, v in selected.state_dict().items()})
+                        state={k: v.detach().to("cpu", copy=True) for k, v in model.state_dict().items()})
             epochs_without_gain = 0
         else:
             epochs_without_gain += 1
@@ -720,15 +690,7 @@ def train(args):
                 log(f"{run_name}: early stop after epoch {epoch} (patience {setup['patience']})")
                 break
 
-    # ---- test with the selected weights (the EMA teacher's for CR-SD, loaded into the model)
-    student_result = None
-    if teacher is not None:
-        model.load_state_dict(best_student["state"])
-        student_logits, student_test = evaluate("test")
-        student_result = {"best_epoch": best_student["epoch"], "selection_score": best_student["score"],
-                          "test": student_test}
-        np.savez_compressed(run_dir / "student_logits.npz", **{
-            f"test_{task}": student_logits[k] for k, task in enumerate(tasks)})
+    # ---- test with the selected weights
     model.load_state_dict(best["state"])
     test_start = time.perf_counter()
     test_logits, test_metrics = evaluate("test")
@@ -770,7 +732,6 @@ def train(args):
         "status": status, "run_name": run_name, "benchmark_eligible": not debug,
         "runner_sha256": code["runner_sha256"], "best_epoch": best["epoch"], "epochs_run": len(val_history[tasks[0]]),
         "selection_score": best["score"], "val": val_metrics, "test": test_metrics,
-        "student": student_result,
         "oof_accuracy": {task: float((oof_logits[k].argmax(-1) == labels["train"][task][held_out]).mean())
                          for k, task in enumerate(tasks)} if args.fold is not None else None,
         "timing": {"step_seconds_mean": float(times.mean()), "step_seconds_median": float(np.median(times)),
@@ -833,13 +794,15 @@ def main(argv=None):
 
     p_fetch = sub.add_parser("fetch", help="download and verify the authors' CSV splits")
     p_fetch.add_argument("--data-dir", required=True)
+    p_fetch.add_argument("--dataset", default="neu", choices=list(DATASETS))
 
     p_prefetch = sub.add_parser("prefetch", help="cache pinned models/tokenizers")
     p_prefetch.add_argument("--backbones", nargs="+", default=list(BACKBONES), choices=list(BACKBONES))
 
-    p_ens = sub.add_parser("ensemble-targets", help="average out-of-fold train predictions for crsd_ens")
+    p_ens = sub.add_parser("ensemble-targets", help="average out-of-fold train predictions for mtl_ed")
     p_ens.add_argument("runs", nargs="+", help="run directories of finished --fold runs")
     p_ens.add_argument("--out", required=True, help="output .npz")
+    p_ens.add_argument("--dataset", default="neu", choices=list(DATASETS))
 
     p_train = sub.add_parser("train", help="run one backbone/setup/seed")
     p_train.add_argument("--backbone", required=True, choices=list(BACKBONES))
@@ -847,6 +810,8 @@ def main(argv=None):
     p_train.add_argument("--seed", required=True, type=int)
     p_train.add_argument("--data-dir", required=True)
     p_train.add_argument("--out-dir", required=True)
+    p_train.add_argument("--dataset", default="neu", choices=list(DATASETS),
+                         help="neu = NEU-ESC (default), vsfc = UIT-VSFC; non-default runs are named <dataset>-...")
     p_train.add_argument("--micro-batch", type=int, help="default 64, or 32 for mtl_smart")
     p_train.add_argument("--test-every-epoch", action="store_true",
                          help="also save test logits each epoch (post-hoc analysis only; never select on test)")
@@ -854,7 +819,7 @@ def main(argv=None):
     p_train.add_argument("--fold", type=int, help="hold out this fold of the training set and save "
                          "its out-of-fold predictions (oof.npz)")
     p_train.add_argument("--num-folds", type=int)
-    p_train.add_argument("--ens-targets", help="ensemble-targets output, required by crsd_ens")
+    p_train.add_argument("--ens-targets", help="ensemble-targets output, required by mtl_ed")
     debug = p_train.add_argument_group("smoke/debug (marks the run benchmark_eligible=false)")
     debug.add_argument("--epochs", type=int)
     debug.add_argument("--max-steps-per-epoch", type=int)
@@ -863,6 +828,7 @@ def main(argv=None):
     debug.add_argument("--fp32", action="store_true")
 
     args = parser.parse_args(argv)
+    use_dataset(getattr(args, "dataset", "neu"))
     if args.command == "fetch":
         fetch_data(args.data_dir)
         return 0

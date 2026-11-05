@@ -1,6 +1,7 @@
 """Technical acceptance of finished runs. Deliberately never compares scores with Table 6.
 
     python src_improvement/check_runs.py runs/ --seeds 42
+    python src_improvement/check_runs.py runs/vsfc --dataset vsfc --setups mtl mtl_smart mtl_ed --seeds 42
 
 A run passes when it finished on the benchmark protocol, trained (finite loss that went down,
 validation macro-F1 above a constant majority-class predictor) and saved complete, unique
@@ -20,12 +21,12 @@ from pathlib import Path
 import numpy as np
 
 BACKBONES = ("phobert", "visobert")
-SETUPS = ("st_sentiment", "st_topic", "mtl", "mtl_smart", "mtl_mlm", "mtl_mlm_smart", "selfdistill", "crsd_ens")
+SETUPS = ("st_sentiment", "st_topic", "mtl", "mtl_smart", "mtl_mlm", "mtl_mlm_smart", "mtl_ed")
 TASKS = {"st_sentiment": ("sentiment",), "st_topic": ("topic",),
          "mtl": ("sentiment", "topic"), "mtl_smart": ("sentiment", "topic"),
          "mtl_mlm": ("sentiment", "topic"), "mtl_mlm_smart": ("sentiment", "topic"),
-         "selfdistill": ("sentiment", "topic"), "crsd_ens": ("sentiment", "topic")}
-SPLIT_SIZES = {"val": 3305, "test": 6613}
+         "mtl_ed": ("sentiment", "topic")}
+SPLIT_SIZES = {"neu": {"val": 3305, "test": 6613}, "vsfc": {"val": 1583, "test": 3166}}
 
 
 def majority_macro_f1(labels, num_classes):
@@ -34,7 +35,7 @@ def majority_macro_f1(labels, num_classes):
     return 2 * p / (1 + p) / num_classes
 
 
-def check_run(run_dir, setup):
+def check_run(run_dir, setup, dataset):
     problems = []
     metrics_path = run_dir / "metrics.json"
     if not metrics_path.exists():
@@ -69,7 +70,9 @@ def check_run(run_dir, setup):
     ids = [r["sample_id"] for r in rows]
     if len(set(ids)) != len(ids):
         problems.append("duplicate sample IDs in predictions.csv")
-    for split, size in SPLIT_SIZES.items():
+    if config.get("dataset", "neu") != dataset:
+        problems.append(f"dataset {config.get('dataset', 'neu')}, expected {dataset}")
+    for split, size in SPLIT_SIZES[dataset].items():
         count = sum(r["split"] == split for r in rows)
         if count != size:
             problems.append(f"{count} {split} predictions, expected {size}")
@@ -82,6 +85,7 @@ def main(argv=None):
     parser.add_argument("--seeds", nargs="+", type=int, required=True, help="seeds that must be complete")
     parser.add_argument("--backbones", nargs="+", default=list(BACKBONES), choices=BACKBONES)
     parser.add_argument("--setups", nargs="+", default=list(SETUPS), choices=SETUPS)
+    parser.add_argument("--dataset", default="neu", choices=list(SPLIT_SIZES))
     args = parser.parse_args(argv)
 
     found = {}
@@ -94,10 +98,12 @@ def main(argv=None):
         for backbone in args.backbones:
             for setup in args.setups:
                 name = f"{backbone}-{setup}-s{seed}"
+                if args.dataset != "neu":
+                    name = f"{args.dataset}-{name}"
                 if name not in found:
                     problems, sha = ["missing run directory"], None
                 else:
-                    problems, sha = check_run(found[name], setup)
+                    problems, sha = check_run(found[name], setup, args.dataset)
                 if sha:
                     versions.setdefault(sha, []).append(name)
                 failed += bool(problems)

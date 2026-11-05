@@ -1,12 +1,14 @@
 # Runner Kaggle T4 cho tái lập NEU-ESC
 
-Thư mục này là bộ chạy gọn cho 40 run tái lập Table 6 của NEU-ESC: 8 setup × 5 seed (42–46) trên Kaggle **GPU T4 x2**.
+Thư mục này là bộ chạy tái lập Table 6 của NEU-ESC trên Kaggle **GPU T4 x2**. Kế hoạch ban đầu là 40 run (8 setup × 5 seed 42–46, các bước bên dưới mô tả đợt này). Kết quả chốt có 180 run: 12 setup × 15 seed (42–56), sau khi thêm seed 47–56 và hai setup MLM; xem [báo cáo baseline](../reports/baseline_reproduce/README.md).
 
 | Backbone | Setup | Hàng Table 6 |
 |---|---|---|
 | PhoBERT-base-v2, ViSoBERT | `st_sentiment`, `st_topic` | Single task |
 | | `mtl` | 2-task |
 | | `mtl_smart` | 2-task & SMART |
+| | `mtl_mlm` | 2-task & MLM |
+| | `mtl_mlm_smart` | 2-task & MLM & SMART |
 
 Runner bám code công khai của tác giả ([hung20gg/multi-task-bert@b5637cc](https://github.com/hung20gg/multi-task-bert/tree/b5637cc0a8a7b5e88e794d180c11902405548eb5), bản sao nằm ở [reports/baseline_reproduce/author_code/](../reports/baseline_reproduce/author_code/)).
 
@@ -20,7 +22,7 @@ Runner bám code công khai của tác giả ([hung20gg/multi-task-bert@b5637cc]
 | LinearLR theo epoch | 1 → 0.2 | 1 → 0.1 |
 | Loss | CE | `0.5·(CE_s + 0.02·SMART_s) + 0.5·(CE_t + 0.02·SMART_t)` |
 
-Thiết lập chung: batch 128, max_length 128, tokenizer slow. Dữ liệu lấy từ CSV của tác giả, có kiểm SHA-256. PhoBERT đọc `*_processed.csv` (tác giả đã tách từ sẵn), ViSoBERT đọc CSV gốc. Model khóa theo revision ghi trong `BACKBONES` của `neu_esc_kaggle.py`. Các phát hiện về dữ liệu, code tác giả, Table 6 và Figure 3 nằm trong [docs/FINDINGS.md](../docs/FINDINGS.md).
+Thiết lập chung: batch 128, max_length 128, tokenizer slow. Dữ liệu lấy từ CSV của tác giả, có kiểm SHA-256. PhoBERT đọc `*_processed.csv` (tác giả đã tách từ sẵn), ViSoBERT đọc CSV gốc. Model khóa theo revision ghi trong `BACKBONES` của `neu_esc_kaggle.py`. Các phát hiện về code tác giả nằm trong [báo cáo baseline](../reports/baseline_reproduce/README.md); số liệu Table 6, Figure 3 và kiểm tra dữ liệu nằm trong [paper/](../reports/baseline_reproduce/paper/) và [data_source/](../reports/baseline_reproduce/data_source/).
 
 **SMART theo đúng code tác giả.** Code gốc cộng noise vào *token ID* rồi gọi `.long()`, nên gradient theo noise luôn là `None`. Kết quả là khoảng 49% token bị đổi thành ID liền trước, sau đó tính sym-KL với `reduction='sum'`. Hàm `author_smart_ids` cho ra ID và loss giống hệt `SMARTLoss` gốc. Lệnh `python src_baseline/check_author_smart.py` kiểm tra điều này.
 
@@ -52,12 +54,12 @@ Metrics có thêm `weighted_f1_author_mtl`: trainer 2-task của tác giả gọ
 2. **Cài đặt notebook:** Accelerator = **GPU T4 x2**, Internet = **On** (tài khoản cần xác minh số điện thoại).
 3. **Chạy `smoke_timing.ipynb`** (khoảng 20–40 phút). Nó in bảng thời gian mỗi run và tổng GPU-giờ cho 40 run, đồng thời gợi ý micro-batch theo VRAM.
 4. **Chạy `run_seeds.ipynb` với `SEEDS = [42]`** bằng *Save Version → Save & Run All*. Notebook tự chạy `check_runs.py`. Chỉ khi **cả 8 run PASS** mới chạy tiếp seed 43–46.
-5. **Chạy mỗi seed còn lại trong một session riêng.** Mỗi tài khoản chạy một seed: `account_a` chạy 42, `account_b` chạy 43, `account_c` chạy 44, `account_d` chạy 45, `account_e` chạy 46.
+5. **Chạy mỗi seed còn lại trong một session riêng.** Mỗi tài khoản Kaggle chạy một seed.
 6. **Tải kết quả về máy.** Thư mục `/kaggle/working/runs/` của mỗi session nằm ở tab Output của notebook version. Giải nén vào `runs/s42/`, `runs/s43/`, …. `runs/` đã được `.gitignore`. Sau đó kiểm tra và gộp:
 
 ```bash
 python src_baseline/check_runs.py runs/s42 runs/s43 runs/s44 runs/s45 runs/s46 --seeds 42 43 44 45 46
-python src_baseline/aggregate.py runs/s42 runs/s43 runs/s44 runs/s45 runs/s46 runs/gap/a --out reports/baseline_reproduce/metrics
+python src_baseline/aggregate.py runs/s42 runs/s43 runs/s44 runs/s45 runs/s46 runs/gap/a runs/gap/mlm --out reports/baseline_reproduce/metrics
 ```
 
 Kết quả thô từng run (logits, predictions) nằm trong `runs/` và không commit. Bảng tổng hợp nhỏ `reports/baseline_reproduce/metrics/` (gồm `summary.md`, `summary.csv`, `per_run.csv`, `gains.csv`) thì được commit làm kết quả tái lập.
@@ -75,7 +77,7 @@ Mỗi run ghi vào `runs/<backbone>-<setup>-s<seed>/`. Không lưu checkpoint, c
 - `config.json`: hyperparameter, phiên bản thư viện, GPU, SHA-256 của dữ liệu, các lệch đã nêu, và `code` (SHA-256 của `neu_esc_kaggle.py`, kèm git commit nếu có);
 - `epochs.jsonl`: loss, thời gian, VRAM đỉnh và val metrics từng epoch;
 - `metrics.json`: epoch tốt nhất, val/test metrics, F1 từng lớp, confusion matrix (hàng = nhãn thật), thời gian;
-- `predictions.csv`: dự đoán val/test của epoch được chọn theo ID mẫu, ví dụ `test:000000:cdd81b2c7b96` (split, số dòng trong CSV, tiền tố hash của CSV gốc; giống định dạng ID trong [docs/FINDINGS.md](../docs/FINDINGS.md));
+- `predictions.csv`: dự đoán val/test của epoch được chọn theo ID mẫu, ví dụ `test:000000:cdd81b2c7b96` (split, số dòng trong CSV, tiền tố hash của CSV gốc);
 - `logits.npz`: logits val/test của epoch được chọn, ID mẫu, nhãn, và logits val của mọi epoch (`--test-every-epoch` lưu thêm test từng epoch, chỉ để phân tích sau).
 
 Các cờ `--epochs`, `--max-steps-per-epoch`, `--limit-eval`, `--model-path`, `--fp32` biến run thành `benchmark_eligible=false`. `aggregate.py` bỏ qua các run này, trừ khi thêm `--include-debug`.

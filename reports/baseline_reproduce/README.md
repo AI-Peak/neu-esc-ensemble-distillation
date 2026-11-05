@@ -1,20 +1,20 @@
 # Báo cáo tình trạng Baseline Reproduce (NEU-ESC, arXiv 2506.23524)
 
-Nhóm 5, DPL302m. Cập nhật 2026-10-31.
+Nhóm 5, DPL302m. Cập nhật 2026-11-05.
 
 ## 1. Kết luận
 
 **Nhóm đã reproduce đúng baseline.**
 - Code chạy theo đúng code gốc của tác giả.
 - Kết quả trung bình lệch paper khoảng 0.4 điểm.
-- Xu hướng giống paper: SMART giúp tăng so với MTL.
+- Xu hướng giống paper về accuracy: SMART tăng so với MTL ở cả 4 ô. Macro-F1 thì không giống: SMART giảm ở 3/4 ô (chỉ PhoBERT sentiment có ý nghĩa: −0.79, p = 0.001, paper +1.53) và chỉ tăng ở ViSoBERT topic (+0.52, paper +1.47); xem [metrics/summary.md](metrics/summary.md).
 
 Hai con số baseline chốt dùng để so sánh với phần cải tiến:
 
 | Task | Baseline reproduce | Cấu hình | Paper |
 |---|---|---|---|
 | **Sentiment** | **82.85 ± 0.24** | PhoBERT MTL + SMART, 15 seed | 83.26 |
-| **Topic** | **79.35 ± 0.16** | ViSoBERT MTL + SMART, 15 seed | 79.80 |
+| **Topic** | **79.55 ± 0.20** | ViSoBERT MTL + MLM + SMART, 15 seed | 79.25 |
 
 Cách tính hai số này như sau:
 - Chọn checkpoint theo tập **validation**, như paper mô tả.
@@ -22,8 +22,10 @@ Cách tính hai số này như sau:
 - Lấy **trung bình ± độ lệch chuẩn** qua 15 lần chạy với 15 seed khác nhau (42–56).
 - Không nhìn test để chọn epoch, không chọn seed may mắn.
 
+Mỗi task lấy setup có trung bình cao nhất trong 10 dòng của §2, với mọi dòng đều có 15 seed. Ở topic, ViSoBERT MTL+MLM+SMART (79.55) cao hơn ViSoBERT MTL+SMART (79.35 ± 0.16), dòng được chốt trước khi dòng MLM đủ 15 seed.
+
 Mốc lớn nhất trong paper là 83.66 / 79.80 (§3).
-- Ô topic 79.80 chính là dòng ViSoBERT MTL+SMART trong bảng trên. Trung bình nhóm thấp hơn 0.45 điểm, và 0/15 lần chạy đạt tới (§3).
+- Ô topic 79.80 là dòng ViSoBERT MTL+SMART. Trung bình nhóm ở dòng này là 79.35, thấp hơn 0.45 điểm, và 0/15 lần chạy đạt tới (§3).
 - Ô sentiment 83.66 là dòng PhoBERT MTL+MLM+SMART. Nhóm đã chạy dòng này nhưng không đạt (§3).
 
 ## 2. Kết quả đầy đủ (test accuracy %, trung bình ± độ lệch chuẩn)
@@ -33,27 +35,27 @@ Mốc lớn nhất trong paper là 83.66 / 79.80 (§3).
 | PhoBERT | Single-task | 82.27 ± 0.40 | 81.75 | +0.52 | 78.16 ± 0.58 | 78.65 | −0.49 |
 | PhoBERT | MTL | 82.39 ± 0.71 | 82.88 | −0.49 | 78.75 ± 0.36 | 79.25 | −0.50 |
 | PhoBERT | MTL + SMART | **82.85 ± 0.24** | 83.26 | −0.41 | 79.05 ± 0.17 | 79.31 | −0.26 |
-| PhoBERT | MTL + MLM | 82.42 ± 0.26 | 82.67 | −0.25 | 78.38 ± 0.64 | 78.48 | −0.10 |
-| PhoBERT | MTL + MLM + SMART | 82.77 ± 0.06 | 83.66 | −0.89 | 79.09 ± 0.18 | 79.49 | −0.40 |
+| PhoBERT | MTL + MLM | 82.25 ± 0.53 | 82.67 | −0.42 | 78.46 ± 0.44 | 78.48 | −0.02 |
+| PhoBERT | MTL + MLM + SMART | 82.83 ± 0.16 | 83.66 | −0.83 | 79.09 ± 0.17 | 79.49 | −0.40 |
 | ViSoBERT | Single-task | 82.30 ± 0.64 | 82.78 | −0.48 | 78.11 ± 0.42 | 77.94 | +0.17 |
 | ViSoBERT | MTL | 82.04 ± 0.43 | 82.63 | −0.59 | 78.22 ± 0.55 | 78.56 | −0.34 |
-| ViSoBERT | MTL + SMART | 82.71 ± 0.18 | 83.58 | −0.87 | **79.35 ± 0.16** | 79.80 | −0.45 |
-| ViSoBERT | MTL + MLM | 81.89 ± 0.29 | 82.23 | −0.34 | 78.04 ± 0.20 | 78.38 | −0.34 |
-| ViSoBERT | MTL + MLM + SMART | 82.83 ± 0.14 | 83.12 | −0.29 | 79.46 ± 0.23 | 79.25 | +0.21 |
+| ViSoBERT | MTL + SMART | 82.71 ± 0.18 | 83.58 | −0.87 | 79.35 ± 0.16 | 79.80 | −0.45 |
+| ViSoBERT | MTL + MLM | 81.83 ± 0.68 | 82.23 | −0.40 | 78.18 ± 0.41 | 78.38 | −0.20 |
+| ViSoBERT | MTL + MLM + SMART | 82.82 ± 0.16 | 83.12 | −0.30 | **79.55 ± 0.20** | 79.25 | +0.30 |
 
-Số lần chạy: 15 seed cho Single-task, MTL và MTL+SMART; 5 seed cho hai dòng MLM.
+Số lần chạy: 15 seed (42–56) cho mọi dòng.
 
 Cách đọc bảng:
-- Độ lệch trung bình (giá trị tuyệt đối) là **0.42 điểm**. Biên độ giữa các seed (max − min) đã lên tới 1–2 điểm. Vậy độ lệch so với paper nhỏ hơn mức dao động tự nhiên của một lần chạy.
+- Độ lệch trung bình (giá trị tuyệt đối) là **0.42 điểm**. Biên độ giữa các seed (max − min) từ 0.48 đến 2.51 điểm, trung bình 1.40. Vậy độ lệch trung bình nhỏ hơn mức dao động trung bình của một lần chạy; các ô 0/15 ở §3 là ngoại lệ.
 - Hầu hết các ô của nhóm **thấp hơn paper một chút**. Đây là điều dễ hiểu: paper chỉ báo **một lần chạy** cho mỗi dòng, còn nhóm báo **trung bình nhiều lần**. Số của một lần chạy được chọn để báo cáo thường cao hơn số trung bình.
 
 ## 3. Đã kiểm tra những nguyên nhân gì
 
-Nhóm dùng 10 tài khoản Kaggle (GPU T4) và chạy tổng cộng **170 lần**. Kết quả theo từng giả thuyết:
+Nhóm dùng 10 tài khoản Kaggle (GPU T4) và chạy tổng cộng **210 lần**. Kết quả theo từng giả thuyết:
 
 | # | Giả thuyết | Cách kiểm | Kết quả |
 |---|---|---|---|
-| 1 | Paper chỉ chạy 1 lần, gặp may | Tăng từ 5 lên 15 seed | **Đúng với phần lớn các ô.** Số của paper nằm trong vùng dao động của các seed của nhóm. |
+| 1 | Paper chỉ chạy 1 lần, gặp may | Tăng từ 5 lên 15 seed | **Đúng với phần lớn các ô.** 16/20 ô có ít nhất một seed đạt số của paper. Bốn ô đạt 0/15: ViSoBERT MTL+SMART (83.58, 79.80) và PhoBERT MTL+MLM+SMART (83.66, 79.49). |
 | 2 | Tác giả chọn epoch bằng cách nhìn test (code lưu mọi epoch, không ghi tiêu chí chọn) | Lưu kết quả test ở mọi epoch, so 4 cách chọn | Nếu nhìn test thì MTL tăng thêm khoảng +0.3 đến +0.9. **Không giải thích được 2 ô lệch lớn** (xem dưới). |
 | 3 | fp32 (tác giả) khác fp16 (nhóm) | Chạy lại MTL và MTL+SMART bằng fp32, cùng 5 seed | **Không ảnh hưởng.** Chênh lệch từ −0.28 đến +0.41, trung bình gần 0. |
 | 4 | SMART bị cài sai | Đặt nhiễu lên embedding như SMART gốc của Jiang et al. | Accuracy **sụp xuống khoảng 72%**. Code gốc mới là bản đúng để reproduce (giải thích dưới). |
@@ -64,7 +66,7 @@ Nhóm dùng 10 tài khoản Kaggle (GPU T4) và chạy tổng cộng **170 lần
 | Ô | Paper | Trung bình nhóm | Số lần chạy đạt paper | Mức cao nhất có thể* |
 |---|---|---|---|---|
 | ViSoBERT MTL+SMART, sentiment | 83.58 | 82.71 ± 0.18 | 0/15 | 83.09 |
-| PhoBERT MTL+MLM+SMART, sentiment | 83.66 | 82.77 ± 0.06 | 0/5 | 83.25 |
+| PhoBERT MTL+MLM+SMART, sentiment | 83.66 | 82.83 ± 0.16 | 0/15 | 83.25 |
 
 \*Mức cao nhất có thể: lấy epoch có test cao nhất cho riêng task đó, rồi lấy seed tốt nhất. Đây là kiểu "gian lận tối đa", chỉ dùng để chứng minh, không dùng để báo cáo.
 
@@ -87,9 +89,8 @@ Theo nguyên tắc nhóm đặt ra từ đầu, **hai ô này được kết lu�
 
 ## 4. Ý nghĩa cho phần cải tiến
 
-- So sánh cải tiến với **82.85 (sentiment)** và **79.35 (topic)**, theo đúng cách tính ở trên: chọn theo val và lấy trung bình nhiều seed.
-- Trong bảng chính, nên so **cùng backbone, cùng setup** (ví dụ PhoBERT MTL+SMART với PhoBERT CR-SD) để phép so sánh công bằng.
-- Phát hiện số 1 ở §3 cho thấy cái lợi thật sự của "SMART" là **consistency regularization**. Điều này củng cố hướng cải tiến CR-SD: R-Drop, EMA teacher và self-distillation đều thuộc nhóm phương pháp này.
+- So sánh cải tiến với **82.85 (sentiment)** và **79.55 (topic)**, theo đúng cách tính ở trên: chọn theo val và lấy trung bình nhiều seed.
+- Trong bảng chính, nên so **cùng backbone** (ví dụ PhoBERT MTL+SMART với PhoBERT ED) để phép so sánh công bằng.
 
 ## Phụ lục: số liệu kiểm tra
 
@@ -99,7 +100,7 @@ Mỗi ô ghi theo dạng **sentiment / topic**, test accuracy %.
 
 Các run có lưu test ở mọi epoch:
 - 10 seed cho MTL và MTL+SMART.
-- 5 seed cho hai dòng MLM.
+- 15 seed cho hai dòng MLM.
 
 Cách đọc các cột:
 - **Val**: cách của nhóm, chọn epoch theo tập validation.
@@ -110,12 +111,12 @@ Cách đọc các cột:
 |---|---|---|---|---|---|
 | PhoBERT | MTL | 82.43 / 78.73 | 83.02 / 78.93 | 83.43 / 79.36 | 82.88 / 79.25 |
 | PhoBERT | MTL + SMART | 82.82 / 79.07 | 82.88 / 79.12 | 83.29 / 79.40 | 83.26 / 79.31 |
-| PhoBERT | MTL + MLM | 82.42 / 78.38 | 83.09 / 78.98 | 83.35 / 79.36 | 82.67 / 78.48 |
-| PhoBERT | MTL + MLM + SMART | 82.77 / 79.09 | 83.02 / 79.14 | **83.25** / 79.40 | **83.66** / 79.49 |
+| PhoBERT | MTL + MLM | 82.25 / 78.46 | 82.98 / 79.00 | 83.38 / 79.57 | 82.67 / 78.48 |
+| PhoBERT | MTL + MLM + SMART | 82.83 / 79.09 | 82.95 / 79.19 | **83.25** / 79.54 | **83.66** / 79.49 |
 | ViSoBERT | MTL | 81.92 / 78.45 | 82.88 / 78.67 | 83.32 / 79.04 | 82.63 / 78.56 |
 | ViSoBERT | MTL + SMART | 82.68 / 79.38 | 82.80 / 79.50 | **83.09** / 79.75 | **83.58** / 79.80 |
-| ViSoBERT | MTL + MLM | 81.89 / 78.04 | 82.60 / 78.55 | 83.20 / 78.87 | 82.23 / 78.38 |
-| ViSoBERT | MTL + MLM + SMART | 82.83 / 79.46 | 82.85 / 79.71 | 83.15 / 79.96 | 83.12 / 79.25 |
+| ViSoBERT | MTL + MLM | 81.83 / 78.18 | 82.77 / 78.65 | 83.34 / 79.12 | 82.23 / 78.38 |
+| ViSoBERT | MTL + MLM + SMART | 82.82 / 79.55 | 82.97 / 79.66 | 83.28 / 79.96 | 83.12 / 79.25 |
 
 ### B. fp32 so với fp16 (giả thuyết 3)
 
@@ -142,7 +143,7 @@ Cùng 5 seed 42–46, chạy một lần bằng fp16 và một lần bằng fp32
 | File / thư mục | Nội dung |
 |---|---|
 | `README.md` | Báo cáo này |
-| `gap_runs.csv` | Kết quả từng run (170 run) dùng cho báo cáo |
+| `gap_runs.csv` | Kết quả từng run (210 run) dùng cho báo cáo |
 | `metrics/` | Bảng đầy đủ accuracy, macro-F1, weighted-F1 của 15 seed so với paper (`src_baseline/aggregate.py`) |
 | `paper/` | Số liệu Table 6 và Figure 3 chép từ paper, phần audit Figure 3 |
 | `author_code/` | Bản sao code tác giả (commit b5637cc0), dùng cho `src_baseline/check_author_smart.py` |
@@ -151,10 +152,11 @@ Cùng 5 seed 42–46, chạy một lần bằng fp16 và một lần bằng fp32
 ### Cách tạo lại
 
 - Bảng phân tích: `python src_baseline/analyze_gap.py`. Lệnh in các bảng ra màn hình và ghi lại `gap_runs.csv`.
-- Bảng metrics: `python src_baseline/aggregate.py runs/s42 runs/s43 runs/s44 runs/s45 runs/s46 runs/gap/a --out reports/baseline_reproduce/metrics`
+- Bảng metrics: `python src_baseline/aggregate.py runs/s42 runs/s43 runs/s44 runs/s45 runs/s46 runs/gap/a runs/gap/mlm --out reports/baseline_reproduce/metrics`
 - Run gốc nằm trong:
   - `runs/s42..s46`: 5 seed gốc.
-  - `runs/gap/a`: thêm 10 seed và các dòng MLM.
+  - `runs/gap/a`: thêm 10 seed và các dòng MLM seed 42–46.
+  - `runs/gap/mlm`: các dòng MLM seed 47–56 (cùng runner `5a56bc35…`, cùng cờ `--test-every-epoch`).
   - `runs/gap/b`: fp32 và SMART trên embedding.
 - Có hai phiên bản runner:
   - 40 run gốc chạy bằng `2a2a25ae…`.

@@ -1,0 +1,1584 @@
+text,sentiment,classification
+giáo_trình chưa cụ_thể .,0,1
+giảng buồn_ngủ .,0,0
+"giáo_viên vui_tính , tận_tâm .",2,0
+"giảng_viên nên giao bài_tập nhiều hơn , chia nhóm để làm bài_tập , giảng_kỹ những vấn_đề trọng_tâm của môn_học , đưa ra phương_pháp để học hiệu_quả hơn .",0,0
+"giảng_viên cần giảng bài chi_tiết hơn , đi_sâu hơn code và chạy thử chương_trình có trong bài giảng nếu được .",0,0
+nên có giảng_viên nước_ngoài dạy để sinh_viên có cơ_hội thực_hành giao_tiếp .,0,0
+nên có bài_tập lớn đồ_án môn_học .,0,1
+"giảng_viên đảm_bảo nội_dung học , phân_tích giải nhiều bài_tập .",2,0
+"nêu rõ mục_tiêu , mục_đích môn_học để sinh_viên tiếp_thu dễ_dàng .",0,1
+có một_số vấn_đề nói chưa rõ .,0,1
+"giáo_viên tận_tình , chuẩn_bị bài_học chu_đáo .",2,0
+giảng_viên dạy hay và tâm_huyết .,2,0
+"cách tính học_phí đối_với môn thực_hành không được rõ_ràng và minh_bạch , trong khi học thực_hành sinh_viên hầu_như không sử_dụng máy_tính của trường và kiến_thức học được từ giảng_viên là rất ít so với học lý_thuyết .",0,1
+nói_chuyện dễ nghe .,2,0
+"hiểu được mục_tiêu của môn_học , thầy nhiệt_tình giúp_đỡ sinh_viên .",2,0
+"cô dạy khó hiểu , phải về nhà học thêm nhiều mới hiểu những gì cần_thiết cho môn_học .",0,0
+"truyền_đạt tốt , bám sát đề_thi , bài giảng cung_cấp đầy_đủ .",2,0
+thầy cô dạy rất nhiệt_tình !,2,0
+em không có bất_cứ một lời phê_bình nào .,1,3
+"nội_dung học quá trừu_tượng , thực_hành chưa thực_sự mang lại hiệu_quả , đa_phần sinh_viên thực_hành theo bài_tập được giao , thực_hành xong không biết mình đang làm gì , không thấy được ý_nghĩa thực_tiễn của môn_học .",0,1
+cô nên thêm phần điểm đi học thực_hành .,0,0
+cách nói_chuyện với sinh_viên gây mất cảm_tình của sinh_viên đối_với giảng_viên .,0,0
+"đồng_thời , bài giảng , theo em nhìn_nhận , thực_sự rất chi_tiết .",2,1
+truyền_đạt kiến_thức .,1,0
+rất ấn_tượng với những bài_tập thở giúp cho não_bộ được nghĩ_ngơi của cô .,2,0
+"thầy rất nhiệt_tình , giảng_bài rất hay và dễ hiểu .",2,0
+"nhưng em không mấy hài_lòng về cách giải_quyết vấn_đề của giảng_viên khi giảng_viên đã đi trễ như_vậy , thầy trực phòng thực_hành lên_tiếng bảo em ( và một_số bạn khác ) ra về .",0,0
+đôi_khi giảng_dạy quá nhiệt_tình mà quên mất cả thời_gian ( hết giờ học giảng_viên vẫn dạy thêm 10 - 15 phút ) .,0,0
+ôn_tập kỹ trước khi thi hoặc trong lúc giảng_dạy cập_nhật đến những vấn_đề có_thể cho ra trong bài thi .,0,0
+"sự nhiệt_tình , vui_tính của giảng_viên .",2,0
+"thầy cho tự tìm_hiểu , và tự tìm_hiểu khác với hiểu được vấn_đề .",1,0
+"cô dạy đều , bao_giờ cũng đến sớm và đúng giờ .",2,0
+"thầy dạy hay và có tâm , mặc_dù môn_học lịch_sử khá khô_khan nhưng chúng_em hiểu được rất nhiều bài_học qua bài giảng của thầy .",2,0
+mong thầy dạy tận_tâm hơn !,0,0
+thầy chưa có sự hướng_dẫn cụ_thể .,0,0
+không đi đúng giờ .,0,0
+môn này khó .,0,1
+tạm được .,1,3
+rât tốt .,2,3
+"khi ra đề_thi thầy nên kiểm_tra kỹ nội_dung đề , tránh để sót lỗi điển_hình như doubledot tên cột của bảng_trùng từ khóa của oracle .",0,0
+giảng_viên chưa cho sinh_viên bài_tập về nhà .,0,0
+giảng_viên chỉ lên lớp còn lại không hướng_dẫn nội_dung thực_hành cho sinh_viên .,0,0
+thầy giảng bài dễ hiểu .,2,0
+giảng bài nghe rất dễ hiểu vui_tính .,2,0
+giảng_viên thực_hành chỉ gặp sinh_viên rất ít .,0,0
+còn đi trễ .,0,0
+"thầy dạy hay , demo code trực_tiếp cho sinh_viên dễ hiểu .",2,0
+giáo_trình nên có sự trình_bày cụ_thể hơn .,0,1
+"thầy vui_tính , chuyên_môn vững .",2,0
+"dạy đúng đề_cương , ôn_tập sát với đề_thi .",2,0
+"cô dạy bài_tập rất tận_tình , dễ hiểu .",2,0
+cô rất nghiêm .,0,0
+"đề_cập về tính thực_tế , liên_quan của hệ_thống kiến_thức .",2,1
+"mỗi khi cần giảng_giải bài_tập , kiến_thức , vấn_đề gì mà sử_dụng đến mạng wifi thì rất tệ làm tốn thời_gian của thầy và sinh_viên .",0,2
+"thầy rất nhiệt_tình , sẵn_sàng trả_lời câu hỏi sinh_viên .",2,0
+nhà_trường nên cập_nhật visual studio lên phiên_bản mới nhất để tụi em thực_hành tốt hơn .,0,2
+em hy_vọng nhà_trường cải_thiện lại các máy trong phòng thực_hành để tương_ứng với số tiền đối_với số chỉ thực_hành .,0,1
+quá khó_khăn trong việc báo_cáo bài .,0,0
+"cô dạy đến hơi thở cuối_cùng , rất tận_tâm với sinh_viên , sinh_viên không rõ vấn_đề gì đề giải_thích cặn_kẽ , lâu_lâu trong giờ học kể những vấn_đề có liên_quan tới môn_học giúp cho sinh_viên định_hướng được học môn này để làm_gì tạo hứng_thú cho sinh_viên học_tập , đặc_biệt cô có giờ tiếp sinh_viên định_kỳ để để hỗ_trợ sinh_viên em rất thích điều này .",2,0
+ngoài_ra cung_cấp một_vài thông_tin bổ_sung về việc học công_nghệ_thông_tin hiệu_quả hơn .,2,1
+cô dạy nhiệt_tình và dễ hiểu .,2,0
+"giảng dễ hiểu , cho bài_tập đầy_đủ .",2,0
+"thầy vui_tính , rất nhiệt_tình với sinh_viên .",2,0
+sự nhiệt_tình và liên_hệ thực_tế của giáo_viên .,2,0
+tận_tình chỉ_bảo .,2,0
+"mong giảng_viên có_thể liên_hệ bài_học với thực_tế , cho ví_dụ nhiều hơn sinh_viên có_thể hiểu được bài .",0,0
+giảng_viên giảng nhiều bài_tập và tăng_cường ôn_tập ngữ_pháp và luyện nói .,2,0
+"tụi em tới để học chứ không phải để nghe cô chê_bai người_việt này nọ lọ chai , không phải để nghe việc cô đi dạy người nước_ngoài nói tiếng việt , cô cũng đừng đánh_giá người ta nói cái gì cho cả một tập_thể .",0,0
+đề thi khó .,0,1
+không check mail mỗi khi hỏi bài .,0,0
+nhiều tài_liệu hữu_ích .,2,1
+"đồ_án cuối kỳ trong vòng một tháng cuối , áp_dụng được quy_trình thực_tế .",2,1
+thúc_đẩy sinh_viên tự học đạt điểm cao trong các kỳ thi .,2,1
+"thì hiện_nay khóa 5 đang học môn này có cảm_nhận vẫn còn là con "" chuột_bạch "" thử_nghiệm cho môn_học .",0,1
+"thầy rất nhiệt_tình , vui_tính , dạy dễ hiểu và cặn_kẽ .",2,0
+giảng_viên nói tiếng anh không hay .,0,0
+các công_thức đã có sự đổi_mới nên cô cần cập_nhật thêm ( betweenness centrality và closeness_centrality ) tránh áp_đặt kiến_thức lên sinh_viên .,0,0
+thầy không quan_tâm đến học_sinh .,0,0
+"mong nhà_trường cần nâng_cấp các phòng thực_hành , và phong_lab khoa .",0,2
+"nhưng cách truyền_đạt và cách dạy_học rất buồn_ngủ , không hiệu_quả , rắc_rối .",0,0
+"giảng_viên vui_vẻ , thoải_mái trong giờ học , không gây áp_lực .",2,0
+không dễ_tính .,0,0
+"giảng rất hay và dễ hiểu , giúp cho sinh_viên nắm vững kiến_thức .",2,0
+"giảng_viên giảng_dạy nhiệt_tình , có đầy_đủ các hoạt_động để sinh_viên rèn_luyện và học_tập .",2,0
+"giảng_viên không dạy phần trọng_tâm của môn_học , dạy quá dài_dòng , và cần hạn_chế viết bảng .",0,0
+"giảng_viên chưa giải hết thắc_mắc của sinh_viên , còn một_vài vấn_đề chưa hiểu rõ .",0,0
+"cô dạy vui , dễ hiểu .",2,0
+được 200 điểm là đươc 1 điểm quá_trình .,1,1
+chất_lượng tốt .,2,3
+tôi thấy rất bất_mãn về việc giảng_dạy của giảng_viên mong nhà_trường chấn_chỉnh lại việt này .,0,0
+"giảng_viên giảng_dạy dễ hiểu , nhanh tiếp_thu bài , đưa ra các ví_dụ và bài_tập hay .",2,0
+thầy giảng bài quá buồn_ngủ .,0,0
+"thầy vui_tính , dạy rất dễ hiểu và rất nhiệt_tình .",2,0
+các bài thực_hành cần bám sát theo chương_trình lý_thuyết .,0,1
+tài_liệu được cấp thông_qua lớp trưởng .,1,1
+"nhiệt_tình , tài_liệu đầy_đủ dễ đọc dễ hiểu .",2,0
+thầy vui_tính trong việc dạy .,2,0
+"thầy rất tân_tâm , vui_vẻ , và có khả_năng truyền_đạt kiến_thức .",2,0
+"slide bài giảng đầy_đủ rõ_ràng , giáo_viên đúng giờ .",2,0
+cô vui_vẻ trong giảng_dạy .,2,0
+"tận_tình , chu_đáo , hiểu tâm_lý sinh_viên .",2,0
+"giảng_viên giảng_dạy tận_tâm , nhiệt_huyết .",2,0
+"giáo_viên dễ gần , phương_pháp dạy dể tiếp_thu .",2,0
+"thầy mở máy_lạnh lạnh quá ạ , mong thầy bật máy_lạnh vừa_phải thôi !",0,0
+giảng_viên nên trình_bày mẫu các bài giải nhiều hơn .,0,0
+dành ra những tiết thực_hành nghe nói_riêng tạo sự tự_nhiên cho sinh_viên khi giao_tiếp bằng tiếng anh .,2,1
+cô_giáo xinh .,2,0
+"giảng hay , dễ hiểu .",2,0
+thầy dạy cho nhiều dạng bài_tập ví_dụ hay giúp em hiểu rõ hơn môn mạng .,2,0
+chia_sẻ kiến_thức thực_tế cho sinh_viên .,2,3
+"thầy cũng vui_tính , nói_chuyện liên_hệ thực_tiễn cao .",2,0
+"nội_dung không sâu , sơ_sài .",0,1
+"giáo_viên nhiệt_tình , thân_thiện .",2,0
+chủ_yếu dựa vào năng_lực tự học của sinh_viên .,0,0
+"đúng giờ , tận_tình .",2,0
+thầy lên lớp đúng giờ .,2,0
+"giọng cô khó nghe , cô truyền_đạt chưa hay , giảng nhanh .",0,0
+sự nhiệt_tình .,1,0
+"thầy cho ít bài_tập để làm , toàn_bộ bài_tập em làm đều là do các bạn ở lớp khác chia_sẻ .",0,0
+thầy dạy rất truyền_cảm .,2,0
+thầy rất đúng giờ .,2,0
+cô có tổ_chức một hoạt_động về anh văn nhưng em thấy chưa thực_sự có hiệu_quả ( đó là ý_kiến cá_nhân của em ) .,0,0
+"giảng khó hiểu , nhưng phần_lớn là do môn giải_tích khó .",0,0
+"cô tạo được một môi_trường học_tập rất thân_thiện , thoải_mái và không kém phần bổ_ích cho sinh_viên , hy_vọng cô sẽ dạy nhiều hơn .",2,0
+khi nào sinh_viên chưa hiểu đều giảng nhiệt_tình .,2,0
+thầy dịch slide và giảng khó hiểu .,0,0
+không đăng_slide bài giảng lên course .,0,0
+cẩn_thận .,1,0
+thầy cần chủ_động về thời_gian .,0,0
+"thầy_giáo tích_cực , tâm_lý .",2,0
+"thầy tận_tâm , nhiệt_tình với sinh_viên .",2,0
+thầy dạy bám sát nội_dung cần_thiết nhiệt_tình .,2,0
+em mong thầy sẽ cung_cấp chúng_em nhiều tài_liệu chính_thống hơn để chúng_em có_thể dễ_dàng tìm_hiểu kiến_thức môn_học .,0,0
+"cô dạy nhiệt_tình , thường_xuyên chia_sẻ bài trên website môn_học .",2,0
+đã là chủ_nhật còn bắt đi học .,0,1
+thầy nhiệt_tình giảng bài !,2,0
+quá nhiều nội_dung không cần_thiết .,0,1
+thầy giảng kỹ bài .,2,0
+"cô nhiệt_tình với sinh_viên , vui_vẻ .",2,0
+"thầy dạy vui_tính , không áp_lực .",2,0
+"việc truyền_đạt kiến_thức theo lối bình_dân , khiến sinh_viên khó hình_dung , nắm_bắt được mình đang được truyền_đạt điều gì .",0,0
+và nội_dung đó không giúp sinh_viên sau_này nhiều .,0,1
+"thầy giảng bài rất nhiệt_tình , có các ví_dụ minh_họa để làm rõ vấn_đề .",2,0
+các bài_tập thực_hành giúp nâng cao kiến_thức đã học trên lớp .,2,1
+báo nghỉ không đại_trà .,0,0
+"cô dạy hay tuyệt , rất dễ hiểu .",2,0
+thầy giao đồ_án cho sinh_viên tự bơi .,0,0
+"dạy đúng giờ , thường_xuyên đưa bài_tập lên moodle , tạo cơ_hội cho học_sinh rèn_luyện kỹ_năng nghe và nói nhiều .",2,0
+giảng_viên giảng chưa được thú_vị .,0,0
+em muốn thầy dạy và sửa bài_tập .,0,0
+đừng có một chỗ tiếng anh một chỗ tiếng việt .,0,3
+giảng_dạy hay dễ hiểu .,2,0
+cần sử_dụng phòng elab và các thiết_bị nghe nhìn cho lớp chất_lượng cao .,0,2
+thầy nhiệt_tình trong cách giảng_dạy .,2,0
+"theo như danh_sách phòng đào_tạo đưa xuống , lớp_học có gần 140 sinh_viên đăng_kí .",1,3
+môn này là môn quan_trọng trong truyền_thông nên cần thực_hành trên phần_mềm và thiết_bị mô_phỏng nhiều hơn .,0,1
+giảng_viên giảng_dạy theo đúng quy_trình .,1,0
+"hiện_tại tương_đối tốt , không cần điều_chỉnh gì thêm .",2,3
+"giảng_dạy tận_tâm , nhiệt_tình , hay .",2,0
+vui tính hòa đồng .,2,0
+"giảng_viên thường cho một_số bài_tập nâng cao , hơi quá_sức đối_với tụi em .",0,0
+"thầy khá hiền , ít nói .",0,0
+"cô dạy dễ hiểu , bài giảng sống_động .",2,0
+"thầy cho bài_tập về quá nhiều , thời_gian cố_định , ngắn nên không đủ thời_gian để làm bài .",0,0
+"giáo_viên dạy tận_tình , dễ hiểu , hay giải_đáp những thắc_mắc của sinh_viên về môn_học .",2,0
+nhà_trường nên có nhiều giáo_trình bài_tập và hướng_dẫn_giải bài_tập nhiều hơn .,0,1
+"tận_tâm , nhiệt_tình giải_đáp thắc_mắc trong quá_trình học .",2,0
+"thầy dạy vui , không khô_khan , liên_tưởng tốt .",2,0
+tệ đến mức không tả được .,0,3
+"giảng_viên diễn_đạt quá nhanh , lớp thường rất đông , rất thiệt_thòi cho sinh_viên ngồi cuối lớp do không nhìn thấy nội_dung bài giảng .",0,0
+thầy không cho slide bài giảng cũng không giới_thiệu tài_liệu đọc thêm .,0,0
+nếu là điểm cố_định thì thầy phải cho cơ_hội cho tất_cả các sinh_viên đều nộp bài được và giải_thích rõ_ràng khung điểm này từ đầu .,0,0
+thầy tiếp_tục giảng_bài .,1,0
+"tài_liệu thầy cung_cấp đầy_đủ , cụ_thể .",2,0
+cực_kỳ nhiệt_tình .,2,3
+"thầy ít có giảng về bài_tập , chỉ cho sinh_viên tự tìm_hiểu .",2,0
+giáo_viên có kiến_thức tốt .,2,0
+"nhờ thầy cho bài_tập và sửa thầy không làm , và cũng giảng nhưng_mà để làm được bài thì em muốn có được cách làm rõ_ràng .",0,0
+"học thầy rất là vui , mà_còn biết thêm nhiều cái hay nữa .",2,0
+có_thể tổ_chức các buổi seminar nhằm kích_thích sinh_viên tìm_hiểu thêm và ứng_dụng tốt hơn môn_học này vào thực_tiễn .,2,1
+"thầy giảng bài khá là dễ hiểu , chậm nhưng chắc .",2,0
+"dạy dễ hiểu , và cung_cấp thêm những phương_pháp học_tập hiệu_quả .",2,0
+"cô dạy rất dễ_thương , dễ hiểu , nắm chắc kiến_thức .",2,0
+"thầy giảng_dạy nhiệt_tình , hăng_say !",2,0
+"thêm nữa , thầy cũng không muốn nhìn thấy một sinh_viên ngủ gục trên bàn mà vẫn có tên trong danh_sách điểm_danh .",0,0
+thầy dạy dễ hiểu tận_tâm nhiệt_tình với sinh_viên .,2,0
+giải bài_tập cho sinh_viên nhiều .,2,3
+môn mạng máy_tính còn nặng_nề lý_thuyết rất nhiều .,0,1
+thầy giảng bài rất hay !,2,0
+không áp_lực khi học_tập .,1,0
+"tiết học căng_thẳng , phải thường_xuyên đúng giờ .",0,0
+"nhưng thầy rất ra_dáng một doanh_nhân thành_đạt , một người diễn_thuyết tạo cảm_hứng nhiều hơn là kiến_thức phù_hợp với sinh_viên .",2,0
+thầy lồng_ghép ví_dụ thực_tiễn vào bài_học .,2,0
+"cô dạy nhiệt_tình và có tâm_huyết , dễ hiểu , cô dạy rất hay và cung_cấp cho em nhiều kiến_thức , trình_độ của cô rất giỏi .",2,0
+nâng_cấp hệ_thống loa cho các phòng học .,0,2
+"giảng_viên nhiệt_tình , tâm_huyết , giảng_dạy tốt .",2,0
+đề_nghị trừ lương .,0,0
+"thầy dạy hay nhưng không ôn_tập thi giữa kỳ , cuối kỳ cho sinh_viên .",0,0
+thầy dạy hay và tận_tâm với em .,2,0
+"nhiệt_tình , tận_tâm , giảng dễ hiểu .",2,0
+"em thích cách dạy của thầy , làm bài_tập sau khi giảng xong lý_thuyết cho sinh_viên có_thể nhớ ngay hôm ấy không cần về nhà coi lại bài .",2,3
+giảng_viên cần đảm_bảo thời_gian lên lớp .,0,0
+giảng_viên cho bài_tập bám sát nội_dung giảng_dạy .,2,0
+giảng_viên nhiệt_tình !,2,0
+máy_chiếu tại phòng học còn mờ .,0,2
+viết quá nhiều ví_dụ trùng_lặp ( dạng ) với nhau .,0,0
+tài_liệu môn_mạng máy_tính được dịch từ computer networking a_topdown aproach còn hơi khó hiểu để sinh_viên học hay tự nghiên_cứu .,0,1
+thầy rất nhiệt_tình giảng_dạy .,2,0
+"em mong_muốn được nghe thầy kể nhiều câu_chuyện về sự_nghiệp và cuộc_đời , gian_nan từng_trải của thầy trong các bài_học nhiều hơn_nữa , có lẻ sinh_viên sẽ học được nhiều điều hơn .",0,0
+"em thấy lúc giảng , thầy chỉ ngồi yên trên ghế và đọc slide dẫn đến sinh_viên cảm_thấy nhàm_chán .",0,0
+thầy dạy rất dễ hiểu .,2,0
+"dạy chắc_chắn kiến_thức , truyền_đạt tốt .",2,0
+"thầy dạy rất hay , quan_tâm học_sinh .",2,0
+giáo_trình môn_học được cập_nhật .,2,1
+thầy thường_xuyên đặt ra những deadline không phù_hợp với sinh_viên .,0,0
+phương_pháp dạy thực_hành rất hay .,2,0
+"giảng_viên tận_tâm , nhiệt_tình , dễ_tính , lên_lớp đúng giờ .",2,0
+quá khắt_khe colonsad .,0,3
+em mới gặp thầy buổi thực_hành cũng là buổi thi .,1,1
+"cô dạy hay , lại rất đúng giờ dạy_học .",2,0
+giải_đáp rất tận_tình mọi thắc_mắc của sinh_viên .,2,0
+"cô dễ_thương , tận_tâm với sinh_viên .",2,0
+cách giảng của thầy hơi đều và chậm .,0,0
+"giảng_viên nhiệt_tình , tạo nhiều hoạt_động cho lớp .",2,0
+cần thể_hiện chi_tiết hơn nội_dung của môn_học và nhiều ví_dụ minh_họa hơn .,0,1
+không đảm_bảo giờ lên_lớp .,0,0
+"mỗi khi báo_cáo tiến_độ đồ_án trong năm_học , giảng_viên chỉ chỉ ra duy_nhất một lỗi trong đồ_án cho sinh_viên , mà không xem toàn_bộ đồ_án để góp_ý cho sinh_viên mọi sai_sót để sinh_viên khắc_phục trong lần báo_cáo cuối kỳ .",0,0
+quá tệ .,0,3
+"giảng_viên tận_tâm , nhiệt_tình , vui_vẻ .",2,0
+tăng thêm thời_lượng môn_học .,0,1
+giúp học_sinh chủ_động trong việc thực_hiện đề_tài và nhiệt_tình giúp_đỡ sinh_viên tìm tài_liệu .,2,1
+cung_cấp nhiều kiến_thức bổ_ích cho sinh_viên .,2,0
+"giảng_viên nhiệt_tình trong giảng_dạy , hệ_thống tài_liệu học_tập được update tốt .",2,0
+giáo_viên nhiệt_tình giảng_dạy .,2,0
+thầy dạy rất nhiều điều bổ_ích từ học_tập đến cuộc_sống ngoài đời .,2,0
+"cách diễn_đạt dễ hiểu , vui_vẻ , tận_tình với học_sinh .",2,0
+"hay đi trễ , dạy lố thời_gian .",0,0
+tận_tình chu_đáo dễ hiểu .,2,0
+giải_đáp thắc_mắc sinh_viên kỹ_lưỡng .,2,0
+"phần đầu môn này nói về những chủ_đề đại_loại như "" làm thế_nào để thành_công "" , "" thói_quen người thành_công "" hay_là bàn về tương_lai vdotv .",1,3
+"dạy nhiệt_tình , vui_vẻ trong giờ học .",2,0
+như_vậy là được .,2,3
+thấy rất vui_tính .,2,0
+"giảng_dạy quoa loa , thiếu nhiệt_tình , chương_trình học hoàn_toàn không ăn_khớp với lý_thuyết .",0,0
+giảng_viên nên dạy kỹ hơn các phần quan_trọng của bài_học .,0,0
+"giáo_viên không nhiệt_tình , tận_tâm với sinh_viên .",0,0
+"môn_học này không có sắp_xếp lịch_học , phòng học .",0,1
+"nhiều bạn phải học_tiết 4 , 5 phải nghỉ giữa_chừng để đi học môn khác như tư_tưởng .",0,1
+khả_năng tiếng anh .,1,3
+không công_bố điểm giữa kỳ sớm .,0,1
+nên giảng những phần cần chú_trọng nhiều hơn .,0,0
+phương_pháp giảng tốt .,2,0
+thầy dạy dễ hiểu !,2,0
+"thầy lên lớp rất trễ , giờ học bắt_đầu vào lúc 13 h00 thì có hôm 13 h30 hoặc 14 h00 thầy mới vô .",0,0
+"thầy dạy hay , cung_cấp thông_tin rất chi_tiết , ví_dụ dễ hiểu .",2,0
+"giảng_viên vui_vẻ , giảng_dạy tận_tâm , đến lớp đầy_đủ đúng giờ .",2,0
+giảng_viên tận_tâm nhiệt_tình vui_vẻ .,2,0
+giọng nói khó truyền_đạt kiến_thức một_cách hiệu_quả nhất .,0,0
+học còn khá tẻ_nhạt .,0,3
+"giọng nói hơi nhỏ , khó tiếp_thu !",0,0
+"dạy rất kỹ , rất nhiệt_tình , thêm giờ để hoàn_thành xong bài giảng , hỏi_han sinh_viên , nói_chung là rất tuyệt .",2,0
+thực_hành nhiều hơn .,0,1
+"tiết học vui_vẻ , thoải_mái , thầy dạy nhiệt_tình , dễ tiếp_thu .",2,0
+nhiều phần nâng cao thường bị giảng_viên bỏ_qua .,0,0
+dời lịch hẹn gặp sinh_viên nhưng không thông_báo .,0,0
+"phòng học , micro , máy_chiếu cần nâng_cấp và cải_thiện và bảo_trì thường_xuyên hơn .",0,2
+tận_dụng hết thời_gian .,2,0
+"thầy dạy tận_tâm , nhiệt_tình , tạo nhiều điều_kiện giúp_đỡ , hỗ_trợ sinh_viên học_tập tốt môn_học .",2,0
+đôi_lúc giảng quá nhanh .,0,0
+"thầy dạy với tư_tưởng là sinh_viên biết hết cả rồi , lên giảng_dạy chỉ nói vài chỗ .",0,0
+cần đổi_mới tài_liệu .,0,1
+do_đó làm hiệu_quả học chưa đạt mức tốt nhất .,0,3
+"tận_tâm , nhiệt_tình giảng_dạy , tiết_học có lồng_ghép nhiều chuyện đời vui_vẻ , lý_thú , không gây buồn_ngủ .",2,0
+"hoạt_động dạy và học rất sôi_nổi , rất tận_tâm và nhiệt_huyết !",2,3
+"nhiệt_tình , tạo không_khí học_tập tốt .",2,0
+thầy nên up các bài giải lên để em so_sánh kết_quả cho dễ .,0,0
+"cơ_sơ vật_chất tốt , giảng hay .",2,0
+"em nghĩ nhà_trường nên nâng_cấp phiên_bản của sql vì sql 2005 mà nhà_trường đang cho sinh_viên thực_hành còn thiếu_sót nhiều chức_năng , hỗ_trợ .",0,2
+"giảng_viên cũng hỗ_trợ nhiều kiến_thức cho sinh_viên , giúp sinh_viên hiểu bài tốt hơn .",2,0
+dạy nói hơi nhỏ .,0,0
+em thấy cô dạy rất hay .,2,0
+thầy dạy rất nhiệt_tình .,2,0
+"sinh_viên lớp chất_lượng cao nhưng lại xếp thi_phòng thực_hành của lớp thường , việc cấu_hình máy mất hơn nửa tiếng cho cả lớp , chưa kể còn nhiều bất_cập khi làm bài thi .",0,2
+"cách truyền_đạt kiến_thức dễ hiểu , sự hài_hước vui_vẻ .",2,0
+"phương_pháp dạy của thầy rất hay , cho điểm rất rõ_ràng .",2,0
+tận_tình nhiệt_huyết .,2,0
+"giáo_viên giảng_bài dễ hiểu , nhiệt_tình .",2,0
+"tận_tâm , nhiệt_tình , đúng giờ .",2,0
+"cô nhiệt_tình , tận_tâm , dạy dễ hiểu , quan_tâm học_sinh , lớp hoạt_động sôi_nổi , phát_âm dễ nghe , dễ hiểu .",2,0
+"giáo_viên dạy nhiệt_tình , dễ hiểu .",2,0
+cách_thức diễn_đạt chưa đạt hiệu_quả tốt .,0,0
+nội_dung bài giảng khó hiểu .,0,0
+không hài_lòng với sự_cố_gắng của bản_thân mình .,0,3
+lịch học bù không phù_hợp với sinh_viên .,0,0
+một người thầy như vậy thì làm_sao có_thể dạy được học_sinh tốt .,0,0
+"đúng từng câu chữ thì ok , còn lại failse .",0,1
+good .,2,0
+khó tính .,0,0
+do học_khoa khác nên dạy không theo kịp tiếng độ của chương_trình .,0,0
+"giảng_viên dạy hay , tận_tâm , dễ hiểu bài .",2,0
+giảng_viên tận_tâm và nhiệt_tình .,2,0
+quan tấm sinh_viên nhiều hơn .,0,0
+giáo_viên nên làm nhiều bài_tập mẫu cho sinh_viên .,0,0
+không nên dừng lại chỉ ở mức khái_niệm .,0,1
+"mong_muốn nhà_trường , khoa cùng giảng_viên có_thể thay_đổi nội_dung sao cho hấp_dẫn hơn .",0,1
+nhiệt_tình_yêu nghề .,2,0
+"ít kinh_nghiệm , dạy khó hiểu , kỹ_năng giao_tiếp kém , giảng bài cực khó hiểu .",0,0
+"dễ hiểu , tích_cực trong việc giải_đáp thông_tin của học_sinh .",2,0
+thầy thân_thiện .,2,0
+hướng_dẫn dạy_học tận_tình .,2,0
+speaking vừa_rồi cô không công_bằng .,0,3
+"em không_thể nghe được thầy nói gì do khác vùng_miền , cách giảng_dạy chưa có sức hấp_dẫn .",0,0
+"cần giảm bớt căng_thẳng , dồn_dập tiết_học .",0,1
+cô hướng_dẫn làm đồ_án rất nhiệt_tình .,2,0
+"thầy giảng hay , dễ hiểu , có nhiều ví_dụ .",2,0
+"thầy dạy nhiệt_tình , kiến_thức bộ_môn chuyên_sâu , cần phát_huy .",2,0
+"giảng_viên giảng_dạy tốt , dễ hiểu .",2,0
+"giảng_viên giảng_bài khó hiểu , đặt nặng lý_thuyết khiến sinh_viên khó hiểu dễ gây chán_nản .",0,0
+"nhiệt_tình , nhưng đôi_khi quá nhiệt_tình , giảng_bài một_cách quá nhiều khiến em không_thể nhớ hết được .",0,0
+ôn kiến_thức bằng cách chơi trò_chơi .,2,1
+môn này thầy dạy rất mơ_hồ .,0,0
+môn_học cần phải gần_gũi với thực_tiễn ở việt_nam .,0,1
+"cô rất nhiệt_tình , tận_tâm và gần_gũi .",2,0
+giảng_viên dạy rất dễ hiều .,2,0
+"thầy có lòng giúp sinh_viên , rất tốt .",2,0
+cần tạo cảm_hứng học hơn cho sinh_viên .,0,0
+sau môn_học toàn kiến_thức lý_thuyết mà không biết vận_dụng kiến_thức đó như_thế_nào .,0,1
+mini test trong cả khóa_học nhiều hơn .,0,2
+đồ_án thầy phân_tích rất chuyên_sâu .,2,0
+thầy cần sử_dụng máy_chiếu khi giảng bài vì lớp khá đông !,0,0
+"thầy giảng_dạy những phần kiến_thức có hơi cao , sinh_viên không nắm_bắt kịp .",2,0
+cần lắp thêm quạt và màn che cửa_sổ .,0,2
+"thầy ơi , giảng bài cho tụi em đi !",0,0
+mong cô giúp_đỡ để cải_thiện vốn tự_vựng tiếng anh .,0,0
+"cô luôn động_viên và định_hướng sinh_viên trong việc tự rèn_luyện , trau_dồi kỹ_năng ngoại_ngữ .",2,0
+nên có giờ thực_hành của môn_học này .,0,1
+giảng_dạy tốt đạt hiểu quả cao .,2,0
+"truyền_đạt tốt , dễ hiểu .",2,0
+"phòng đào_tạo và khoa wzjwz84 nên thống_nhất lại hình_thức thi và nội_dung thi cho hợp_lý , tránh thay_đổi hình_thức thi vào gần sát cuối kỳ_học .",0,1
+"giảng_viên luôn đến lớp đúng giờ , giảng_dạy thân_thiện , tận_tâm .",2,0
+"những bài thuyết_trình chưa đủ để nâng cao kiến_thức của cá_nhân , chưa thực_sự phù_hợp với khả_năng hiện_tại của bản_thân .",0,1
+nhưng không sao .,1,1
+"giảng_viên dạy dễ hiểu , hướng_dẫn bài_tập cụ_thể .",2,0
+"cho thêm bài_tập về nhà , đề_tài thuyết_trình bằng tiếng anh , bài viết .",0,1
+"giảng_viên dạy dễ hiểu , đi dạy đúng giờ .",2,0
+giảng_viên làm_việc riêng khi sinh_viên báo_cáo .,0,0
+"nhiệt_tình , quan_tâm giúp_đỡ học_sinh .",2,0
+sức khỏe_yếu .,0,0
+giảng_viên không sử_dụng moodle để sinh_viên nộp bài_tập mà yêu_cầu gửi qua mail cá_nhân .,0,0
+giảng_viên quá tệ .,0,0
+hài_lòng hết !,2,3
+thầy dạy rất đúng giờ .,2,0
+thầy rất vui_tính gần_gũi .,2,0
+lên lớp đầy_đủ .,2,0
+giáo_viên lên lớp đúng giờ .,2,0
+hướng_dẫn cách học tiếng anh hiệu_quả cho sinh_viên !,2,0
+nhiệt_tình với sinh_viên .,2,0
+"đề thi không có tính phân_loại về kiến_thức nhiều , mà hơn nhau ở chỗ ai tỉ_mỉ hơn , ai nhanh hơn .",0,1
+khả_năng sư_phạm của cô theo em cần được cải_thiện hơn .,0,0
+thầy đẹp trai colonlove .,2,0
+giảng_viên thường_xuyên tương_tác với sinh_viên trong lúc dạy .,2,0
+cô nên yêu_cầu sinh_viên trả_lời câu hỏi nhiều hơn .,0,0
+cung_cấp lượng lớn thông_tin .,2,3
+có nhiều thứ bổ_ích .,2,1
+thầy giảng rất kỹ từ lý_thuyết cho đến bài_tập .,2,0
+nguyên_kỳ này em thấy học được mỗi môn của thầy dạy là vô .,2,0
+"thầy siêu dễ_thương , dạy có tâm .",2,0
+điều_chỉnh trang_thiết_bị giảng_dạy .,0,2
+lo cho sinh_viên .,2,0
+đôi_khi thầy hơi lan_man .,0,0
+cô_giáo tuyệt_vời .,2,0
+"đi dạy đúng giờ , truyền_đạt kiến_thức dễ nắm_bắt .",2,0
+phần thực_hành nếu có phải nộp bài nào để lấy điểm thì nên thông_báo lên moodle và cho nộp online .,0,0
+"sinh_viên được chủ_động trong giờ học , tự suy_nghĩ , tham_gia thảo_luận về bài_học và có liên_hệ thực_tế .",2,1
+chưa từng gặp giảng_viên wzjwz144 ở môn thực_hành thiết_bị mạng và truyền_thông đa phương_tiện .,0,3
+hoạt_động tham_quan rất bổ_ích .,2,0
+thầy rất nhiệt_huyết trong khi giảng bài .,2,0
+"thầy dạy hay , dễ hiểu , cho bài_tập nhiều nhưng thường quá giờ quy_định .",2,0
+"đôi_khi thầy có đến trễ một_chút nhưng các nội_dung thầy giảng_dạy đều đầy_đủ , ngoài_ra thầy còn tăng thêm các buổi tăng_cường trước các ngày thi .",2,0
+thầy không quan_tâm tiến_độ và bám sát hoạt_động học của sinh_viên .,0,0
+quay video quá_trình dạy .,2,0
+trong quá_trình dạy cô có liên_hệ thực_tế nhiều .,2,0
+thầy dạy rất nhiệt_tình ví_dụ và lý_thuyết dễ hiểu slide bài giảng tốt .,2,0
+thầy dạy khá hay và kỹ .,2,0
+truyền_đạt rất tốt .,2,0
+tận_tâm và nhiệt_tình trong giảng_dạy .,2,0
+"rất dễ hiểu , bài_tập phong_phú , đa_dạng .",2,0
+"cô dạy rất tận_tình , tạo không_khí thoải_mái trong lớp_học cung_cấp tốt mọi kiến_thức cho sinh_viên quan_tâm đến sinh_viên .",2,0
+vui nhiệt_tình tận_tâm .,2,0
+yêu_cầu bài lab chưa đủ rõ_ràng .,0,1
+"một vấn_đề nữa , em mong quý thầy_cô tạo một_không_khí hưng_thú cho sinh_viên , có_thể kể thêm chuyện ngoài lề , bao_giờ vui_vẻ thì sinh_viên cũng học tốt hơn , gò bó ép_buộc mình vào một điều gì đó đôi_khi lại phản_tác_dụng , em tin nếu làm được thế sinh_viên sẽ tự_giác đi học nhiều hơn , còn việc điểm_danh thì thủ_tục quá gây cho học_sinh tâm_lý trói buộc .",0,0
+có chuẩn_bị slide bài giảng chi_tiết với nhiệt_tình .,2,0
+"thầy dạy nhiệt_tình , cập_nhật được kiến_thức mới .",2,0
+"giảng_viên nhiệt_huyết , rất có tâm_colonhihi .",2,0
+"dạy sai kiến_thức về fork , sai giải_thuật round - robin , sai kiến_thức về bộ_nhớ .",0,0
+giảng_viên thiếu trách_nhiệm .,0,0
+"rất thích cách dạy của thầy , dễ hiểu , thầy rất tận_tình .",2,0
+"cô vui_tính , truyền_đạt được ý_kiến cho học_sinh , tạo môi_trường làm_việc nhóm hiệu_quả .",2,0
+"cô dạy rất kỹ , nhiệt_tình , cô luôn giám_sát thái_độ và chất_lượng học_tập của sinh_viên , và luôn cóc những bào_tập về nhà để sinh_viên luyện_tập thêm ở nhà .",2,0
+"giảng_viên theo_dõi , giám_sát quá_trình thực_hành .",2,0
+"thầy cho cả lớp tranh_luận về các quy_luật , các cặp phạm_trù , các nguyên_lý của chủ_nghĩa_mác - lênin .",1,0
+thầy dạy tâm_huyết và nhiệt_tình .,2,0
+"trình_bày vấn_đề đơn_giản , dễ tiếp_thu .",2,0
+"giảng_viên nên có bài sửa cho những bài thực_hành được cho làm , hoặc giảng lại cách làm sau đó .",0,0
+cần đảm_bảo thời_gian lên lớp .,0,1
+kiến_thức truyền_đạt .,1,3
+"giảng_viên nói to rõ , nhiệt_tình , tận_tâm .",2,0
+cần tăng thêm bài_tập thực_tế .,0,1
+cô tạo không_khí vui_vẻ và tạo được tinh_thần học cho sinh_viên .,2,0
+"nhiệt_tình , quan_tâm sinh_viên .",2,0
+"thầy dạy nhiệt_tình , cho nhiều ví_dụ .",2,0
+không giới_thiệu khái_quát về nội_dung .,0,1
+tâm_huyết giảng_dạy của giáo_viên .,2,0
+"những bài giảng_thiết_thực , kèm theo những hình_thức học_tập mới_lạ làm cho sinh_viên cảm_thấy bớt căng_thắng khi học .",2,0
+tài_liệu ôn_tập thi không được cung_cấp .,0,1
+không thông_báo rõ_ràng lịch_học .,0,1
+"thầy tận_tâm nhiệt_tình , dạy sát nội_dung môn_học .",2,0
+giảng_viên khuyến_khích sinh_viên tự tìm_hiểu .,2,0
+nâng_cấp phiên_bản của các phần_mềm .,0,2
+"thầy dạy hay , dễ hiểu bài , em thích điều đó .",2,0
+"giảng_viên vui_vẻ , hoạt_bát , lun tiếp_cận tìm_hiểu sinh_viên , giúp sinh_viên hiểu bài tốt hơn .",2,0
+mọi mặt đều tốt .,2,3
+đó là ý_kiến cá_nhân của em .,1,3
+cô đẩy nhanh quá nên chậm lại xíu .,0,0
+"hướng_dẫn và giảng_dạy chi_tiết , dễ hiểu .",2,0
+"thầy nhiệt_tình , giải_đáp thắc_mắc kịp_thời .",2,0
+thầy giải_thích rất chi_tiết nội_dung bài .,2,0
+"thầy cho các nhóm seminar dịch sách tiếng anh nhưng nhiều nhóm làm quá qua_loa nên em không hiểu nội_dung sách cho lắm , mặc_dù thầy có giảng lại .",0,0
+"thầy dạy nhiệt_tình , vui_tính , tận_tâm !",2,0
+tạm tạm .,1,3
+"nên tăng thời_lượng thực_hành để đủ thời_gian cho giảng_viên hướng_dẫn thực_hành hướng_dẫn đầy_đủ cho sinh_viên , môn này là môn quan_trọng trước khi vào chuyên_ngành .",0,1
+buổi học nào thầy cũng có_mặt đầy_đủ .,2,0
+"cách dạy không hay , dễ gây nhàm_chán .",0,0
+có đầy nhiệt_tình và quan_tâm việc học .,2,0
+nên có các bài_tập trên lớp và bài_tập hàng tuần để rèn_luyện kỹ_năng và vận_dụng kiến_thức học được vào thực_tế .,0,1
+cần tài_liệu point_word để dễ tiếp_thu .,0,1
+cần phân_bố thời_gian thực_hành và lý_thuyết hợp_lý hơn .,0,1
+"giáo_viên thân_thiện , tận_tâm , nhiệt_tình .",2,0
+thầy nên cho sinh_viên làm nhiều loại bài_tập .,0,0
+"giáo_viên dạy sát chương_trình , lượng kiến_thức truyền_đạt đầy_đủ .",2,0
+"cô dạy hay , rất nhiệt_tình với sinh_viên .",2,0
+"phương_pháp truyền_đạt thú_vị , tiết_học sôi_động không gò_bó .",2,0
+"thầy wzjwz288 nhiệt_tình , nghiêm_túc .",2,0
+mong thầy lên lớp đừng muộn quá .,0,0
+cách học theo nhóm rất hay .,2,0
+"hướng_dẫn tốt , nhiệt_tình giải_đáp khi sinh_viên có thắc_mắc .",2,0
+"giảng_viên nhiệt_tình dạy tốt , nhưng cô cập_nhật điểm lâu , không up bài lên course .",0,0
+"thầy không chủ_động hướng_dẫn , gây khó_khăn trong việc áp_dụng kiến_thức .",0,0
+cuối_cùng em không biết môn_học làm gì .,0,1
+"giảng_dạy đúng giờ , hiệu_quả .",2,0
+ít bài_tập làm thêm .,0,1
+chưa tạo được nhiều hoạt_động trên lớp .,0,0
+"giải_tích là một môn_học khó , thầy cần thêm thời_gian giảng_dạy và cho sinh_viên một bài thi phù_hợp trình_độ đồng_đều hơn .",0,0
+"giảng_viên nhiệt_tình , vui_tính , giảng hay và dễ hiểu .",2,0
+"em thấy có vài vấn_đề ở môn_học này , thay_vì nó là một môn_học có_thể thay bằng một đồ_án chuyên_ngành .",0,1
+"ngoài_ra , các bài hướng_dẫn thực_hành nên chú_trọng vào các vấn_đề của môn để sinh_viên có_thể vừa tiếp_cận thực_hành và tiếp_cận với đồ_án cuối kỳ .",0,1
+quá nghiêm_khắc .,0,0
+một_số chỗ nên giảng_kỹ hơn .,0,0
+"điểm thi còn nhiều bất_cập , rất nhiều bạn còn phúc_kháo .",0,1
+"giáo_viên giảng dễ hiểu , bài_tập thầy cho có tính ứng_dụng cao , và cần nhiều kiến_thức để giải_quyết .",2,0
+"thầy rất nhiệt_tình , giảng_bài dễ hiểu và tận_tâm .",2,0
+"thầy giảng rõ_ràng , dễ hiểu .",2,0
+bài_tập chưa đủ để sinh_viên thấu_hiểu .,0,1
+"giảng_dạy hay , nhiệt_tình , vui_tính .",2,0
+"không hiểu thầy có phải là giảng_viên không nữa , nói tiếng anh không_thể_nào nghe được , còn có thái_độ không nghe góp_ý của sinh_viên nữa chứ , giải_bài gì mà toàn "" this is .",0,0
+"giảng_viên nhiệt_tinh , tận_tâm .",2,0
+giảng_viên cần tập_trung đi_sâu vào kiến_thức ngữ_pháp và nhiều bài_tập hơn .,0,0
+"cô rất vui_vẻ , nhiệt_huyết .",2,0
+"cô wzjwz306 cực_kỳ nhiệt_tình , luôn biết cách tạo cơ_hội cho sinh_viên , khuyến_khích_cự chủ_động và sáng_tạo trên lớp , thẳng thắng phê_bình dù là cả lớp một_cách hết_sức xây_dựng và thức_tỉnh .",2,3
+mỗi người giảng_viên đều có một phương_pháp dạy khác nhau và trình_bày bài_tập cũng khác nhau .,1,0
+"đề_thi nằm ngoài mục_tiêu giảng_dạy quá nhiều , đề_trắc_nghiệm khách_quan mà cho tới 5 đáp_án là không hợp_lý .",0,1
+"thoải_mái , lắng_nghe ý_kiến sinh_viên .",2,0
+"sinh_viên được chia nhóm và thực_hành trên thiết_bị thật 2 buổi , 1 buổi làm_quen và một buổi hoàn_tất là hơi thiếu .",0,1
+cô cho nhiều bài_tập để rèn_luyện .,2,0
+kiến_thức môn_học có_ích .,2,1
+"thầy khá nhiệt_tình , các nội_dung giảng_dạy của thầy là những câu_chuyện thực_tế mà thầy trải qua vì_vậy tụi em thích_thú hơn .",2,0
+cần có nhiều tài_liệu được cung_cấp ngay từ buổi học đầu_tiên thuận_lợi và tạo điều_kiện cho sinh_viên tìm_hiểu và nghiên_cứu .,0,1
+"thầy wzjwz298 , dạy rất hay và dễ hiểu môn xác_suất thống_kê , cực_kỳ thích cách giảng_dạy của thầy , bài_tập và slide bài giảng thầy đều gửi đầy_đủ giúp sinh_viên nắm_bắt được bài giảng hiệu_quả .",2,0
+tốt .,2,3
+"giảng_viên tận_tình , tâm_huyết .",2,0
+giúp nâng cao kiến_thức .,2,3
+nghỉ học nhưng không thông_báo cho sinh_viên biết trước .,0,0
+đảm_bảo giờ_giấc lên lớp .,2,0
+giảng_viên giảng_dạy nhiệt_tình và hiệu_quả .,2,0
+"phương_pháp giảng của thầy hơi trừu_tượng , đề_thi có lý_thuyết mà thầy quên nhắc .",0,0
+"sự nhiệt_tình của giảng_viên , tạo động_lực cho sinh_viên học_tập tốt .",2,0
+cần có nhiều thời_gian hơn_nữa để sinh_viên có_thể tiếp_thu và vận_dụng vào trong thực_tế .,0,1
+"thầy nhiệt_tình , giảng hay .",2,0
+"chấm điểm rộng_rãi , không công_bằng .",0,0
+"đôi_lúc thầy "" chia_sẻ "" hơi nhiều thời_gian và việc học vào chương_trình thì bị bớt lại nhưng điều này cũng không mấy ảnh_hưởng gì .",1,0
+điều em hài_lòng nhất đó là thầy rất là vui_vẻ khi mà hỏi bài thầy và thầy rất nhiệt_tình trong lúc giảng_dạy .,2,0
+nhiều trang_thiết_bị thực_hành trong phòng thực_hành_điện_tử cơ_bản đa_số hư_hỏng nhiều cần phải thay mới .,0,2
+môn game là môn khó mà lượng thời_gian thực_hành quá ít .,0,1
+"slide bài giảng đầy_đủ rõ_ràng , giáo_viên đúng giờ , tạo nhiều điều_kiện cho sinh_viên .",2,0
+thầy rất nghiêm_khắc .,0,0
+cần chú_ý khắc_phục .,0,3
+"vui_vẻ , tận_tình giải_đáp thắc_mắc .",2,0
+"giảng_viên giảng_dạy quá áp_lực , gây áp_lực về điểm_số cho sinh_viên .",0,0
+"thiết_bị thực_hành không đáp_ứng yêu_cầu môn_học , như router , switch .",0,2
+"thầy giảng hay , dễ hiểu , bài_tập cho về nhà vừa sức với em .",2,0
+nên có tiết thực_hành hỗ_trợ phần đồ_án .,0,1
+"giảng_viên giảng_dạy nhiệt_tình , tận_tâm , dễ hiểu .",2,0
+nói_chuyện điện_thoại nhiều hơn giảng_dạy .,0,0
+giảng_viên rất hòa đồng với học_sinh .,2,0
+khi dùng micro em nghe được hai giọng của thầy và của loa rất đau_đầu .,0,2
+điều này như lướt qua đầu tụi em và nó chả để lại ấn_tượng gì nên trong bài thi giữa kỳ đa_số là sai phần bài_tập .,0,3
+còn nghỉ .,0,0
+"quản_lý lớp tốt , truyền_đạt hay .",2,0
+"gần_gũi , phương_pháp dạy phù_hợp .",2,0
+"trong quá_trình giải bài_tập , giảng_viên đưa ra nhiều nhận_xét khác nhau , mỗi buổi lại giải một_cách khác nhau khiến sinh_khiên không xác_định được cách làm , hoang_mang .",0,0
+giao_viên dạy rất nhiệt_tình .,2,0
+"có bài thì một tuần deadline , có bài thì cả tháng mới deadline , có tuần thì deadline ba bài cùng lúc .",0,1
+"cô wzjwz82 dạy rất khó hiểu , nhiều bạn trong lớp không nắm được .",0,0
+"hy_vọng cô thay_đổi cấu_trúc đề_thi thực_hành , thực_ra khó thì không khó lắm , nhưng đánh_máy không kịp .",0,0
+"thầy tận_tâm , nhiệt_tình , giảng bài trên lớp kỹ .",2,0
+giảng_viên luôn nhiệt_tình với sinh_viên trong quá_trình giảng_dạy .,2,0
+"cô dạy vui_vẻ , thân_thiện với sinh_viên .",2,0
+môn_học giúp hiểu rõ về từng ngành .,2,1
+"nhiệt_huyết , vui_tính .",2,0
+nên thường_xuyên điểm_danh hơn .,0,0
+cần phòng thực_hành môn_học .,0,2
+đây là một giảng_viên có số_lượng fan đông nhất trường .,2,0
+"thầy dạy và hướng_dẫn sinh_viên làm đồ_án rất tốt và rất nhiệt_tình , luôn giải_đáp các câu hỏi của sinh_viên rất nhanh .",2,0
+nên mất_tiết khá nhiều .,0,1
+"sự nhiệt_tình tận_tâm , nếu có_thể tăng_tiết cho môn_học này thì rất tốt ạ !",2,0
+cô chấm bài_tập còn khắt_khe .,0,0
+cô nên sử_dụng micro .,0,0
+chỗ thực_hành rất nắng và nóng và dụng_cụ thực_hành rất có_hạn .,0,2
+chưa có diễn_đàn trên courses .,0,1
+giải bài_tập nhiều hơn .,0,0
+nên nhanh_chóng đưa thiết_bị thật vào thực_hành .,0,2
+"có nhiều trò_chơi mới_lạ , vui_tươi .",2,1
+mở_rộng hệ_thống bài giảng .,1,1
+đề thi ra không hợp_lý .,0,0
+"nội_dung thi , kiểm_tra quá rộng .",0,1
+"thân_thiện , tận_tình hướng_dẫn .",2,0
+"cô rất nhiệt_tình , dạy kỹ .",2,0
+giảng_viên nên hướng_dẫn sinh_viên sử_dụng myelt trong việc tự học ở nhà .,0,0
+"cô giảng hay , truyền_đạt được kiến_thức đầy_đủ .",2,0
+luôn vui_vẻ và rất nghiêm_túc trong chuyện giảng_dạy .,2,0
+"do năm nay chường trình av nâng lên một bậc , nên cũng giống như em vừa học xong av1 , lại nhảy lên thẳng av3 của năm_ngoái .",0,0
+trong một khoảng thời_gian ngắn không_thể vừa tìm_hiểu vừa làm được .,1,1
+"cách dạy thầy rất tốt , nâng cao khả_năng , kiến_thức của sinh_viên .",2,0
+tài_liệu .,1,1
+đưa ra nhiều ví_dụ cụ_thể minh_họa cho bài giảng giúp cho sinh_viên phân_biệt rõ các khái_niệm và nắm_bắt bài_học .,2,0
+"thầy dạy hay , thầy có kiến_thức sâu_rộng nhưng lại không lên_lớp đủ giờ học , thường_xuyên nghỉ học không được báo trước làm sinh_viên rất hoang_mang , thiếu kiến_thức .",0,0
+giọng rõ dễ nghe .,2,0
+"đúng giờ , dễ hiểu .",2,0
+em chưa bao_giờ gặp giáo_viên như_vậy trong suốt 3 năm năm đại_học .,1,0
+thiếu kinh_nghiệm .,0,0
+giảng_viên khá tích_cực trong việc trao_đổi các vấn_đề về đồ_án với sinh_viên .,2,0
+thời_gian làm bài_tập còn hơi dài .,0,1
+"giảng_viên rất tâm_huyết , nhiệt_tình .",2,0
+"lý_thuyết quá nhiều , không nhiệt_tình với sinh_viên .",0,0
+hướng_dẫn_giải bài_tập rất hay và chi_tiết .,2,0
+thầy giảng bài dễ hiểu và tận_tâm .,2,0
+"thưa , thầy luôn nhiệt_tâm và rất gần_gũi với sinh_viên .",2,0
+"cô dạy rất nhiệt_tình , hiểu tâm_lý sinh_viên , rất vui_tính .",2,0
+"môn_học khá nặng và có nhiều phần rất khó hiểu , thời_gian phân_bố các chương cần có sự thay_đổi cho phù_hợp , một_số phần khá khó nhưng chỉ học trong vòng vài tiết làm sinh_viên rất khó hiểu .",0,1
+"học lý_thuyết khác hẳn với thực_hành , học nhiều buổi thực_hành nhưng thầy chỉ cho 2 bài thực_hành về sân bóng mà đa_số sinh_viên không hiểu đề .",0,1
+phương_pháp dạy dễ hiểu .,2,0
+chất_lượng đào_tạo quá tốt .,2,1
+"em có ý_kiến là thầy nên ra thêm nhiều bài_tập , chia_sẻ thêm nhiều tài_liệu hơn .",0,0
+thầy giảng bài rất nhiệt_tình và đầy_đủ kiến_thức của môn_học .,2,0
+"giảng_viên đảm_bảo đủ các buổi học , nhưng rất thường_xuyên đến lớp trễ .",0,0
+giọng thầy hơi nhỏ và đều_đều làm sinh_viên buồn_ngủ .,0,0
+"giảng_viên dạy nhiệt_tình , dễ hiểu , kỹ_càng , chu_đáo .",2,0
+thầy vui_vẻ tận_tâm .,2,0
+"thầy dạy chi_tiết , dễ hiểu bài , luôn đi vào các phần trọng_tâm của bài .",2,0
+"hiện_nay theo em nhận thấy , trong khi lúc học thì sinh_viên chỉ được học về doubledot kỹ_năng ghi_chép , kỹ tổ_chức cuộc họp .",1,3
+"giảng_dạy hay , dễ hiểu .",2,0
+thầy truyền_đạt nhiều kiến_thức hay .,2,0
+"điểm thực_hành nên chia ra nhiều mục doubledot chuyên cần , bài_tập , kiểm_tra , kiểm_tra cuối kỳ .",0,1
+"giảng_viên nhiệt_tình , đưa ra nhiều bài_tập .",2,0
+"thầy dạy rất hay , rất dễ hiểu .",2,0
+cô dạy có tâm nhất luôn colonlove .,2,0
+"cô vui_tính , hướng_dẫn rất tận_tình .",2,0
+"khả_năng truyền_đạt tốt , tận_tâm , chu_đáo .",2,0
+"mong cô thay_đổi một_chút về phương_pháp như sau , có_lẽ sẽ giúp sinh_viên tiếp_cận dễ_dàng với bài_học hơn .",0,0
+nên cho làm bài_tập trên lớp sau mỗi chương .,0,0
+cô dạy hay nhiệt_tình nhất trong những giáo_viên anh văn_em đã học !,2,0
+đi dạy luôn trễ từ 10 - 20 phút .,0,0
+hoạt_động giảng_dạy logic và dễ hiểu không có gì để ý_kiến .,2,0
+"thầy nhiệt_tình , chỉ dạy dễ hiểu .",2,0
+buồn ngủ .,0,3
+"thầy dạy hay , tận_tình .",2,0
+thầy đẹp_trai nhưng trông có pha_chút nữ_tính .,0,0
+"giáo_viên chưa được tận_tâm cho lắm , nhiều buổi thực_hành giáo_viên chỉ đến đưa thiết_bị rồi đi họp .",0,0
+cách dạy của cô rất thoải_mái không gò_bó sinh_viên .,2,0
+"tận_tình , truyền_đạt dễ hiểu .",2,0
+có nhiều trò_chơi nhỏ .,2,3
+"trong giờ học thì không tập_trung vào các nội_dung chính của bài mà hỏi sinh_viên những câu không liên_quan , liên_quan về vấn_đề riêng_tư , và em không thấy được sự áp_dụng vô bài_học .",0,0
+"phòng học còn rất là bụi , phấn viết bảng thì thiếu trầm_trọng , khăn lau bảng thì rách_tả tơi .",0,2
+nếu nghỉ học thì mong thầy báo sớm cho tụi em và mong thầy giải hoặc hướng tụi em cách làm một bài_tập cũ hoặc mới một_cách cụ_thể hơn .,0,0
+cho nhiều bài_tập về nhà để luyện các kỹ_năng nghe và đọc .,2,0
+slide môn_học có đôi chỗ bị sai .,0,1
+"phòng học được sắp_xếp gần nơi thi_công wzjwz125 ồn_ào , không học được .",0,2
+"giảng_viên hòa đồng , nhiệt_huyết , tận_tâm .",2,0
+chất_lượng giảng_dạy .,1,3
+"nếu được thì mong nhà_trường hoặc giảng_viên giới_thiệu rõ hơn về môn_học , tầm ảnh_hưởng tiên_quyết của nó đối_với các môn_học chuyên_ngành về sau .",0,1
+do bản_thân .,1,3
+"giảng_viên hơi gầy , cần bồi_bổ thể_chất colonsmile .",0,0
+"giáo_viên vui_tính , nhiệt_huyết .",2,0
+"kiến_thức sát với thực_tế , được cập_nhật .",2,1
+"thầy rất vui và dạy rất nhiệt_tình , kiến_thức rất rộng .",2,0
+thiết_bị còn quá cũ_kỹ .,0,2
+"cô đọc slides nhanh quá , ít giảng cụ_thể và nêu ví_dụ lên bảng .",0,0
+"nhiệt_tình , vui_vẻ , tận_tâm .",2,0
+thầy dạy rất có tâm và giúp chúng_em hiểu rất sâu .,2,0
+giáo_viên giảng_dạy hay .,2,0
+môn_học rất khó hiểu .,1,1
+giáo_viên giảng khó hiểu .,0,0
+giảng_dạy vui_vẻ nhiệt_tình gần_gũi với sinh_viên .,2,0
+một_số máy còn không được cài_đặt phần_mềm thực_hành .,0,2
+thầy cực_kỳ nhiệt_tình !,2,0
+bài_tập mang tính ứng_dụng thực_tế .,2,1
+đây là góp_ý nhỏ của em để cô đỡ mệt thêm thôi ạ !,1,0
+"còn ít tạo cơ_hội cho sinh_viên rèn_luyện các kỹ_năng quan_trọng như nghe , nói nhiều .",0,0
+có hài_lòng .,1,0
+thời_gian quá ngắn .,0,3
+thầy nhiệt_tình giảng_dạy dù có lúc không ai thèm nghe thầy nói .,2,0
+thầy chỉ đến hỗ_trợ khi sinh_viên cần giúp .,0,0
+thực_hành .,1,1
+thầy liên_hệ thực_tiễn rất tốt .,2,0
+có .,1,0
+môn mạng máy_tính nên tăng_cường thêm thời_gian thực_hành thay_vì dạy nội_dung môn_học dạy quá nhiều lý_thuyết dẫn đến gây khó hiểu cho sinh_viên .,0,1
+"thầy hướng_dẫn tận_tâm , nhiệt_tình !",2,0
+"khả_năng truyền_đạt tốt , thân_thiện với sinh_viên .",2,0
+nên sắp_xếp lịch thực_hành phù_hợp với tiến_độ giảng_dạy lý_thuyết .,0,1
+mong khoa đổi giảng_viên cho môn này vào năm_học sau .,0,0
+"thầy rất nhiệt_tình giảng_dạy , cho_dù ít sinh_viên .",2,0
+trang_thiết_bị nên được trang_bị thường_xuyên .,0,2
+thầy lên lớp rất đúng giờ .,2,0
+thường_xuyên đi trễ và áp_đặt sinh_viên .,0,0
+khó gần .,0,0
+để thay_đổi không_khí và vừa nghỉ giải_lao .,2,3
+cuối buổi học thầy chia_sẻ kinh_nghiệm để tụi em có_thể học tốt hơn .,2,1
+"nhiệt_tình với sinh_viên , luôn đáp_ứng và trả_lời câu_hỏi khi sinh_viên thắc_mắc .",2,0
+"thầy chơi đểu em nhé , gọi em 2 lần làm em 1 con_dấu nợ đấy !",0,0
+sinh_viên có nhiều môn_học nên khó mà chỉ đầu_tư quá nhiều cho một môn .,0,1
+đa_số các kiến_thức của môn sinh_viên phải tự học hoặc học_hỏi lẫn nhau mà không có hướng_dẫn .,0,1
+"chương_trình quá nặng , quá nhiều yêu_cầu dễ bị quá_tải .",0,3
+nên biên_soạn tài_liệu tiếng việt đi kèm .,0,1
+yêu_cầu môn_học thì mập_mờ và thiếu thực_tế .,0,1
+thầy dạy đủ buổi .,1,0
+"thầy dạy nhiệt_tình , có sự tương_tác giữa người dạy và học trong suốt quá_trình học_tập .",2,0
+"thầy tâm_lý , vui_tính .",2,0
+"các mục được đánh "" không ý_kiến "" có nghĩa là em đồng_ý với điều được hỏi , không ý_kiến gì .",1,3
+phòng quá nóng và chói làm máy_chiếu bị mờ .,0,2
+sử_dụng giờ lên_lớp chưa hợp_lý .,0,0
+thầy dạy hay cho nhiều bài_tập .,2,0
+"tận_tình , giảng rõ_ràng .",2,0
+thầy rất tích_cực trong quá_trình giảng_dạy .,2,0
+khó tiếp_cận nội_dung vì slide toàn tiếng anh .,0,1
+thầy vui_tính nhiệt_tình .,2,0
+chưa giảng chi_tiết những bài_tập sinh_viên không làm được .,0,0
+"giảng_viên nhiệt_tình , giảng dễ hiểu .",2,0
+"nội_dung thực_hành còn sơ_sài , giảng_viên chưa hướng_dẫn , thông_báo trước hay giảng_giải về nội_dung thực_hành .",0,0
+"thầy rất thương sinh_viên , sẵn_sàng nói lại kiến_thức lý_thuyết khi sinh_viên chưa hiểu .",2,0
+"nhiệt_tình , truyền_đạt tốt , hiệu_quả .",2,0
+"có_thể ta sẽ tìm thấy được một phương_pháp lập_trình cho bài_toán đó tối_ưu hơn , hay hơn .",2,1
+em rất thích cách dạy này !,2,0
+"phòng lab kém , buổi đầu_tiên không cài visual , buổi thứ 2 cũng không cài , buổi thứ 3 cũng vậy sinh_viên không đi thực_hành !",0,2
+rất dễ hiểu .,2,0
+"thầy dạy có tâm , nhiệt_tình , chấm điểm công_bằng .",2,0
+"thầy dạy thêm nhiều kiến_thức hay , chia_sẻ cho lớp nhiều kinh_nghiệm đã từng học và đi làm của thầy , em thấy rất hứng_thú .",2,0
+"không_gian học thoải_mái , giảng_viên tận_tâm , không tạo nhiều áp_lực cho sinh_viên .",2,0
+cần nhắc_nhở giáo_viên này và khiển_trách nhiều .,0,0
+"giảng_viên nhiệt_tình , giảng_dạy rõ_ràng .",2,0
+"giáo_viên dạy dễ hiểu , thực_hành tốt , kích_thích tư_duy sinh_viên .",2,0
+"giảng_viên dạy quá nhanh , ít sửa bài_tập .",0,0
+chấm bài_tập hoặc đồ_án hơi gắt .,0,0
+"cách dạy thuyết_phục sinh_viên , phù_hợp với sinh_viên .",2,0
+"quy_định rõ sinh_viên phải học và làm gì ngay từ đầu học_kỳ , tránh đầu học_kỳ yêu_cầu một kiểu , giữa kỳ lại đổi làm sinh_viên khó theo kịp yêu_cầu môn_học .",0,0
+thầy có phong_cách giảng_bài gần_gũi với sinh_viên .,2,0
+giảng_viên cho quá nhiều bài_tập .,0,0
+"dạy nhanh , giải bài_tập nhanh , làm em không theo kịp .",0,0
+giáo_viên nhiệt_huyết .,2,0
+"nhiệt_tình , tận_tâm , vui_tính .",2,0
+"cần đưa ra các ứng_dụng thực_tiễn của môn_học , giúp cho sinh_viên có_thể định_hình được họ có_thể làm được những gì khi kết_thúc môn_học , đồng_thời có_thể áp_dụng kiến_thức môn_học để đáp_ứng yêu_cầu của thị_trường lao_động .",0,1
+phòng học quá bé và thời_lượng học quá ít .,0,2
+"giảng_viên dễ_thương , truyền_đạt kiến_thức tốt , dễ hiểu .",2,0
+cô chấm kỹ quá .,0,0
+dạy quá số giờ quy_định .,0,0
+cô dạy rất tận_tâm và dễ hiểu .,2,0
+chưa tận tụy .,0,0
+thu_hút em học .,2,3
+"nên cho nhiều ví_dụ và bài_tập về nhà , cung_cấp tài_liệu thêm cho các sinh_viên muốn tìm_hiểu thêm .",0,1
+thời_gian trên lớp không hiệu_quả .,2,1
+"giáo_viên không có khả_năng đứng_lớp , bài giảng dở_tệ .",0,0
+nên có nhiều buổi kiểm_tra trên lớp .,0,1
+nên giảm số sinh_viên trong 1 lớp .,0,1
+thầy luôn tích_cực trả_lời thắc_mắc của sinh_viên trên moodle .,2,0
+thầy có định_hướng dạy rất tốt về công_nghệ hiện_tại .,2,0
+giáo_viên nói hơi nhỏ .,0,0
+thầy cần sửa nhiều bài_tập hơn_nữa .,0,0
+thực_hành không cần phải lên phòng máy nhiều .,0,1
+mong thầy yêu_thương tất_cả học_trò của mình !,0,0
+"nhiệt_tình , luôn quan_tâm các sinh_viên trong mỗi buổi dạy .",2,0
+"truyền_đạt kiến_thức còn quá lan_man , thiếu ví_dụ về hệ_thống thực_tế bên ngoài , truyền_cảm_hứng chưa tốt , chưa tạo được niềm vui cho sinh_viên đến lớp .",0,0
+"giảng_dạy tận_tình , không_khí học_tập thoải_mái , vui_vẻ .",2,0
+"thầy chỉ đọc trên slide , ít có giảng nội_dung ngoài .",2,0
+nên có nhiều bài_tập vận_dụng thực_tế vào thực_hành .,0,1
+sau đó mở vào giờ khuya lúc sinh_viên đi ngủ .,0,0
+bài_tập chất_lượng .,2,1
+"tuy có một_số phần khó nhưng thầy giảng và làm ví_dụ rất dễ hiểu , có một tiết thầy giảng bằng tiếng anh rất hay .",2,0
+"bài giảng được cung_cấp đầy_đủ , hữu_ích .",2,1
+"trẻ , có nhiều cái mới , hay .",2,0
+mong cô tiếp_tục dạy như_vậy nữa .,2,0
+giảng_viên nên cho bài_tập thường_xuyên tuần nào cũng phải trả bài .,0,0
+cô dạy hay nhiệt_tình và dễ hiểu .,2,0
+"giảng kỹ , giảng nhiều phần nâng cao .",2,0
+giảng_viên hướng_dẫn sinh_động .,2,0
+nên để ngày học thực_hành chung ngày với lý_thuyết .,0,1
+thầy rất nhiệt_tình và tận_tâm với sinh_viên !,2,0
+thời khóa_biểu thực_hành cần sắp_xếp hợp_lý so với giờ học lý_thuyết .,0,1
+cô dạy rất nhiệt_tình và quan_tâm đến sinh_viên .,2,0
+giảng_viên giảng tận_tình .,2,0
+giáo_viên không đến lớp bữa nào nên em không biết nhận_xét .,1,0
+vô_cùng tuyệt_vời .,2,3
+"thầy dạy hơi nhanh , một_vài chỗ lướt hơi nhanh .",0,0
+thầy dạy nhiệt_tình dễ hiểu .,2,0
+giáo_viên tận_tình mặc_dù nhiều sinh_viên còn lơ_là .,2,0
+môn_học khá nhẹ_nhàng cho sinh_viên .,2,1
+máy_tính trong phòng thực_hành không được tốt cho lắm .,0,2
+"phòng máy nên đầu_tư đồng_bộ một_chút , tránh hiện_tượng các máy là khác nhau .",0,2
+thầy dạy đủ để thi .,1,0
+mong phòng đào_tạo xem_xét để khóa sau học được chất_lượng ạ .,0,1
+lớp trưởng trách_nhiệm kém .,0,3
+"cô dạy rất hay , vui_tính và dễ hiểu .",2,0
+em rất hài_lòng về cách dạy của thầy trong môi_trường đại_học .,2,0
+"thầy tận_tâm , nhiệt_tình với học_sinh .",2,0
+thầy hướng_dẫn thực_hành rất không tốt .,0,0
+"phương_pháp giảng_dạy phù_hợp , giải_quyết thắc_mắc nhanh_chóng .",2,0
+cần cải_thiện tốc_độ mạng .,0,2
+thầy hơi khó_chịu .,0,0
+chưa tổng_quát .,0,0
+"chỉ được thực_hành hai buổi thi vì_vậy không vận_dụng tốt kiến_thức đã học , không đảm_bảo số buổi như lúc bắt_đầu đã thỏa_thuận .",0,1
+khuôn_khổ bài_học chưa truyền được cảm_hứng cho sinh_viên .,0,0
+đề_nghị giảng_viên chuẩn_bị tốt bài giảng .,0,0
+cô rất nhiệt_tình và tận_tâm với sinh_viên !,2,0
+"giáo_viên nhiệt_tình , có trách_nhiệm , truyền_đạt dễ giểu .",2,0
+được tiếp_xúc môi_trường thực_tế ở các công_ty .,2,3
+thầy rất vui_tính và dễ gần .,2,0
+giảng kỹ và chi_tiết .,2,0
+giáo_viên hướng_dẫn tận_tâm .,2,0
+"em thấy giáo_viên dạy dễ hiểu , tận_tình .",2,3
+giọng nói dễ nghe .,2,0
+một_số vấn_đề còn khó hiểu .,0,1
+giảng_viên vui_tính nhiệt_tình .,2,0
+"thầy giảng_hơi khó hiểu , giọng đều_đều buồn_ngủ .",0,0
+cần định_hướng tạo điều_kiện cho sinh_viên giao_lưu các doanh_nghiệp để biết được yêu_cầu của họ về một người kỹ_sư .,0,1
+"giàu kinh_nghiệm , dễ hiểu , dẫn_chứng cụ_thể .",2,0
+em nhớ nhất câu phải có sự đấu_tranh mới phát_triển .,2,3
+"không kiểm_soát được lớp , không tận_tâm chuẩn_bị trước khi lên lớp .",0,0
+giáo_viên đúng giờ .,2,0
+cô dạy nhiệt_tình nhưng hơi nhanh .,0,0
+em nghĩ thầy nên cho nhiều bài_tập về nhà hơn .,0,0
+"bám không sát đề_thi , lan_man .",2,1
+không có đề_cương trên khóa học .,0,3
+giảng_viên nên thông_báo hình_thức ra đề_đề_mở hay đề_đóng để sinh_viên biết và chuẩn_bị tài_liệu để bài kiểm_tra có kết_quả tốt hơn .,0,0
+đặc_biệt là tránh để thời_gian chết .,0,3
+giảng_viên hơi khó_tính .,0,0
+"thầy dạy tận_tâm , nhiệt_tình , truyển đạt dễ hiểu .",2,0
+"thầy dạy rất kỹ và chi_tiết , rất quan_tâm đến học_sinh .",2,0
+ít cho học_sinh luyện kỹ_năng nghe nói .,0,1
+giảng_viên nên giảng chậm lại và phân_tích trọng_tâm từng đề_mục của bài_học .,0,0
+funny .,2,3
+quá nhiều lý_thuyết khiến sinh_viên không tiếp_thu kịp vào không biết cách vận_dụng .,0,1
+mong thầy đổi phương_pháp dạy và cách phản_biện với sinh_viên .,0,0
+em nghĩ là nhà_trường không nên tổ_chức học thực_hành .,0,1
+sự_cố này kéo_dài hơn một tháng mới chấm_dứt .,0,3
+"cô_giáo rất tích_cực trong giảng_dạy , truyền_đạt kiến_thức tới sinh_viên rất hay .",2,0
+cần thực_hành thêm nhiều bài_tập .,0,1
+giúp cho sinh_viên tập_trung vào thiết_kế mạng phù_hợp với mục_đích môn_học .,2,0
+giảng_viên giải_đáp các thắc_mắc tại lớp tận_tình .,2,0
+thay_vì cho làm kiểm_tra wecode thì cho làm trên lớp thuận_tiện hơn .,0,1
+"nói to , rõ .",2,0
+thiếu sự giảng_dạy và khả_năng truyền_đạt không hiệu_quả .,0,0
+"hướng_dẫn làm đồ_án còn chưa rõ_ràng , chưa hướng_dẫn cho sinh_viên một_cách cụ_thể về các kỹ_năng đứng trước đám đông .",0,0
+"các bài giảng khó tiếp_thu , hiểu được .",0,1
+thầy dạy vui_tính .,2,0
+thầy dạy được .,2,0
+nhà_trường nên giúp_đỡ thầy trong việc giảng_dạy vì môn này không đúng chuyên_môn của thầy .,0,1
+cung_cấp nhiều kiến_thức mở_rộng hữu_ích .,2,0
+"giảng_viên rất nhiệt_tình , tạo mọi điều_kiện cho sinh_viên hoàn_thành tốt môn_học .",2,0
+thầy rất nhiệt_tình trong việc giảng_dạy và hướng_dẫn sinh_viên .,2,0
+cách truyền_đạt của cô khá khó hiểu .,0,0
+"nhiệt_tình , giảng_dạy chi_tiết cụ_thể .",2,0
+"thầy biết sâu_rộng và có nhiều chủ_đề_giảng mang tính thực_tiễn , thực_tế bên cạnh việc giảng_dạy môn giải_tích .",2,0
+"giảng_viên không hướng_dẫn thực_hành , vào phòng thực_hành làm các bài lab và nộp , không có sự hướng_dẫn , sinh_viên nào chưa hiểu giảng_viên yêu_cầu đến lớp lý_thuyết để hỏi vào phòng thực_hành , giảng_viên ngồi trên máy_tính , sinh_viên bên dưới làm gì tùy_thích , đến hạn nộp lab xem như hoàn_thành !",0,0
+thầy dạy dễ hiểu và dễ tiếp_thu .,2,0
+em mong_muốn thầy phân_bổ thời_gian dạy hợp_lý hơn .,0,0
+nên thu nhỏ lớp_học lại .,0,2
+thường_xuyên cho bài_tập về nhà .,2,0
+"giáo_viên nên liên_hệ với giáo_viên lý_thuyết , để có nội_dung thực_hành_sát với nội_dung giảng_dạy trên lớp .",0,0
+thầy dạy nhiệt_tình bài_tập và slide hay .,2,0
+thực_tiễn .,1,1
+"thầy_giáo nhiệt_tình , tận_tâm .",2,0
+mong phòng đào_tạo không sắp cho thầy dạy lớp em nữa .,0,0
+"giảng_viên nhiệt_tình giảng_dạy , giúp_đỡ sinh_viên rất nhiều .",2,0
+"tận_tâm , kỹ_lưỡng .",2,0
+"lên báo_cáo thì "" đuổi về "" , thái_độ với sinh_viên quá là tệ .",0,0
+mong thầy_cô xem_lại mức_độ ra bài_tập hoặc đưa ra hướng_dẫn cụ_thể hơn dành cho sinh_viên .,0,0
+nên điều_chỉnh môn này thời_gian nhiều hơn .,0,1
+nội_dung dạy không hấp_dẫn !,0,0
+rất hay và quá hay .,2,3
+thầy nên giảng chậm lại để học_sinh dễ hiểu hơn và cho nhiều bài_tập để học_sinh có_thể áp_dụng được .,0,0
+học patin vui .,2,3
+"cách trình_bày , diễn_đạt kiến_thức chưa được tốt .",0,0
+cải_thiện_tốc dộ_mạng .,0,2
+"giảng_viên dạy dễ tiếp_thu , nhiệt_tình .",2,0
+"thầy giảng bài rất tận_tâm , dễ hiểu , nhưng tiết_dạy kéo_dài rất ngắn .",0,0
+"giảng_dạy dễ hiểu , cuốn_hút sinh_viên !",2,0
+"giảng_viên dạy nhiệt_tình , chu_đáo , tận_tâm , tạo mọi điều_kiện cho sinh_viên phát_triển kỹ_năng suy_luận .",2,0
+giảng nhanh .,0,0
+"hiểu được sơ_lược về một hệ điều_hành , biết được một_số thuật_toán cần_thiết của môn_học .",2,1
+cho làm bài_tập nhiều hơn_nữa .,0,0
+cô_giáo dạy hay .,2,0
+cách dạy khoa_học .,2,0
+dạy vui_vẻ va_nhiệt_tình .,2,0
+"giảng_viên nhiệt_tình , tận_tình giải_thích khi sinh_viên thắc_mắc .",2,0
+chưa đảm_bảo thời_gian lên lớp .,0,0
+cần tài_liệu chính_thức cho phần lý_thuyết hơn_nữa .,0,1
+"cô dạy kiến_thức còn sư_phạm , khó áp_dụng thực_tế .",0,0
+cần trang_bị thêm các rèm che cho các phòng học ở dãy nhà c nhằm tránh tình_trạng không thấy rõ máy_chiếu .,0,2
+hỗ_trợ nhiều bài_tập giúp nâng cao trình_độ .,0,1
+"gần_gũi , hòa đồng , vui_tính .",2,0
+đây là môn đầu_tiên học thầy và cũng nghe mọi người nói thầy dạy và chấm điểm khó .,0,0
+dễ tính .,2,1
+"có một nhóm seminar và mỗi tuần có một nhóm thực_hiện thuyết_trình , bên cạnh đó khoảng 2 - 3 tuần đầu học_kỳ là giáo_viên nghỉ dạy , thế nên hầu_như là tuần nào cũng có seminar và cách giảng_dạy của giảng_viên là như trên .",0,0
+nên tăng_cường các kỹ_năng nghe và nói cho sinh_viên .,0,1
+"giảng_viên tận_tâm , nhiệt_tình với sinh_viên .",2,0
+"thầy dạy tận_tình , khá rõ_ràng .",2,0
+đảm_bảo giờ lên_lớp .,2,1
+nhiệt_tình tận_tâm .,2,0
+giảng_viên dạy được .,1,0
+em cảm_ơn thầy nhiều ạ .,1,0
+giáo_viên thân_thiện .,2,0
+môn_học nên có thêm phần ví_dụ về áp_dụng thực_tiễn .,0,1
+"học_tập thoải_mái , không áp_lực .",2,0
+"nâng cao trang_thiết_bị phòng học doubledot máy_chiếu , quạt , ổ_điện .",0,2
+"thầy giảng_dạy nhiệt_tình , hiệu_quả .",2,0
+em xin đóng_góp là giáo_viên dạy thực_hành và giáo_viên dạy lý_thuyết cần có sự trao_đổi với nhau để có sự thống_nhất trong nội_dung bài_học cho sinh_viên .,0,0
+"hay đi trễ , giảng buồn_ngủ .",0,0
+"bài_tập thầy cho quá dễ và không có tính bắt_buộc nên sinh_viên hay "" ngó_lơ "" , lần sau thầy cứ trừ_điểm quá_trình là mấy bạn tự_khắc làm liền à colonbigsmile .",0,0
+"cách giảng_bài khó hiểu , vòng_vèo , không theo chủ_đề .",0,0
+phần speaking rất dễ hiểu .,2,1
+tiếng anh chuẩn .,2,0
+phương_pháp giảng_dạy hay .,2,0
+"tận_tình với sinh_viên , dạy tốt .",2,0
+"cô dạy rất nhiệt_tình , bài giải đầy_đủ !",2,0
+thầy biết lắng_nghe ý_kiến từ học_sinh .,2,0
+giảng_viên cần có tâm hơn .,0,0
+truyền_đạt khó hiểu .,0,0
+nhanh .,1,3
+thầy dạy thiếu nhiệt_tình .,0,0
+không up tài_liệu lên courses .,0,0
+"thầy nhiệt_tình tận_tâm , đề_cập thực_tế và các phương_pháp học dễ hiểu .",2,0
+ví_dụ không thực_tiễn .,0,1
+"thầy giảng rất dễ hiểu , hay , có tài_liệu rõ_ràng , đồng_thời có kèm theo bài_tập để luyện_tập .",2,0
+cái này là bức_xúc với cách xếp lịch_học chứ không hề có vấn_đề gì với giảng_viên .,0,1
+môn_học rất là hữu_ích .,2,1
+tma qua dạy làm cho thầy thiếu thời_gian nhưng hầu_như thầy dậy rất kỹ .,2,0
+"giảng dễ hiểu , thu_hút , hấp_dẫn .",2,0
+giảng_viên giảng nhanh .,0,0
+nên dùng giáo_trình tập_trung kỹ_năng nghe nói nhiều hơn .,0,1
+"dạy có tâm_huyết với sinh_viên , giảng và hướng_dẫn làm bài_tập tốt .",2,0
+"thầy tận_tâm , vui_tính .",2,0
+thầy cần xem rõ cách dạy trên lớp .,0,0
+thầy đưa ra những tinh_huống thực_tế rất hay .,2,0
+"thiết_bị phòng lab cũ , chưa đáp_ứng được yêu_cầu thực_hành .",0,2
+"phòng thực_hành kém chật_lượng , quá nhỏ , nhiều bạn thực_hành phải làm bài_tập bên ngoài hành_lang rồi mới vào trong chấm được .",0,2
+"thầy rất vui , cực_kỳ nhiệt_tình .",2,0
+thầy thường hay cho nghỉ .,0,0
+kiến_thức môn_học nhàm_chán .,0,1
+thầy nghiêm_khắc và nhiệt_tình .,2,0
+chữ_viết khá nhỏ .,0,3
+đôi_lúc nói nhanh nghe không kịp .,0,0
+"giảng_viên vui_tính , có tâm_huyết .",2,0
+điểm danh quá nhiều .,0,0
+nâng cao thiết_bị giảng_dạy .,0,2
+buổi thực_hành giáo_viên không đi buổi nào .,0,0
+nhiều hoạt_động giao_lưu với học_sinh .,2,0
+giảng_viên giảng_dạy khá nhanh_khiền nhiều sinh_viên không theo kịp đặc_biệt là phần lý_thuyết .,0,0
+em không học giáo_viên này ạ !,1,0
+"tóm_lại , đồ_án cuối kỳ không nên đánh_giá phần nội_dung vì đề_bài đã không thiết_thực thì không_thể_nào bắt sinh_viên làm đạt yêu_cầu được .",0,1
+"thời_gian thực_hành quá ít , phân_bổ không phù_hợp .",0,1
+"giáo_viên tận_tình , giảng_bài dễ hiểu dễ tiếp_thu .",2,0
+chỉ_dẫn làm bài chưa hiệu_quả cho sinh_viên .,0,0
+"thông_báo học quá trễ , qua kỳ_thi giữa kỳ 2 - 3 tuần mới có thông_báo học buổi học thực_hành đầu_tiên .",0,1
+"không ý_kiến , môn_học rất tốt .",2,1
+đề_nghị nhà_trường nâng_cấp .,0,3
+hơi đi_sâu vấn_đề khác ( lạc_đề ) .,0,0
+có các bài_tập hay bài kiểm_tra đánh_giá kiến_thức theo từng tuần .,2,1
+"thầy cho nghỉ thường_xuyên , nhưng không báo trên hệ_thống của trường mà toàn thông_báo trên facebook của thầy .",0,0
+"phòng học quá nóng , xin nhà_trường trang_bị thêm quạt cho các phòng học dãy c .",0,2
+thầy đến lớp trễ và nghỉ nhưng không báo trước .,0,0
+sửa và giảng_bài khá nhanh .,0,0
+giáo_viên thực_hành và lý_thuyết nên liên_hệ với nhau để hỗ_trợ sinh_viên tốt hơn trong việc học .,0,0
+thầy nói tiếng anh sinh_viên cũng khó hình_dung được câu nói ( phát_âm ) .,0,0
+"giảng quá nhanh và quá phức_tạp trong một buổi học , không giải bài_tập hoặc ví_dụ mẫu bao_giờ , nên sinh_viên khó_lòng làm được các hình_thức bài_tập mới và khó .",0,0
+"thầy rất nhiệt_tình hay , thầy đưa nhiều ví_dụ mẫu cho sinh_viên dễ hiểu và luôn có đề_mẫu làm thử khi gần thi giữa kỳ và cuối kỳ .",2,0
+"lôi_cuốn , thú_vị , biết thêm nhiều kiến_thức lạ , có tính áp_dụng cao .",2,0
+đề_nghị giảng_viên nên sử_dụng hệ_thống moodle nhiều hơn !,0,0
+thầy dạy chưa đúng giờ .,0,0
+nên lắng_nghe ý_kiến của sinh_viên nhiều hơn .,0,0
+tận_tâm và nhiệt_huyết .,2,0
+có chuyên_môn cao .,2,0
+"giảng_dạy nhiệt_tình , đảm_bảo kiến_thức chuyên_sâu .",2,0
+"thầy dạy không nhiệt_tình , cứ chiếu slide rồi cho sinh_viên chép .",0,0
+cô giảng quá nhanh .,0,0
+sự nhiệt_tình của giáo_viên .,2,0
+thầy hiểu học_sinh cần đạt được kiến_thức gì trong học kỳ_đầu và tạo điều_kiện để học_sinh học_tập .,2,0
+"nhiệt_tình , vui_tính !",2,0
+giáo_viên giúp_đỡ học_sinh rất nhiều .,2,0
+"nhiệt_tình , tâm_huyết với học_sinh .",2,0
+lịch học phân_trùng thời_gian sinh_viên không_thể tham_gia học thực_hành .,0,1
+đó là hệ_thống máy thực_hành còn kém .,0,2
+giáo_trình tiếng anh .,0,0
+"thầy dạy rất hay , nhiệt_tình , dễ hiểu .",2,0
+"thầy rất tận_tình , cho bài_tập rất nhiều , mở_rộng nhiều kiến_thức cho sinh_viên .",2,0
+thầy có liên_hệ với thực_tế khiến bài_học dễ tiếp_thu hơn .,2,0
+"chương_trình dạy hơi khó hiểu , khó tiếp_thu và hơi ít bài_tập để ôn_luyện cho học_sinh .",0,0
+em cảm_thấy hứng_thú trong tiết_học của thầy .,2,0
+"không_khí thoải_mái , không bị gò_bó về vấn_đề bài_tập , không bị áp_lực .",2,1
+đôi_khi dạy hơi nhanh khiến học_sinh hơi hoang_mang .,0,3
+"hơi lan_man , không đi vào trọng_tâm .",0,0
+cần có biện_pháp để có_thể đánh_giá phù_hợp với thực_lực của sinh_viên hơn .,0,3
+"giảng_viên truyền_đạt tốt , liên_hệ nhiều kiến_thức bên ngoài .",2,0
+"cô rất nhiệt_tình , vui_tính .",2,0
+"thầy giảng_dạy nhiệt_tình , và dễ hiểu .",2,0
+lượng kiến_thức cho phần kiểm_tra đánh_giá kết_quả học_tập tràn_lan .,0,1
+giảng_viên phân_tích rõ một_vài vấn_đề giúp hiểu rõ hơn về các ngành fraction_khoa .,2,0
+"giảng_viên dạy đầy_đủ , đúng giờ .",2,0
+giảng_viên luyện nói rất hiệu_quả .,2,0
+cần chuẩn_bị thêm trang_thiết_bị để hỗ_trợ kịp_thời trong học_tập và thực_hành .,0,2
+bài_tập hay và cụ_thể .,2,1
+"môn tốt_nghiệp mà thấy chỉ cho các nhóm thuyết_trình xong điểm_danh , thầy còn không ý_kiến về cả bài thuyết_trình .",0,1
+"cô dạy rất nhiệt_tình , tận_tâm và chu_đáo .",0,0
+"mơ_hồ , không chi_tiết .",0,0
+nói_chung again 10 fraction 10 .,2,3
+thời_gian .,1,3
+thầy dạy chưa đúng với thời_gian biểu .,0,0
+"cần có giáo_trình với nhiều ví_dụ rõ_ràng hơn , hiện_tại quá ít ví_dụ để sinh_viên tự học theo .",0,1
+"slide bài giảng , bài_tập đầy_đủ .",2,1
+nhưng lại ra đề rất khó .,0,1
+thầy hơi nóng_tính .,0,0
+phương_pháp giảng_dạy gây nhàm_chán .,0,0
+"giảng_viên lên lớp đúng giờ , chấm điểm công_bằng , có những hình_thức để khuyến_khích sinh_viên đến lớp .",2,0
+"giảng_viên nhiệt_tình , tận_tâm với công_việc , slide dễ hiểu .",2,0
+ít bài_tập ôn_tập .,0,1
+ít trao_đổi với lớp .,0,0
+hoạt_động seminar chưa tốt .,0,0
+không có tài_liệu cụ_thể .,0,0
+thầy dễ_thương !,2,0
+quá_trình giảng_dạy rất dễ hiểu .,2,0
+dạy nghiêm_túc .,2,0
+cô giảng dễ hiểu .,2,0
+tổng_quan môn_học này không đúc_kết được gì nhiều dù cho giảng_viên có kiến_thức tốt .,0,1
+giảng_viên không đảm_bảo giờ lên_lớp .,0,0
+"thầy giảng rất hay , rất tận_tâm , luôn dạy quá tiết , luôn trả_lời thắc_mắc của sinh_viên .",2,0
+chú_trọng giao_tiếp .,1,1
+giảng_viên giảng_dạy tận_tâm nhiệt_tình và chu_đáo .,2,0
+thầy nên cho làm nhiều bài_tập hơn .,0,0
+giang_viên quá cứng_nhắc .,0,0
+trong khi đề_thi lại có 50 % bài_tập .,1,1
+thầy cung_cấp đủ các tài_liệu giảng_dạy .,2,0
+"mọi thứ đều tốt , mong thầy chia_sẻ thật nhiều kinh_nghiệm hơn_nữa cho tụi em .",2,0
+"học_tập bằng việc ghi trên bảng , khá thú_vị .",2,0
+đảm_báo giờ lên_lớp và kiến_thức .,2,0
+thầy giảng_dạy hay và dễ hiểu .,2,0
+thêm các ví_dụ minh_họa để sinh_viên dễ hiểu hơn về môn_học .,0,1
+"phòng học quá gần khu thi_công , ồn_ào , mất tập_trung .",0,2
+tận_tình giúp_đỡ các bạn sinh_viên .,2,0
+"thầy dạy rất tận_tình , dễ hiểu .",2,0
+"cô vui_tính , dạy nhiệt_tình .",2,0
+ví_dụ trường_hợp có hai lớp thực_hành cách nhau một tuần nhưng lại cho ra một deadline bài_tập cùng một thời_điểm .,0,1
+nên dạy lý_thuyết trước rồi thực_hành sau .,0,1
+thấy dạy rất hay nhiệt_tình .,2,0
+bài_tập .,1,1
+cô nhiệt_tình giải bài_tập để sinh_viên hiểu lý_thuyết kỹ hơn .,2,0
+sĩ số sinh_viên trong lớp quá đông với_lại nhiều sinh_viên nhiều ngành khác nhau học nên chất_lượng buổi học không tốt .,0,1
+dạy cách học hiểu vấn_đề chứ không học_vẹt .,0,0
+thầy dạy hay và tốt với em .,2,0
+sự nhiệt_tình của cô .,1,0
+giảng_dạy vui_vẻ .,2,0
+rất tận_tâm .,2,0
+"nhìn cô dễ_thương , giọng cô nghe rất ngọt .",2,0
+"cô vui , nhiệt_tình , hướng_dẫn tận_tâm , thân_thiện .",2,0
+bài_tập cực_kỳ khó .,0,1
+"vui_tính , dạy dễ hiểu , đảm_bảo tiết học lý_thuyết và làm bài_tập trên lớp .",2,0
+"các bài giảng của giáo_viên dễ hiểu và dễ tiếp_thu , phương_pháp dạy vui_vẻ và nhiệt_tình .",2,1
+"tổng_hợp ôn_tập tốt , cô_giáo nhiệt_tinh .",2,0
+"thầy dạy rất tốt , đầy_đủ về nội_dung .",2,0
+rất hài_lòng về tất_cả hoạt_động giảng_dạy .,2,0
+thầy dạy rất tận_tâm và thương sinh_viên .,2,0
+"giờ_giấc giảng_dạy không đảm_bảo , giảng_viên hay vắng_mặt không báo trước , không up tài_liệu giảng_dạy lên moodle .",0,0
+"dạy dễ hiểu , dễ gần .",2,0
+ngoài_ra còn nói về một_số kiến_thức thực_tế liên_quan đến môn_học .,2,1
+"thầy giảng bài rất dễ hiểu , bên cạnh đó còn có các câu_chuyện của cuộc_sống rất ý_nghĩa , mong được học nhiều môn thầy dạy !",2,0
+khó tiếp_thu .,0,3
+"giảng_viên dạy tương_đối dễ hiểu , có nhiều ví_dụ minh_họa cụ_thể .",2,0
+"bài giảng của cô khá trừu_tượng , nếu cô có thêm vài ví_dụ rõ_ràng hơn , thì chúng_em sẽ hiểu bài hơn .",0,1
+"thầy dạy khá sát thực_tiễn , bài_tập nhiều , hay .",2,0
+"phương_pháp giảng_dạy hiệu_quả , giúp cho sinh_viên hiểu rõ được vấn_đề .",2,0
+em nghĩ môn_học không cần_thiết ạ !,0,1
+cần có thêm nhiều tiết bài_tập .,0,1
+bài_tập thực_hành khá nặng so với lý_thuyết tại cùng một thời_điểm .,0,1
+"không nên chia giờ học kiểu 2 tiết 1 buổi , như_vậy thời_lượng học mỗi buổi quá ít , gây gián_đoạn cho việc giảng_dạy .",0,1
+"giảng bài dễ hiểu , dễ tiếp_thu .",2,0
+không có gì để không hài_lòng .,1,3
+chương_trình nên cập_nhật thường_xuyên để phù_hợp hơn với thực_tế .,0,1
+"giáo_viên vui_vẻ , thân_thiện .",2,0
+"tận_tâm , nhiệt_tình và hay liên_hệ thực_tiễn .",2,0
+"cô dạy rất dễ hiểu , tận_tình hướng_dẫn học_sinh .",2,0
+lớp em học thì máy hay có sự_cố .,0,2
+"cô vui_vẻ , nhiệt_tình , hòa đồng .",2,0
+thầy cần có nhiều phương_pháp giảng_dạy hay hơn !,0,0
+"cô dạy tốt tận_tình , tài_liệu đầy_đủ .",2,0
+"thầy vui_tính , nhiệt_tình với sinh_viên .",2,0
+giảng_viên cần nói nhiều hơn khi dạy .,0,0
+nên có hướng_dẫn chi_tiết .,0,0
+"giảng_viên nhiệt_tình , kỹ_năng truyền_đạt tốt .",2,0
+"đầu_tư vật_chất , có nhiều hoạt_đông thú_vị .",2,0
+nên giảng_dạy phương_pháp làm bài trước khi đưa ra bài_tập .,0,0
+"khoa wzjwz10 với số_lượng sinh_viên khá đông mà đôi_khi lại có thêm những bạn từ khoa khác vào học , nên giảng_đường 2 trở_nên đông kín .",0,1
+với_lại môn_học này dạy quá chán .,0,1
+"thầy vui_tính , giảng bài hấp_dẫn , mới_mẻ .",2,0
+"khi báo_cáo đồ_án cuối kỳ , thì do sự phân_công , và trong một nhóm thì ai cũng có điểm yếu và điểm mạnh nên mới tạo thành một nhóm để giúp_đỡ nhau , nhưng thầy làm_khó các thành_viên .",0,1
+giảng_viên tận_tình giúp_đỡ sinh_viên .,2,0
+thầy rất quan_tâm sinh_viên luôn cho điểm đúng thực_lực .,2,0
+nhưng em nghĩ thời_gian và phòng học nên cố_định hơn và được thông_báo rõ_ràng .,0,1
+"vui_vẻ , nhiệt_tình , tận tụy .",2,0
+giải_đáp thắc_mắc của sinh_viên nhanh_chóng .,2,0
+bài giảng mang tính thực_tiễn và ứng_dụng cao .,2,1
+"đưa ra ít ví_dụ về những trường_hợp đặc_biệt cần phải lưu_ý , nên dành nhiều thời_gian cho những phần quan_trọng , đưa ra ví_dụ song_song với việc demo trực_tiếp trên máy_tính trong lúc giảng_dạy như_vậy hiệu_quả giảng_dạy sẽ tốt hơn .",0,0
+dạy_học .,1,0
+em rất mong_phòng đào_tạo cho em biết được tên giảng_viên khi đăng_ký môn_học để sau nay em còn đc học thầy wzjwz155 .,0,0
+"cô vui_tính , tận_tình và cách giảng_giải dễ hiểu .",2,0
+"đúng giờ , giảng bài kỹ .",2,0
+chưa giới_thiệu cụ_thể các tài_liệu cho sinh_viên đọc thêm .,0,0
+ứng_dụng thực_tế vô giảng_dạy .,2,1
+"dạy sát chương_trình thi , nhiệt_tình .",2,0
+tổ_chức quá nhiều hoạt_động thừa trên lớp không phù_hợp với trình_độ của sinh_viên .,0,0
+thầy cho thuyết_trình làm đồ_án theo nhóm nên giúp em có khả_nang truyền_đạt kỹ_năng work group nâng cao .,2,0
+"thầy dạy nhiệt_tình , cho làm nhiều bài_tập để hiểu sâu và có khả_năng vận_dụng được kiến_thức .",2,0
+giáo_viên giảng_dạy dễ hiểu .,2,0
+em có góp_ý với thầy ở vấn_đề thuyết_trình lấy điểm giữa kỳ_doubledot một_số bạn trình_bày về công_nghệ hay kỹ_thuật rất hay nhưng do cách trình_bày nên các bạn ở dưới chưa hiểu lắm .,0,0
+"thầy wzjwz184 dạy hay , dễ hiểu , truyền_đạ nhiều kiến_thức chuyên_môn lẫn kiến_thức cuộc_sống , đi làm cho sinh_viên , có nhiều lời khuyên .",2,0
+"môn lập_trình mạng căn_bản sử_dụng ngôn_ngữ csharp nhưng trước đó nhà_trường không đề_xuất cho sinh_viên học_môn này trước , gây nhiều khó_khăn cho sinh_viên khi học môn mới .",0,1
+cô nên thêm nhiều bài_tập áp_dụng lý_thuyết hơn .,0,0
+còn nhiều slide .,0,0
+tăng chất_lượng các thiết_bị phục_vụ giảng_dạy .,0,2
+đôi_lúc đi trễ tầm 30 phút .,0,0
+"giảng_viên thực_hành nên hướng_dẫn sinh_viên thực_hành một_cách cụ_thể , không nên ngồi làm_việc riêng rồi khi sinh_viên gọi hỏi thì lại tỏ thái_độ khó_chịu .",0,0
+"thầy đưa ra những dạng bài hay , bao_quát kiến_thức cho sinh_viên .",2,0
+sau khi qua môn này chắc sẽ không học thầy nữa .,0,3
+"giữa kỳ_cộng max là 4 điểm , rồi lại cộng tiếp cho quá_trình , giờ thì lại điểm quá_trình tính trong 1 bài , không làm được , ít điểm cộng thì đành chịu .",0,0
+nâng cao trang_thiết_bị phòng học doubledot_quạt .,0,2
+điều này tạo cho sinh_viên sự chủ_động trong học_tập .,1,1
+nhưng có một vấn_đề mà em chưa thích đó là đi_sâu vào lý_thuyết quá nhiều chưa có giảng_dạy cho chúng_em nhiều về cách cấu_thành sản_phẩm .,0,1
+thầy giảng rất ít .,0,0
+thầy dạy đôi_khi hơi chán cần thay_đổi phương_pháp giảng_dạy .,0,0
+cô rất nhiệt_tình và vui_tính .,2,0
+mong thầy_cô xem_lại cách giảng_dạy môn này .,0,0
+"giảng_viên rất nhiệt_tình thậm_chí dạy lố_giờ , dư buổi nhưng vẫn không đảm_bảo đủ số bài của chương_trình học , không giảng_giải bài_học một_cách rõ_ràng , khi dạy chỉ mở slide và đọc tất_cả những gì trên slide bài giảng nhưng không giảng thêm gì nhiều hoặc nếu có giảng thêm thì cũng khá khó hiểu , khi sinh_viên hỏi lại thì thường chỉ nói lại những gì đã nói lần trước mà không giảng thêm để sinh_viên có_thể hiểu được bài , slide bài giảng được chuẩn_bị sơ_sài và có nhiều sai_sót , giảng_viên thường_xuyên ra ngoài nghe điện_thoại , ăn , hút thuốc trong giờ dạy , thường_xuyên dạy các kiến_thức nâng cao trong khi sinh_viên chưa hiểu hết kiến_thức cơ_bản , thường hay nói_chuyện nặng lời với sinh_viên trong lớp .",0,0
+"bài giảng và bài_tập trọng_tâm , chi_tiết .",2,1
+"phân_chia chương_trình hợp_lý hơn , chia nhỏ_lượng kiến_thức cần đạt được .",2,1
+cô nhiệt_tình giải_đáp thắc_mắc cho sinh_viên .,2,0
+"thầy hướng_dẫn thực_hành tốt , nhiệt_tình .",2,0
+"cô wzjwz228 rất nhiệt_tình với sinh_viên trong giờ lên_lớp , rất hay khuyến_khích sinh_viên đặt câu hỏi , hay tự đặt những câu hỏi xây_dựng khuyến_khích sinh_viên tìm_hiểu trả_lời .",2,0
+dạy cho sinh_viên biết nhiều về thực_tế .,2,0
+cô than hoài à .,0,0
+"nội_dung môn_học không phù_hợp , quá nhiều lý_thuyết , lý_thuyết quá rườm_rà và không phù_hợp với truyền_thống việt_nam .",0,1
+cô vui_vẻ và nhiệt_tình .,2,0
+"phương_pháp giảng_dạy tốt , dễ hiểu .",2,0
+"cô nhiệt_tình , thân_thiện với sinh_viên .",2,0
+vấn_đề nghe từ thiết_bị không tốt lắm .,0,2
+giảng_viên hay đến muộn .,0,0
+cách giảng_cô rất phức_tạp vẫn chưa ngắn_gọn xúc_tích gây khó hiểu ở các công_thức tính_toán .,2,0
+cách dạy_học tăng khả_năng tự vận_động của học_sinh .,2,0
+đây là môn_học khó và cần phải có nền_tảng kiến_thức từ những môn_học_cơ_bản hơn nó nhưng chương_trình k6 thì không có môn nào cơ_bản về tín_hiệu trước môn xử_lý tín_hiệu số .,0,1
+"giáo_viên nhiệt_tình , truyền_đạt kiến_thức tận_tâm .",2,0
+thầy dạy còn khá khó về thời_lượng .,0,0
+hướng_dẫn chi_tiết nhiệt_tình .,2,0
+em rất thích .,2,3
+có tinh_thần trách_nhiệm .,2,0
+các dụng_cụ còn hư nhiều .,0,2
+"cô nói hơi dài_dòng , đôi chỗ hơi khó hiểu .",0,3
+thầy thường chạy trước chương_trình học lý_thuyết .,0,0
+"thêm nhiều ví_dụ cụ_thể , dễ hiểu cho sinh_viên vì năm đầu_tiên ở trường_học môn nhập_môn lập_trình có nhiều bạn còn bỡ_ngỡ , khó hiểu được những kiến_thức có_thể chưa bao_giờ gặp qua này .",0,1
+cho các nhóm tự nghiên_cứu và thuyết_trình .,1,0
+"số_lượng sinh_viên lớp nên tối_đa là 30 , vì đây là môn_học cá_biệt cần sự tương_tác thực_tế .",0,1
+giảng_viên thường đến lớp trễ .,0,0
+"phiền_thầy chỉ giới_thiệu nhanh_chóng , không cần dành quá nhiều thời_gian cho nó , em nghĩ mọi người đã biết từ trước những nội_dung cơ_bản như_vậy ( ít_nhất là những người em quen ) .",0,0
+thầy vô_cùng hài_hước tạo không_khí lớp_học vui_vẻ cho sinh_viên .,2,0
+cô dạy rất tốt và rất nhiệt_tình .,2,0
+"giảng_viên giảng chưa được thu_hút , gây nhàm_chán .",0,0
+nên cần giúp sinh_viên thực_hành nói nhiều hơn và phương_pháp trau_dồi từ vựng sáng_tạo .,0,1
+"cần nâng_cấp phòng học , máy_chiếu .",0,2
+"có slide bài giảng , giảng kỹ bài .",2,0
+"cô dạy hay , nhiệt_tình , cung_cấp đầy_đủ kiến_thức của bộ_môn .",2,0
+bài giảng hay .,2,1
+giảng_viên tận_tình .,2,0
+"giảng_viên vui_tính , hòa đồng .",2,0
+bằng_chứng là thầy wzjwz56 dạy thay thầy wzjwz57 ở lớp wzjwz58 .,1,3
+giáo_viên trao_đổi với sinh_viên hoàn_toàn bằng tiếng anh .,1,0
+cần thêm tài_liệu thực_hành .,0,1
+tận_tình chỉ dạy .,2,0
+cách ứng_dụng lý_thuyết vào thực_tế .,1,0
+"đúng giờ , sát chương_trình .",2,0
+"phòng học còn nóng và bụi_bặm , máy_chiếu tuy nhìn được nhưng như_vậy vẫn là mờ , nếu ngồi xa hay hôm nào sáng quá sẽ khó thấy .",0,2
+"thầy dạy rất hay , nhiệt_tình với sinh_viên .",2,0
+hầu_hết em và các bạn đều không đi thực_hành .,0,3
+giảng_viên nên tương_tác với sinh_viên nhiều hơn_nữa .,0,0
+thầy rất thân_thiện !,2,0
+không có gì .,1,3
+rất bổ_ích và thú_vị .,2,3
+cải_tiến trang_thiết_bị thường_xuyên hơn .,0,2
+thầy giảng dễ hiểu .,2,0
+"ngoài_ra , các mặt còn lại em không có ý_kiến .",1,3
+"giảng_viên truyền_đạt tốt , khơi_gợi cho sinh_viên tự tìm_hiểu kiến_thức .",2,0
+"thầy truyền_đạt kiến_thức rất hay , và dễ hiểu .",2,0
+môn_học rất hay và bổ_ích .,2,1
+không có_điều nào không hài_lòng .,1,3
+nên rèn kỹ_năng nghe và nói nhiều hơn cho sinh_viên .,0,1
+thầy có kiến_thức chuyên_môn sâu .,2,0
+cách thầy giảng rất hấp_dẫn và dễ hiểu .,2,0
+"giảng_dạy tận_tình , đi đúng giờ .",2,0
+"cô dạy quá nhanh , lý_thuyết dạy quá nhanh và quá nhiều mà cũng không cần_thiết lắm .",0,0
+khá ổn .,2,3
+thầy giảng_hơi khó hiểu hay tại bài_học khó hiểu ?,0,0
+"giảng_viên vui_vẻ , nhiệt_tình .",2,0
+nên để giảng_viên dạy lý_thuyết cả thực_hành sẽ logic hơn .,0,1
+sinh_viên tìm_tòi cách khác để có được kết_quả giống nhưng không chấp_nhận .,0,1
+"giảng_viên thân_thiện , hòa đồng với sinh_viên .",2,0
+"thầy rất tận_tâm , tận_tình với học_sinh .",2,0
+dạy hơi khó hiểu .,0,0
+cô giảng hay .,2,0
+giang dạy quá nhiệt_tình và tâm_huyết truyền_đạt cho học_sinh kiến_thức của cô .,2,0
+"thầy tận_tâm , nhiệt_tình , dạy kỹ bài , hướng_dẫn_giải bài cụ_thể .",2,0
+giảng_viên tận_tâm nhiệt_tình .,2,0
+"giảng_viên nhiệt_tình , tương_tác tích_cực với sinh_viên .",2,0
+giảng_viên nhiệt_tình giảng_giải những thắc_mắc của sinh_viên .,2,0
+thầy tạo điều_kiện cho sinh_viên có thê_hoàn_thành tất_cả các bài lab .,2,0
+nên cải_tiến phòng thực_hành .,0,2
+thầy chấm điểm hơi mắc .,0,0
+có dạy thêm ngôn_ngữ trung rất thú_vị .,2,0
+"cách giảng_dạy của giảng_viên dễ tiếp_thu , dễ hiểu .",2,0
+"thường_xuyên đi trễ , giảng_dạy không nhiệt_tình , dạy khá lang_mang , không đảm_bảo đúng tiến_độ học_tập .",0,0
+cô dễ_thương quá coloncc .,2,0
+nêu lên những ví_dụ rất hay giúp sinh_viên dễ nắm_bắt kiến_thức .,2,1
+giảng_viên thường_xuyên đi trễ vào những buổi gần cuối .,0,0
+giảng_viên giảng_dạy khó tiếp_thu .,0,0
+"giảng_viên dạy hay , nhiệt_tình .",2,0
+"rất hài_lòng , cô dạy rất vui_vẻ .",2,0
+"cô nói nhanh và nhiều khiến em bị "" quá_tải "" .",0,0
+"bổ_sung nhiều kiến_thức thực hay , nâng cao cho sinh_viên .",2,1
+đảm_bảo số giờ lên_lớp .,2,0
+thầy chỉ dạy một buổi nên không đánh_giá được .,0,0
+"cô rất nhiệt_tình , cô còn có phương_pháp giảng_dạy gây hứng_thú cho người học .",2,0
+cần có lập_trình thực_nghiệm các bước và xem rõ cách hoạt_động chương_trình demo .,0,1
+"cần có các bài lab thực_hành để trực_quan hơn , sát với thực_tế làm_việc ở các công_ty phần_cứng .",0,1
+"giảng_viên vui_tính , nhiệt_tình .",2,0
+chưa truyền_đạt được kiến_thức .,0,0
+cần thêm tài_liệu .,0,1
+thầy giúp học_sinh giải nhiều bài_tập .,2,0
+"nhiệt_tình , bài giảng_tạo cảm_hứng cho sinh_viên học_tập .",2,0
+chỉ nhìn mỗi khía_cạnh làm slide lý_thuyết mà đánh_giá_cả đồ_án của sinh_viên một_cách rất hời_hợt .,0,1
+tóm_lại em rất hài_lòng .,2,3
+"giảng_viên giảng bài còn mơ_hồ , phức_tạp .",0,0
+"cô dạy rất nhiệt_tình và vui_vẻ , dạy chi_tiết từng tí một .",2,0
+mong thầy sử_dụng micro .,0,0
+"cô đến lớp đúng giờ , giảng dễ hiểu .",2,0
+"giảng_viên tạo áp_lực quá lớn cho sinh_viên trong khi đây là môn_học đòi_hỏi sự năng_động , sáng_tạo .",0,0
+"cô dạy rất hay và kỹ , dành nhiều thời_gian sửa bài_tập .",2,0
+cho bài_tập nhiều giúp học_sinh có bài_tập về nhà làm .,2,0
+giáo_viên truyền_đạt kiến_thức mập_mờ cho sinh_viên .,0,0
+"có cảm_giác hà_khắc , khá khó_chịu .",0,0
+nói_chung là em không_thể tiếp_thu bài trên lớp .,0,1
+"thầy chăm lên lớp giảng_dạy , tận_tình .",2,0
+"dạy nhiệt_tình , hiệu_quả .",2,0
+"cô điểm_danh mình em lúc đầu giờ , cuối giờ mới điểm_danh mấy bạn kia colonsadcolon .",0,0
+giải_tích 2 .,1,3
+slide bài giảng hay .,2,1
+"nên có một_số buổi ngoại_khóa bên ngoài , tiếp_cận thực_tiễn , giao_tiếp với người nước_ngoài .",0,1
+giảm tảibỏ những phần không thật_sự cần_thiết .,0,1
+thiếu hiệu_quả không phù_hợp với môn_học .,0,1
+dạy lý_thuyết tốt .,2,0
+"không_khí học_tập sôi_nổi , dễ tiếp_thu kiến_thức .",2,0
+dạy rất dễ hiểu .,2,0
+"thầy hiền , nhiệt_tình .",2,0
+kiến_thức thực cần tế hơn .,0,1
+"nhiệt_tình truyền_đạt kiến_thức , hài_hước .",2,0
+đôi_lúc thầy giảng hơi nhanh .,0,0
+đầu_tư thêm máy_móc hiện_đại .,0,0
+"thầy dạy những nội_dung cần_thiết , ngắn_gọn và dễ hiểu .",2,0
+giúp_đỡ sát_sao khi sinh_viên gặp vấn_đề khó trong thực_hành .,2,0
+đa_số sinh_viên tự học và không liên_hệ đến giảng_viên thực_hành .,0,3
+phân_bổ thời_gian hoàn_thành môn_học hợp_lý hơn_nữa .,0,1
+thầy dạy rất nhiệt_tình và sẵn_sàng giải_đáp .,2,0
+thầy rất quan_tâm đến điểm_số của sinh_viên .,2,0
+"nhiệt_tình , giảng hiểu bài .",2,0
+"cô dạy hấp_dẫn , thú_vị !",2,0
+quan_tâm sinh_viên .,2,0
+giảng bài hay !,2,0
+"đây làm môn_học cần thực_hành nhiều , cần tăng thêm số buổi thực_hành .",0,1
+"giảng_dạy dễ hiểu , nhiệt_tình với sinh_viên .",2,0
+"giảng_viên dạy nhiệt_tình , dễ hiểu !",2,0
+thầy hiền dễ_tính .,2,0
+nên để đồ_án cuối kỳ các sinh_viên được phép làm nhóm .,0,0
+"giảng_viên không bao_giờ đi dạy , toàn nhờ sinh_viên dạy thay , không có trách_nhiệm , môn_học này chẳng giúp_ích được gì , thanks .",0,0
+"giáo_trình anh văn_dường_như không giúp_ích cho công_nghệ_thông_tin cũng như những khả_năng giao_tiếp của sinh_viên , sinh_viên trung_bình khó có_thể đạt 5 điểm ở các chương_trình anh văn .",0,1
+giáo_viên rất nhiệt_tình trong việc giải_đáp thắc_mắc cho sinh_viên .,2,0
+nhiệt_tình và quan_tâm học_sinh .,2,0
+diễn_đạt trong giảng_dạy không được tốt lắm .,0,0
+thầy chưa hỗ_trợ lớp trong việc giải_đáp các câu_hỏi cũng như tạo điều_kiện cho sinh_viên học_hỏi .,0,0
+giới_thiệu những kiến_thức mới cho sinh_viên .,2,0
+"vui , hay .",2,3
+không biết thầy wzjwz260 là thầy nào ?,0,3
+nên có nhiều bài_tập cho sinh_viên tham_khảo .,0,1
+hầu_như giảng_viên không giảng mà chỉ dịch slide do slide viết bằng tiếng anh .,0,0
+"giảng_viên giảng_kỹ , dễ hiểu .",2,0
+luôn giải_thích chi_tiết vấn_đề thắc_mắc của sinh_viên .,2,0
+cho ít đồ_án thôi .,0,0
+thầy cho chép quá nhiều .,0,0
+"trang_thiết_bị phục_vụ còn hạn_chế , không có nhiều thời_gian trực_tiếp thực_hành .",0,2
+giáo_viên dạy rất tệ .,0,0
+giáo_viên cần bổ_sung thêm các bài_tập liên_quan nhiều hơn để các bạn sính_viên nắm rõ hơn .,0,0
+"môn_học này có định_hướng thiên về lý_thuyết_logic nên em nghĩ nên học theo hình_thức trao_đổi và tham_khảo , không nên đặt nặng đồ_án và bài_tập .",0,1
+"dạy dễ hiểu , tạo cảm_giác thân_thiện với học_sinh !",2,0
+giảng_viên dạy tận_tâm .,2,0
+đồ_án lớn không có trong phần giảng_dạy khiến sinh_viên khó_khăn trong việc thực_hiện .,0,1
+thầy đi vào trễ nhưng lại về muộn .,0,0
+thầy nên sử_dụng micro để giảng .,0,0
+tốc_độ dạy khá nhanh khiến việc tiếp_thu không hiệu_quả .,0,0
+dạy sát với chương_trình .,2,0
+"vui_vẻ , nhiệt_tình , giảng dễ hiểu .",2,0
+thời_gian nộp bài thực_hành quá ngắn .,0,1
+cô dạy dễ hiểu và thân_thiện .,2,0
+"thầy có kiến_thức rất rộng , có_thể giải_thích mọi thắc_mắc của sinh_viên .",2,0
+"rèn_luyện cho sinh_viên kỹ_năng làm_việc nhóm , nâng cao tính chủ_động của sinh_viên .",2,0
+"cô có ôn_tập , sửa bài đầy_đủ .",2,0
+nghiêm_khắc nhưng rất tận_tình .,2,0
+"giảng_viên lý_thuyết nên cải_thiện kỹ_năng truyền_đạt , và chuẩn_bị bài giảng tốt hơn .",0,0
+quá ít thiết_bị cho sinh_viên thực_hành .,0,2
+không có ý_kiến gì .,1,3
+thời_gian lên lớp ít nhưng tiếp_thu nhiều .,2,0
+tài_liệu giảng_dạy đầy_đủ .,2,1
+luôn_luôn đúng giờ .,2,0
+"cô giảng_dạy rất chăm_chú , tận_tình giải_đáp thắc_mắc của sinh_viên .",2,0
+thầy rất tận_tâm và thương_yêu sinh_viên .,2,0
+nhiều kinh_nghiệm .,2,0
+thầy có kiến_thức nhiều .,1,0
+"ngoài việc giảng_dạy , do môn này là môn nhập_môn máy_học , nếu thầy có_thể giới_thiệu về các tài_liệu về các loại máy_học , áp_dụng , hơn đơn_thuần cưỡi ngựa xem hoa .",0,0
+"thầy có slide , nhưng làm mất thời_gian vì quá_trình viết bảng .",0,0
+thầy giảng còn hơi khó hiểu .,0,0
+"cô bớt xinh_lại giúp em một_tí , làm em hơi mất tập_trung mỗi lần nhìn cô giảng .",0,0
+"cô vui_tính , dễ gần , nhiệt_tình .",2,0
+bài_tập quá nhiều .,0,1
+"thầy dạy tốt , có tâm_huyết với an_toàn thông_tin .",2,0
+"chưa tạo động_lực học cho học_sinh , chưa hướng_dẫn rõ_ràng cho sinh_viên làm đồ_án .",0,0
+cô dạy rất có_tâm và quan_tâm đến sinh_viên .,2,0
+đó là nội_dung chương_trình học rất tốt .,0,1
+nên đi_sâu vào vấn_đề .,0,1
+"cô nhiệt_tình với học_sinh , bài giảng dễ hiểu .",2,0
+"cần nâng_cấp các phòng học thực_hành , phòng máy quá tệ để thực_hành , các phiên_bản phần_mềm cũ .",0,2
+những nội_dung mà cô muốn truyền_đạt đều rất có_ích cho quá_trình làm_việc sau_này của sinh_viên !,2,0
+thầy tận_tâm nhiệt_huyết .,2,0
+"giảng_viên không sử_dụng course gây khó_khăn cho sinh_viên , hay chém_gió , giọng giảng không rõ_ràng .",0,0
+trong lúc giảng_thầy thường_xuyên viết & vẽ lên bảng .,2,0
+đi dạy đầy_đủ .,2,1
+thầy lo giảng_quên cả giờ_giấc .,2,0
+cô rất nhiệt_tình trong việc giảng_dạy .,2,3
+giảng_viên khá vui_tính .,2,0
+"giảng_viên tận_tâm , nhiệt_tình , quan_tâm sinh_viên .",2,0
+"nói_chuyện rất nhỏ , cách truyền_đạt chưa đến với sinh_viên .",0,0
+"thầy dạy khá hay nhưng cho bài_tập đột_xuất , đôi_khi thầy nói các vấn_đề hơi nhanh .",0,0
+"thầy là người rất hài_hước , nhiệt_huyết và cách truyền_đạt rất hay .",2,0
+cảm_ơn thầy rất nhiều .,1,0
+"đề_thi sử_dụng google dịch , nửa tiếng anh nửa tiếng việt .",0,1
+"thuyết_trình nhiều như_thế chưa có hiệu_quả lắm , hi_vọng cô sẽ cải_thiện hình_thức dạy và học .",0,0
+"năm_ngoái học đã có bao_nhiêu bạn bị rớt và suýt bị rớt vì môn này , nhưng năm nay cô không rút kinh_nghiệm cách dạy thậm_chí còn khó hơn năm_ngoái .",0,0
+"tận_tâm nhiệt_tình , lắng_nghe sinh_viên .",2,0
+"cách dạy về môn_học chưa được hợp_lý , nên dạy cơ_bản trước khi dạy nâng cao .",0,0
+em nghĩ cần tăng thêm thời_gian học thực_hành .,0,1
+tuyệt_vời .,2,3
+em nghĩ giảng_viên nên cho bài và sửa bài_tập nhiều hơn .,0,0
+"giảng_viên vui_tính , tận_tâm , nhiệt_tình !",2,0
+phòng máy cũ cần nâng_cấp .,0,2
+"thầy nên có đề_mẫu , bài mẫu .",0,0
+cô không tập_trung trong giờ giảng .,0,0
+"thầy rất nhiệt_tình , giúp_đỡ sinh_viên rất nhiều trong quá_trình hoàn_thành đồ_án .",2,0
+"và chuột máy_tính trong phòng lab cũng hư khá nhiều , đề_nghị nhà_trường thay_thế để có nhiều máy_tính phục_vụ học_tập cho sinh_viên .",0,2
+"giáo_viên giảng_dạy tận_tâm , dễ hiểu , truyền_đạt và liên_hệ thực_tiễn .",2,0
+giảng_viên tận tụy có tâm_huyết đối_với sinh_viên .,2,0
+"giảng_viên dạy rất nhiệt_tình , tuy_nhiên việc dạy quá giờ lên_lớp sẽ khiến nhiều sinh_viên gặp khó_khăn trong việc học , giảng_viên dạy vượt qua tiết 4 và 5 khiến nhiều sinh_viên phải sang học_tiết khác và bỏ_qua rất nhiều bài giảng dẫn đến việc học không hiệu_quả .",0,0
+em có suy_nghĩ là thầy không tin các bài_tập do chính các bạn nữ làm .,0,0
+tạo thêm nhiều ví_dụ ngoài thực_tiễn .,0,1
+"giảng_viên giảng_dạy nhiệt_tình , phương_pháp dạy hay , chỉ_dẫn hiệu_quả .",2,0
+không hài_lòng điểm gì cả !,0,3
+"cần có các bài lab thực_hành , để sinh_viên thành_thạo cũng như các thao_tác ứng_dụng .",0,1
+cách dạy của thầy wzjwz170 vô_cùng chán đối_với môn_học kỹ_năng như thế_này .,2,0
+"thầy luôn hướng_dẫn sinh_viên giải bài_tập bằng nhiều cách , suy_luận logic .",2,0
+sự nhiệt_tình thầy dạy dễ hiểu vui_vẻ .,2,0
+cần tạo điều_kiện cho sinh_viên tăng vốn ngoại_ngữ giao_tiếp .,0,1
+"thầy dạy dễ hiểu , dễ tiếp_thu .",2,0
+thầy hay đến lớp muộn sao với sinh_viên .,0,0
+giảng_dạy nhiệt_tình hơn .,0,0
+thầy sáng_tạo .,2,0
+cô rất vui_tính giảng_bài rất hay .,2,0
+cho nhiều bài nghe hay .,2,0
+nhiệt_tình và tận_tâm với sinh_viên .,2,0
+giảng_viên giảng bài rất dễ hiểu .,2,0
+tìa_liệu hướng_dẫn thực_hành nên cụ_thể hơn đối_với những lab khó .,0,1
+có liên_hệ những ví_dụ thực_tế để giảng_dạy .,2,0
+"giảng bài hơi nhanh , tài_liệu không rõ_ràng , không dùng moodle .",0,0
+phương_pháp dạy không hợp_lý .,0,0
+"cô dạy hay , rất nhiệt_tình , luôn giúp_đỡ , giải_đáp các thắc_mắc của sinh_viên .",2,0
+"tận_tâm , nhiệt_tình , cách giảng_dạy hiệu_quả .",2,0
+không muốn hỏi bài thầy vì thầy giải_đáp không hiểu .,0,0
+gây lãng_phí .,0,3
+nên nhiều khi em thấy không_thể hiểu .,0,3
+nên có giáo_trình rõ_ràng và cơ_bản hơn .,0,1
+nâng_cấp trang_thiết_bị của phòng thực_hành .,0,2
+"thầy còn nhiều lúc giảng chưa kỹ lướt qua quá nhanh chưa kịp đọc bài , chỉ_dẫn chưa rõ_ràng .",0,0
+"có vài chỗ cô giảng còn khó hiểu , những chỗ code khó , dài và rối_em mong cô giảng_kỹ và nhiều hơn .",0,0
+thầy dạy rất nhiệt_tình và vui_vẻ .,2,0
+giảng_viên tận_tình với sinh_viên .,2,0
+"nên phân_công giảng_viên ít công_việc ngoài , phân_bố thời_gian nghỉ lễ hợp_lý .",0,1
+"dù có tìm_hiểu nhưng em không_thể hiểu hết và nắm_bắt hoàn_toàn nội_dung bài lab , nhưng khi hỏi giảng_viên thì em cũng không thu được thông_tin gì thêm cả .",0,0
+cần phải có phương_pháp giảng_dạy linh_hoạt và sáng_tạo hơn .,0,0
+"điểm danh quá nhiều colonsurprise , silde bài giảng cần phải đầu_tư nhiều hơn .",0,1
+giảng_dạy rõ_ràng .,2,0
+"thầy dạy giỏi , vui_tính .",2,0
+có liên_hệ thực_tế qua bài giảng giúp sinh_viên nhanh tiếp_thu kiến_thức .,2,0
+"thầy dạy hay , vui_vẻ .",2,0
+kiến_thức dạy cần được lên kế_hoạch kỹ_càng chương_trình giảng_dạy .,0,1
+giảng_viên ít có giải_thích các phần bài_tập mà chỉ chiếu kết_quả trên phần_mềm outcomes và lướt_lướt cho nhanh để hết_tiết .,0,0
+bám sát nội_dung môn_học .,2,1
+thầy có cho bài_tập về nhà nhưng chưa hướng_dẫn và giải chi_tiết vào hôm sau .,0,0
+"giảng_viên nhiệt_tình giúp_đỡ , tận_tâm với công_việc .",2,0
+giảng_dạy tốt !,2,0
+thầy dậy quá nhanh và không sâu nên không nắm chắc được kiến_thức .,0,0
+"vui hiền , dạy hay sinh_động , perfect .",2,0
+"tận_tâm , nhiệt_tình trong giảng_dạy .",2,0
+"chém gió , nói_chuyện quá nhiều , hướng_dẫn_giải bài_tập một_cách quá sơ_sài .",0,0
+"thầy dạy rất tốt , cung_cấp kiến_thức sâu , đủ với khả_năng sinh_viên .",2,0
+"chưa đề_cập đến nhiều nội_dung như đồ_họa , tệp , liên_kết .",0,1
+"giảng_viên nhiệt_tình giải_đáp câu hỏi , thắc_mắc .",2,0
+không có ý_kiến với giáo_viên .,1,3
+"giảng_viên giảng_lý thuyết_kỹ trước khi cho làm thực_hành , đánh_giá điểm hợp_lý .",2,0
+bài giảng chi_tiết .,2,0
+không nên sử_dụng slide bằng tiếng anh tí nào .,0,1
+cô cho rất nhiều ví_dụ nên rất dễ hiểu được bài .,2,0
+thầy vui tính giảng_dạy dễ hiểu ân_cần .,2,0
+tăng tính thực_tế trong các đồ_án hơn một_chút là tuyệt_vời .,1,0
+"dạy khá nhanh , nên chậm lại tí là ok .",0,0
+chất_lượng đào_tạo tốt .,2,1
+quá_trình thầy giảng_dạy thì hầu_hết bọn em chỉ lên nghe thầy nói kiểu nước đổ đầu vịt .,0,0
+"kiến_thức bao_quát quá rộng_lớn , khó tiếp_cận cho người tự học .",0,1
+"thầy dạy vui_tính , dễ hiểu , dễ_thương !",2,0
+làm kiểm_tra thường_xuyên .,1,3
+khả_năng diễn_đạt bằng tiếng anh thực_sự không tốt lắm .,0,0
+quá chú_trọng vào phần listening .,0,0
+"môn_học đề_cao tính ứng_dụng , vì_vậy nên trang_bị nhiều cơ_sở_vật_chất và tài_liệu nghiên_cứu làm ý_tưởng cho sinh_viên làm đồ_án môn_học .",0,2
+áp_dụng thực_tiễn .,2,1
+"áp_dụng được các hình_ảnh , video clip vào trong quá_trình giảng_dạy .",2,0
+"kết_quả thực_hành , đánh_giá chưa quy_chuẩn , còn qua_loa .",0,0
+"giảng_viên thường giảng_dạy quá thời_gian của tiết_học , nói nhiều và cách nói không thu_hút sinh_viên .",0,0
+giảng_viên chưa cung_cấp kiến_thức đầy_đủ cho sinh_viên .,0,0
+"giảng_viên rất nhiệt_tình , tâm_lý , dễ_thương , luôn_luôn tạo nhiều cơ_hội ghi_điểm cho sinh_viên và tạo mọi điều_kiện để sinh_viên trao_đổi , thảo_luận về bài giảng trên lớp cũng như kiến_thức liên_quan đến môn_học .",2,0
+"các máy_tính tại phòng thực_hành lab khoa wzjwz42 đa_phần đều hư_hỏng không có chuột , chuột không dùng được , máy bị virus rất nặng .",0,2
+không thật_sự công_bằng và đúng theo yêu_cầu .,0,0
+"giảng_viên nhiệt_tình , cho bài_tập đầy_đủ , sử_dụng giờ lên lớp hiệu_quả và đúng giờ .",2,0
+môn này hay .,2,1
+"cô rất vui_vẻ , tâm_huyết nhiệt_tình .",2,0
+"thầy giảng bài vô_cùng thu_hút , dễ hiểu , không bị nhàm_chán .",2,0
+giảng_viên có_thể giải nhiều bài_tập và giảng_kỹ ở mỗi dạng để sinh_viên nắm được bài .,2,0
+"không tổ_chức thi cuối kỳ môn_học , vì lý_do làm đồ_án đã mất rất nhiều thời_gian .",0,1
+giờ thực_hành quá ít .,0,1
+"nói lúc to lúc nhỏ , nghe mệt_tai .",0,0
+"vui , nhiệt_tình .",2,0
+"thầy dạy tận_tình , vui_tính , dễ trao_đổi , kiến_thức được thầy truyền_đạt rất kỹ_càng .",2,0
+"vui_tính , tận_tâm !",2,0
+không có tài_liệu học_tập .,0,1
+"giảng nhiệt_tình , rèn_luyện sinh_viên kỹ_năng làm_việc nhóm , chủ_động trong học_tập .",2,0
+"thực_hành hay , tuy_nhiên cần tìm_hiểu thời_gian nhiều sinh_viên rảnh nhất không thì sẽ có bạn mất bài của môn .",0,1
+kết_hợp thực_tế trong giảng_dạy .,2,0
+"nội_dung môn_học không hay , khá nhàm_chán , không xác_định được mục_tiêu của môn_học .",0,1
+"cô wzjwz20 rất nhiệt_tình và tận_tâm , nhưng cách cô giảng_bài làm nhiều sinh_viên khó tiếp_thu , tất_cả đều có trong slide , cô chủ_yếu chỉ nói trong slide , rất khó hiểu .",2,0
+cho điểm khó .,0,0
+thời_gian học không đúng theo lịch .,0,1
+"cung_cấp đầy_đủ hơn về tài_liệu và những gì sinh_viên cần biết , nên có kênh thông_tin để sinh_viên giao_tiếp với giảng_viên .",0,0
+"giải_đáp thắc_mắc , cập_nhật kiến_thức thực_tế .",2,0
+nếu_như 5 tiết đó để cho sinh_viên làm các dạng bài_tập khác nhau do thầy chiếu trên slide thì hay hơn là dùng 5 tiết để ghi tràn_lan lý_thuyết và số_lượng lớn bài_tập trùng_dạng trên bảng .,0,0
+nhà_trường cần có giáo_trình dùng chung cho tất_cả các lớp và có một chương_trình dạy cụ_thể vì mỗi lớp có một kế_hoạch học_tập riêng mà_lại thi chung nên rất khó cho sinh_viên .,0,1
+"thầy nhiệt_tình , luôn cập_nhật những công_nghệ mới cho sinh_viên , giúp sinh_viên hứng_thú hơn trong việc học .",2,0
+bên cạnh đó lại đòi_hỏi chuẩn quá cao trong khi việc truyền_đạt thì vô_cùng không hiệu_quả .,0,0
+em không có ý_kiến .,1,3
+giáo_viên giải_đáp thắc_mắc nhiệt_tình .,2,0
+cô dạy hay và rất nhiệt_tình .,2,0
+"cô wzjwz266 nghiêm_túc với công_việc giảng_dạy , dạy_tiết nào đáng tiết đó , cung_cấp kiến_thức đầy_đủ cho sinh_viên .",2,0
+"vui_tính , luôn giúp_đỡ sinh_viên khi sinh_viên gặp khó_khăn .",2,0
+"giáo_trình , bài giảng và tài_liệu phục_vụ môn_học được cung_cấp đầy_đủ và cập_nhật trên hệ_thống moodle .",2,0
+thầy rất rất chi là nhiệt_tình .,2,0
+đề_nghị sắp_xếp thời_gian thực_hành nhiều hơn .,0,1
+giảng_viên tận_tình chỉ dạy .,2,0
+áp_dụng một_vài phương_pháp học trao_đổi_mới trên internet thay_vì dựa vào lý_thuyết trên sách_vở nhiều .,1,0
+cô hiền_coloncontemn .,2,0
+"giảng_viên trẻ , nhiệt_huyết , vui_tính , năng_động và dễ_thương !",2,0
+thường_xuyên trễ 15 - 30 phút .,0,0
+"thầy giảng_dạy nhiệt_tình , truyền_đạt kiến_thức tốt .",2,0
+mong nhà_trường sớm thay máy mới !,0,2
+không nên nhiệt_tình quá nên xúc_tích vào những nội_dung cần_thiết .,0,1
+"giảng_viên năng_động , hoạt_bát , tạo hứng_thú cho sinh_viên trong lớp .",2,0
+thiếu_sót là chưa có đề_cương môn_học khiến cho việc tìm tài_liệu trên mạng rất tràn_lan và không biết tìm như_thế_nào cho hiệu_quả !,0,0
+"cách dạy của cô hết_sức tuyệt_vời , tạo cảm_hứng học_tập cho sinh_viên .",2,0
+giọng đọc tiếng anh khó nghe .,0,0
+"thầy dạy nhiệt_tình , thầy dạy tốt , tận_tâm , gần_gũi với sinh_viên .",2,0
+"hệ_thống âm_thanh sử_dụng cho phần "" listening "" chưa thực_sự tốt .",0,2
+giảng bài thú_vị và sinh_động .,2,0
+xảy ra tai_nạn đáng tiếc .,0,3
+khả_năng truyền_đạt chưa tốt lắm .,0,0
+thầy rất tốt và rất tận_tâm .,2,0
+do là hình_thức thực_hành 2 .,0,1
+em thích nhất là phần dạy lý_thuyết của thầy .,2,0
+"khi đưa ra ví_dụ , cô có_thể gợi_ý hướng giải để chúng_em dễ hiểu bài hơn .",0,0
+cho học_sinh nói nhiều hơn .,0,3
+"giảng_viên giảng_dạy rất nhiệt_tình , dễ tiếp_thu kiến_thức .",2,0
+"cô dạy rất dễ tiếp_thu , tận_tình , giải_thích rất rõ_ràng .",2,0
+kiến_thức truyền_đạt khá ít .,0,0
+thầy dạy vui he_he .,2,0
+"cô rất tận_tâm , nhiệt_tình trong công_tác giảng_dạy , cô giảng_bài rất chi_tiết , có các ví_dụ cụ_thể để minh_họa cho từng phần mà cô giảng .",2,0
+"thầy dạy tận_tình , dễ hiểu , luôn quan_tâm giúp_đỡ sinh_viên .",2,0
+"không có gì không hài_lòng , có góp_ý_xíu là sau_này thầy có_thể cho tự chọn mcu luôn , lần này thầy chọn sẵn nên đôi_khi mất đi một xíu sự thú_vị , cho sinh_viên chọn luôn mới hay ho , sinh_viên sẽ phải tìm_hiểu nhiều hơn_nữa , xem con chip nào phù_hợp nhất .",0,0
+"giúp giảng_viên chủ_động truyền_đạt các kiến_thức đã học một_cách cụ_thể cho sinh_viên bởi thực_tế hiện_nay sinh_viên thường làm các đồ_án trong đó không thể_hiện được rõ các kiến_thức đã học trên lớp , nó thiên_về sử_dụng kỹ_thuật nhiều hơn .",0,1
+"thầy dạy ổn , đúng với lý_thuyết .",2,0
+"giảng_viên tận_tâm , nhiệt_tình , dễ_thương .",2,0
+tận_tình luôn muốn sinh_viên hiểu bài .,2,0
+"các slide bài_tập hàng tuần rất đầy_đủ , kể_cả về nội_dung thực_hành .",2,0
+"chi_tiết , dễ hiểu .",2,3
+áp_lực nặng .,0,0
+"cảm_ơn thầy , thầy rất nhiệt_tình !",2,0
+giảng_viên dạy hơi quá thời_gian .,0,0
+thầy rất nhiệt_tình hướng_dẫn sinn_viên đặc_biệt là sửa lỗi sai hay giải bài_tập trên lớp .,2,0
+thầy hay đi trễ .,0,0
+đánh_giá đúng năng_lực của sinh_viên .,2,1
+"không nhấn vào trọng_tâm , giảng bài hơi khó tiếp_thu .",0,0
+giờ lên dạy .,1,0
+hay đi trễ .,0,0
+tập_trung vào nghiên_cứu phần kiến_thức trọng_tâm .,2,1
+cô có tính_cách năng_động hòa đồng với học_sinh .,2,0
+số bài thực_hành quá nhiều đối_với một môn thực_hành hình_thức 2 .,0,1
+"giảng_dạy nhiệt_tình , tận_tâm với sinh_viên , giảng dễ hiểu , tài_liệu cung_cấp luôn đầy_đủ .",2,0
+có bài_tập thực_hành hợp_lý cho từng tuần và phù_hợp với lý_thuyết vừa học xong .,2,0
+"thân_thiện , nhiệt_tình , hòa đồng , vui_tính , đẹp_trai .",2,0
+thầy dạy rất thoải_mái .,2,0
+"cô rất tận_tâm , hết_mình với sinh_viên .",2,0
+"nhiệt_tình , chia_sẻ kinh_nghiệm học_tập .",2,0
+có kiến_thức cao .,2,0
+"giảng_viên tận_tâm , thân_thiện gần_gũi .",2,0
+"cô nói nhanh , liên_tục nhiều khi em không_thể nghe kịp .",0,0
+không nên cho thi_môn này .,0,1
+dạy gì thi đó .,1,0
+thầy rất nhiệt_tâm .,2,0
+"giảng_viên luôn cố_gắng liên_hệ thực_tế nhiều nhất có_thể , giúp sinh_viên hiểu hơn về thực_tiễn hơn là chỉ tập_trung vào lý_thuyết của bài_học .",2,0
+giảng_viên rất nhiệt_tình trong giảng_dạy cũng như giải_đáp thắc_mắc của sinh_viên .,2,0
+phòng học gần tòa nhà đang xây gây ảnh_hưởng đến các bài nghe của môn_học này .,0,2
+"thầy dạy rất dễ hiểu , đơn_giản_sát với thực_tế .",2,0
+giảng_viên nói rõ_ràng .,2,0
+"thầy dạy rất chất , em chưa thấy thầy nào dạy chính_trị hay hơn thầy .",2,0
+"dạy nhiệt_tình , thân_thiện .",2,0
+dãy bàn_chính giữa không có quạt .,0,2
+thời_gian học không đảm_bảo .,0,1
+"có nhiều hoạt_động theo nhóm , tăng tính đoàn_kết .",2,0
+"thêm các phần ứng_dụng của danh_sách liên_kết stack , queue và bảng băm .",0,1
+"vui_vẻ , nhiệt_tình , tạo cơ_hội cho sinh_viên được gắn_kết cũng như trau_dồi kỹ_năng nói tiếng anh nhiều hơn .",2,0
+"em học không tốt , em nghỉ nhiều buổi thực_hành , còn lý_thuyết thì em khá vững .",0,3
+dạy vui_vẻ .,2,0
+thầy nhiệt_tình_giảng dễ hiểu không nhàm_chán .,2,0
+thầy dạy ngắn_gọn dễ hiểu .,2,0
+thầy đi bài giảng hơi nhanh .,0,0
+không tận_tâm .,0,0
+tạm ổn .,1,3
+"thầy vui_tính , nhiệt_tình , trả_lời mọi thắc_mắc của sinh_viên .",2,0
+cách dạy của thầy em rất thích .,2,0
+chưa kiểm_soát được thời_gian .,0,0
+dạy chú_trọng đến người học .,2,0
+nên cung_cấp tài_liệu giải trắc_nghiệm anh văn .,0,1
+nếu làm chung với nhóm khác thì sẽ dẫn tới khác đề nên không hợp_tác được .,0,1
+đôi_khi kẹt xe thầy lại trễ giờ .,0,0
+"sự tận_tâm , nhiệt_tình trong giảng_dạy của giảng_viên .",2,0
+"giáo_viên giảng bài hay , thu_hút .",2,0
+giảng_viên truyền_đạt hiệu_quả .,2,0
+rất thực_tế và cụ_thể .,2,0
+em rất hài_lòng về phương_pháp dạy này .,2,0
+"thầy cần giảng_giải cách làm đối_với từng dạng bài nhiều hơn , rồi sau đó hãy cho nhiều bài_tập .",0,0
+"em nghĩ thầy nên nhiều bài_tập hơn và gửi bài giảng qua courses , lập nhóm làm bài để chấm_điểm như các lớp khác .",0,0
+quạt trong phòng học chưa đáp_ứng tốt .,0,2
+thầy dạy hay và nhiệt_tình .,2,0
+"thầy dạy rất kỹ , rất chi_tiết .",2,0
+"cô dạy nhiệt_tình , dễ hiểu , đảm_bảo cho sinh_viên hiểu rõ lý_thuyết .",2,0
+không triển_khai slide bài giảng trên moodle .,0,0
+"giảng_viên giảng_dạy nhiệt_tình , tạo ra hoạt_động vui_nhộn .",2,0
+phản_hồi nhanh các thắc_mắc của sinh_viên .,2,0
+có_lẽ cô nên ra nhiều bài_tập về nhà hơn cho các bạn trong lớp .,0,0
+"em thấy có một_số buổi học kéo_dài , có buổi kéo_dài tới gần 12 h .",0,0
+"thầy nói lan_man khá nhiều , khiến sinh_viên không biết_đâu là phần nội_dung chính .",0,0
+"dạy tận_tâm , nhiệt_tình .",2,0
+cho bài khó .,0,0
+"cô dạy rất hay , chậm và kỹ_càng , giúp chúng_em hiểu sâu hơn về bài giảng .",2,0
+buổi dạy của thầy hay bị gián_đoạn .,0,0
+bên cạnh việc giảng_dạy thầy còn rất kể nhiều câu_chuyện những chiêm_nghiệm trong cuộc_sống cho sinh_viên nghe .,2,0
+mong nhà_trường sẽ có nhiều biện_pháp để tăng_cường thêm các trang_thiết_bị và cơ_sở vật_chất để phục_vụ tốt hơn cho việc học tiếng anh của sinh_viên .,0,2
+giáo_viên giảng dễ hiểu .,2,0
+"giảng_viên rất nhiệt_tình , các kiến_thức đều được đưa ra hợp_lý dễ hiểu và nắm_bắt .",2,0
+bản_thân sinh_viên chưa từng gặp giảng_viên này một lần nào trong khóa_học .,0,0
+"thầy sử_dụng tốt hệ_thống moodle để trao_đổi với sinh_viên và những giảng_giải mang tính dễ hiểu , gần_gũi với sinh_viên .",2,0
+phương_pháp dạy giúp sinh_viên tiếp_thu dễ hơn .,2,0
+cần tăng_cường thêm nhiều bài_tập vào nhiều tiết thực_hành .,0,1
+cô dạy rất tận_tình dễ hiểu .,2,0
+nhiều lúc thầy nói hơi nhanh .,0,0
+"giáo_viên dạy kỹ_càng , dễ hiểu .",2,0
+trang_bị phòng_thí_nghiệm để hiểu rõ hơn về thực_tế .,0,2
+"dạy hay , vui_vẻ và gần_gũi với sinh_viên .",2,0
+"có nhiều vấn_đề còn khó hiểu , khó tiếp_cận .",0,0
+giảng_viên chưa thực_sự chuẩn_bị bài giảng chu_đáo trong một_số buổi học .,0,0
+giờ học chưa đảm_bảo .,0,0
+phòng có máy điều hòa .,1,2
+cô không cho đề trước khi thi .,0,0
+"cô dạy rất nhiệt_tình , luôn trao_đổi trên lớp và trên website môn_học .",2,0
+phương_pháp giảng_dạy không nên phụ_thuộc hoàn_toàn vào việc thuyết_trình của sinh_viên .,0,0
+"giảng_viên tận_tình , dạy minh_họa dễ hiểu .",2,0
+"giáo_viên giảng_dạy hay , dễ hiểu .",2,0
+"ra bài_tập thì thầy nên sửa , để chúng_em đối_chiếu kết_quả .",0,0
+cách giảng của thầy chưa thực_sự hay và có nhiều sự chuẩn_bị cho bài giảng bằng những tình_huống thực_tế .,0,0
+"thầy dạy rất có tâm , chấm_điểm rất chính_xác .",2,0
+"đưa slide , bài_tập lên moodle để sinh_viên tham_khảo .",1,0
+"giảng rất nhiệt_tình , cố_gắng quan_sát sinh_viên .",2,0
+"nên cho bài_tập theo hình_thức file , thay_vì chép bảng ( chỉ nên chép bảng bài_học thôi ) .",0,1
+giọng thầy hơi khó nghe .,0,0
+"chương_trình dạy quá cũ , chưa hợp_lý .",0,0
+em quen ngồi máy_tính tìm_hiểu hơn là học_môn này buồn_ngủ .,0,0
+"điều này thật là "" ảo "" vì không sinh_viên nào làm điều đó .",0,3
+cô là giáo_viên tận_tâm nhất trong những người tận_tâm nhất .,2,0
+tăng_cường kỹ_năng nói nhiều hơn_nữa .,0,1
+"trang_bị máy_chiếu mới , loa và micro của phòng học , máy_tính mới cho phòng lab .",0,2
+giảng bài đôi_khi hơi khó hiểu .,0,0
+cô tận_tình giải_đáp thắc_mắc .,2,0
+"giảng_dạy tận_tình , bài_tập hay .",2,0
+các máy_tính trong phòng lab nên cài_đặt thêm phần_mềm android_studio để phục_vụ việc thực_hành_môn này .,0,2
+"nhiệt_tình giải_đáp những thắc_mắc trên lớp , và qua trang_web sinh_viên .",2,0
+cho làm nhiều bài kiểm_tra hơn .,0,0
+thầy tương_đối khó trong việc nộp bài lab .,0,0
+tài_liệu đầy_đủ .,2,1
+chỉ_dẫn tận_tình cho sinh_viên .,2,0
+tích_cực giúp_đỡ sinh_viên .,2,0
+"giảng_viên nhiệt_tình , vui_tính , có tâm .",2,0
+cô phát_âm kém và sai .,0,0
+"giảng_viên nghỉ dạy khá nhiều , không đảm_bảo giờ lên_lớp .",0,0
+cung_cấp nhiều kiến_thức hữu_ích liên_quan đến ngành .,2,0
+chu_đáo .,2,0
+trân_trọng .,1,3
+cô rất dễ .,2,0
+"giáo_trình cấu_trúc dữ_liệu và giải_thuật còn khá nhiều sai_sót , mong nhà_trường chỉnh_sửa và bổ_sung lại .",0,1
+thầy chưa giải_đáp thật chi_tiết thắc_mắc của sinh_viên .,0,0
+"không nên mê gái , nên quan_tâm đồng_đều tất_cả các học_sinh .",0,0
+thầy giảng hay có trọng_tâm dễ hiểu .,2,0
+trong nửa đầu của học_kỳ không có giáo_viên hướng_dẫn thực_hành .,2,0
+thầy dạy hay dễ hiểu cho làm nhiều bài_tập thực_hành oop nhờ thầy em học tốt hơn .,2,0
+giáo_viên nhiệt_tình và vui_tính .,2,0
+"phòng học quá nóng phòng wzjwz96 , lớp em có nhiều sinh_viên nhưng chỉ có 2 cái quạt , học anh văn vào buổi chiều bị nắng_chiếu mà_còn nóng thì em tiếp_thu bài rất kém ạ !",0,2
+"nhiệt_tình , phương_pháp giảng_dạy hiệu_quả .",2,0
+môn thực_hành nên cho những giảng_viên có kinh_nghiệm giảng_dạy để giúp sinh_viên có nền_tảng về lập_trình vì học ngành này thực_hành là rất quan_trọng .,0,1
+"phòng thực_hành không đảm_bảo phục_vụ cho môn_học , các phần_mềm , chương_trình không còn phù_hợp nữa .",0,2
+có hướng_dẫn đầy_đủ dễ hiểu .,2,0
+hướng_dẫn lab mơ_hồ .,0,0
+"thầy cho chúng_em những bài_tập mang tính thực_hành , thực_tiễn cao và em thực_sự rất hài_lòng .",2,0
+thầy không dạy nhiều chủ_yếu cho sinh_viên tự tìm_hiểu .,0,0
+em muốn đổi tên môn_học vì tên môn là lập_trình c fraction_cplusplus nhưng lại học_thiên về csharp .,0,1
+thầy vừa dạy vừa chat hoặc gọi điện_thoại thường_xuyên .,0,0

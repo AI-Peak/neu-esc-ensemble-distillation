@@ -6,6 +6,7 @@ Inputs (run directories with metrics.json / logits.npz / config.json):
   runs/s42..s46        the original 40 runs (fp16, val selection)
   runs/gap/a           10 more seeds (47..56) of the 4 original setups with per-epoch test logits,
                        and the MLM rows (mtl_mlm, mtl_mlm_smart; seeds 42..46)
+  runs/gap/mlm         the MLM rows for seeds 47..56, same runner and flags as runs/gap/a
   runs/gap/b           fp32 reruns of mtl / mtl_smart (seeds 42..46) and SMART with embedding noise
 Prints the tables (markdown) and writes gap_runs.csv to --out; the write-up is
 reports/baseline_reproduce/README.md.
@@ -83,6 +84,7 @@ def main():
     for seed in range(42, 47):
         rows += load_runs(ROOT / "runs" / f"s{seed}", "original")
     rows += load_runs(ROOT / "runs" / "gap" / "a", "more_seeds")
+    rows += load_runs(ROOT / "runs" / "gap" / "mlm", "more_seeds")
     rows += load_runs(ROOT / "runs" / "gap" / "b", "wave_b")
     fp16 = [r for r in rows if r["precision"] != "fp32" and r["setup"] != "mtl_smart_emb"]
     lines = ["# Reproduction gap analysis", "",
