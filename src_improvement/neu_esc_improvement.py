@@ -708,6 +708,15 @@ def train(args):
         if test_history[task]:
             arrays[f"test_by_epoch_{task}"] = np.stack(test_history[task])
     np.savez_compressed(run_dir / "logits.npz", **arrays)
+    if args.save_train_preds:
+        # In-sample teacher for the out-of-fold ablation: predictions on the rows this model trained on,
+        # in the same file format, so ensemble-targets reads them unchanged.
+        all_rows = np.arange(len(sequences["train"]))
+        insample_logits = predict(model, list(sequences["train"]), pad_id, device,
+                                  COMMON["eval_batch_size"], use_amp)
+        np.savez_compressed(run_dir / "oof.npz", rows=all_rows,
+                            train_csv_sha256=DATA_FILES[data["train"][2]],
+                            **{f"oof_{task}": insample_logits[k] for k, task in enumerate(tasks)})
     if args.fold is not None:
         oof_logits = predict(model, [sequences["train"][i] for i in held_out], pad_id, device,
                              COMMON["eval_batch_size"], use_amp)
@@ -820,6 +829,8 @@ def main(argv=None):
                          "its out-of-fold predictions (oof.npz)")
     p_train.add_argument("--num-folds", type=int)
     p_train.add_argument("--ens-targets", help="ensemble-targets output, required by mtl_ed")
+    p_train.add_argument("--save-train-preds", action="store_true",
+                         help="save predictions on the training rows to oof.npz (in-sample teacher ablation)")
     debug = p_train.add_argument_group("smoke/debug (marks the run benchmark_eligible=false)")
     debug.add_argument("--epochs", type=int)
     debug.add_argument("--max-steps-per-epoch", type=int)

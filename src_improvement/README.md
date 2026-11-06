@@ -31,7 +31,7 @@ Code các thử nghiệm không dùng (ablation giai thừa, các biến thể t
 - Từ epoch 1, mỗi task cộng thêm γ · KL(p_ens ‖ p), γ = 1.
 - Cần `--ens-targets`. Chọn checkpoint và test bằng chính model; khi dùng thật vẫn chỉ là một model.
 
-Out-of-fold nghĩa là mỗi câu train chỉ được dự đoán bởi model *không* thấy câu đó lúc train. Nhờ vậy nhãn mềm mang thông tin thật, không phải nhãn đã học thuộc.
+Out-of-fold nghĩa là mỗi câu train chỉ được dự đoán bởi model *không* thấy câu đó lúc train. Trên NEU-ESC, cách này cho accuracy cao hơn teacher in-sample có ý nghĩa, còn macro-F1 không khác có ý nghĩa (`reports/draft_paper.md`, Bảng 3b; số liệu từng run ở `reports/improvement/insample_per_run.csv`). Cờ `--save-train-preds` của lệnh `train` tạo dự đoán in-sample cho ablation này.
 
 ## Chạy ED (3 bước)
 

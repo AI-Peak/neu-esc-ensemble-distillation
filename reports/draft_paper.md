@@ -19,8 +19,9 @@ Số liệu lấy từ [baseline_reproduce](baseline_reproduce/README.md), [impr
 - NEU-ESC là bộ dữ liệu tiếng Việt (bình luận sinh viên), 2 task: sentiment (4 lớp) và topic (10 lớp). Paper gốc báo cáo accuracy cao nhất ở các setup có SMART (sentiment: MTL + MLM + SMART; topic: MTL + SMART), mỗi dòng chỉ **1 lần chạy**.
 - Nhóm **reproduce lại** theo code công khai của tác giả, **15 seed** mỗi dòng. Kết quả lệch paper trung bình 0.42 điểm, nhỏ hơn biên độ trung bình giữa các seed (1.40 điểm); riêng 4/20 ô không có seed nào đạt số của paper.
 - Đề xuất **ED (Ensemble Distillation)**: train 30 model theo fold, lấy dự đoán out-of-fold làm nhãn mềm, distill vào **một** model MTL. Không đổi kiến trúc, không tăng chi phí suy luận.
-- Trên NEU-ESC, ED **thắng cả 5 baseline reproduce** ở cả 2 backbone, 2 task, trên cả accuracy và macro-F1 (p ≤ 0.021). Ví dụ PhoBERT: 83.51 / 79.65 so với 82.85 / 79.05 của MTL + SMART.
-- Kiểm tra trên **UIT-VSFC**: ED vẫn thắng rõ ở topic. Ở sentiment, accuracy ngang (PhoBERT) hoặc cao hơn (ViSoBERT) baseline mạnh nhất, nhưng macro-F1 thấp hơn `mtl_mlm`.
+- Ablation teacher trên NEU-ESC: out-of-fold cao hơn teacher in-sample có ý nghĩa về accuracy (+0.33 đến +0.70), nhưng không khác có ý nghĩa về macro-F1.
+- Trên NEU-ESC, ED **thắng cả 5 baseline reproduce** ở cả 2 backbone, 2 task, trên cả accuracy và macro-F1 (p Holm ≤ 0.022). Ví dụ PhoBERT: 83.51 / 79.65 so với 82.85 / 79.05 của MTL + SMART.
+- Kiểm tra trên **UIT-VSFC**: ED tăng có ý nghĩa ở accuracy topic, nhưng sau hiệu chỉnh Holm macro-F1 topic của PhoBERT không còn có ý nghĩa. Ở sentiment, ED không khác có ý nghĩa so với baseline mạnh nhất.
 
 ## 1. Introduction
 
@@ -57,7 +58,9 @@ Số liệu lấy từ [baseline_reproduce](baseline_reproduce/README.md), [impr
 **Giao thức (áp dụng cho mọi bảng):**
 - Chọn checkpoint theo **mean val macro-F1 của 2 task** (single-task: val macro-F1 của task đó); test đúng **1 lần**.
 - Báo **trung bình ± std** qua 15 seed (42–56) trên NEU-ESC, 10 seed (42–51) trên UIT-VSFC.
-- So sánh bằng **Welch t-test** (riêng Bảng 7 dùng t-test ghép cặp theo seed).
+- So sánh bằng **Welch t-test** (riêng Bảng 6 dùng t-test ghép cặp theo seed).
+- Hiệu chỉnh đa so sánh bằng **Holm** ở α = 0.05, riêng từng dataset, trên mọi cặp ED − baseline về accuracy và macro-F1: 40 phép so sánh trên NEU-ESC, 32 trên UIT-VSFC. "Có ý nghĩa" ở Bảng 4 và Bảng 5 hiểu theo p đã hiệu chỉnh này.
+- Bảng 3b hiệu chỉnh Holm riêng trên 8 phép so sánh của nó.
 - Không chọn seed, không nhìn test để chọn epoch.
 
 ## 4. Reproduce baseline NEU-ESC
@@ -100,7 +103,7 @@ Số liệu lấy từ [baseline_reproduce](baseline_reproduce/README.md), [impr
 - Loss: **L = Σ_task 0.5 · [ CE(y, p) + γ · KL(p_ens ‖ p) ]**, γ = 1, từ epoch 1.
 - Suy luận: một model, một lượt forward, chi phí như baseline.
 
-(Hình 1 nên vẽ: 30 model fold → p_ens → cộng KL vào loss của student; chưa có hình.)
+**Hình 1 – Kiến trúc ED:** [docs/figures/ed_architecture.drawio](../docs/figures/ed_architecture.drawio) (mở bằng draw.io).
 
 ## 6. Kết quả trên NEU-ESC
 
@@ -130,6 +133,25 @@ Số liệu lấy từ [baseline_reproduce](baseline_reproduce/README.md), [impr
 - Chỉ thêm term KL vào `mtl` đã tăng +0.9 đến +1.5 (p < 0.001), lớn hơn mức SMART mang lại.
 - Một model ED **vượt cả ensemble 15 model cùng backbone**, và lấy lại 1/3 đến 1/2 mức lợi của ensemble 30 model, với 1/30 chi phí suy luận.
 
+**Bảng 3b – Ablation teacher: out-of-fold so với in-sample (test, NEU-ESC, 15 seed):** ED in-sample dùng teacher gồm 6 model `mtl` train trên toàn bộ train (2 backbone × 3 seed), dự đoán lại chính các câu đã học. Mỗi câu vẫn có 6 dự đoán, student và loss giữ nguyên. Accuracy của teacher trên train: 97.83 / 96.03, so với 83.55 / 80.47 của teacher out-of-fold. p Holm tính trên 8 phép so sánh của bảng này.
+
+| Backbone | Task | Chỉ số | `mtl` | ED in-sample | ED out-of-fold | Δ OOF − in-sample | p Holm |
+|---|---|---|---:|---:|---:|---:|---:|
+| PhoBERT | Sentiment | Accuracy | 82.39 | 82.82 ± 0.37 | 83.51 ± 0.24 | **+0.70** | **< 0.001** |
+| PhoBERT | Sentiment | Macro-F1 | 76.86 | 77.58 ± 0.40 | 77.91 ± 0.28 | +0.33 | 0.061 |
+| PhoBERT | Topic | Accuracy | 78.75 | 79.09 ± 0.28 | 79.65 ± 0.27 | **+0.56** | **< 0.001** |
+| PhoBERT | Topic | Macro-F1 | 62.23 | 63.16 ± 0.48 | 63.57 ± 0.40 | +0.41 | 0.061 |
+| ViSoBERT | Sentiment | Accuracy | 82.04 | 82.93 ± 0.22 | 83.25 ± 0.18 | **+0.33** | **< 0.001** |
+| ViSoBERT | Sentiment | Macro-F1 | 76.08 | 77.11 ± 0.40 | 77.22 ± 0.28 | +0.12 | 0.726 |
+| ViSoBERT | Topic | Accuracy | 78.22 | 79.25 ± 0.22 | 79.73 ± 0.17 | **+0.48** | **< 0.001** |
+| ViSoBERT | Topic | Macro-F1 | 61.70 | 63.07 ± 0.42 | 63.05 ± 0.26 | −0.02 | 0.876 |
+
+- **Accuracy:** out-of-fold cao hơn in-sample có ý nghĩa ở cả 4 ô (+0.33 đến +0.70). Đây là bằng chứng out-of-fold có tác dụng.
+- **Macro-F1:** không khác có ý nghĩa ở cả 4 ô sau Holm.
+- **Phần còn lại không nhờ out-of-fold:** ED in-sample vẫn cao hơn `mtl` ở 7/8 ô (p gốc chưa hiệu chỉnh ≤ 0.008; riêng accuracy sentiment PhoBERT p = 0.052). In-sample đã đạt 38–73% mức tăng accuracy và 69–101% mức tăng macro-F1 mà ED out-of-fold có so với `mtl`. Vì vậy distill tự nó đã giúp, out-of-fold thêm một phần accuracy.
+- **Chi phí:** teacher in-sample chỉ cần 3.9 giờ GPU so với ~16 giờ. Nếu ưu tiên macro-F1 hoặc thời gian train, đây là phương án rẻ hơn đáng cân nhắc.
+- **Khác biệt ngoài out-of-fold:** model của teacher in-sample học trên 100% train, model fold học trên 80%. Thí nghiệm này chạy sau, với runner có thêm cờ lưu dự đoán train (SHA `245fc620`, ED gốc `4f4d7f0d`).
+
 **Bảng 4 – Toàn bộ setup trên NEU-ESC: accuracy, macro-F1, weighted-F1 và F1 lớp Toxic (test, 15 seed):**
 
 | Backbone | Setup | Sent acc | Sent macro-F1 | Sent weighted-F1 | F1 Toxic | Topic acc | Topic macro-F1 | Topic weighted-F1 |
@@ -148,28 +170,18 @@ Số liệu lấy từ [baseline_reproduce](baseline_reproduce/README.md), [impr
 | ViSoBERT | **ED** | **83.25 ± 0.18** | **77.22 ± 0.28** | **83.05 ± 0.15** | 82.94 | **79.73 ± 0.17** | **63.05 ± 0.26** | **79.21 ± 0.14** |
 
 - ED cao nhất ở cả 6 cột accuracy / macro-F1 / weighted-F1, trên cả 2 backbone. Macro-F1 tăng nhiều hơn accuracy → nhìn chung các lớp nhỏ cũng được lợi, trừ F1 Toxic so với single-task và các setup có SMART (xem §9).
-- So với baseline tốt nhất của từng cột (Welch t-test), ED tăng có ý nghĩa ở cả 8 ô accuracy / macro-F1:
+- So với baseline tốt nhất của từng cột (Welch t-test, p gốc), ED tăng có ý nghĩa ở cả 8 ô accuracy / macro-F1. Sau hiệu chỉnh Holm, cả 40 phép so sánh trên NEU-ESC vẫn có ý nghĩa (p Holm lớn nhất 0.022, ở hai ô topic ViSoBERT so với MTL + MLM + SMART):
   - PhoBERT: sent acc +0.66 (vs MTL + SMART), sent macro-F1 +0.67 (vs single), topic acc +0.56 (vs MTL + MLM + SMART), topic macro-F1 +1.34 (vs MTL); p < 0.001 cả 4.
   - ViSoBERT: sent acc +0.43 (vs MTL + MLM + SMART, p < 0.001), sent macro-F1 +0.71 (vs single, p < 0.001), topic acc +0.18 (vs MTL + MLM + SMART, p = 0.011), topic macro-F1 +0.47 (vs MTL + MLM + SMART, p = 0.021).
   - Run thấp nhất của ED vẫn cao hơn trung bình baseline tốt nhất ở 7/8 ô (trừ topic acc ViSoBERT, ô tăng ít nhất).
 - **F1 Toxic (2.5% dữ liệu) là điểm đánh đổi:** ED thấp hơn các setup có SMART (83.28 so với 85.35; 82.94 so với 84.68) và single-task (85.32; 83.39), nhưng cao hơn MTL và MTL + MLM. Ghi vào phần hạn chế.
 - F1 đầy đủ từng lớp (14 lớp × 6 setup) để ở phụ lục.
 
-**Bảng 5 – Chi phí (Kaggle T4, một run):**
-
-| Setup | Thời gian train |
-|---|---|
-| `mtl` | 0.65 giờ |
-| `mtl_smart` | 1.7 giờ |
-| **ED** | **0.65 giờ** (+ teacher 30 × 0.52 giờ ≈ 16 giờ GPU, làm một lần, dùng chung) |
-
-Suy luận: bằng baseline (một model).
-
 ## 7. Tổng quát hoá: UIT-VSFC
 
 Cùng siêu tham số, cùng pipeline, không tinh chỉnh. Teacher dựng lại trên train UIT-VSFC theo đúng cách §5. 10 seed. Khác NEU-ESC ở hai điểm: PhoBERT đọc bản tách từ bằng underthesea 9.5.0, và không chạy single-task nên chỉ có 4 baseline.
 
-**Bảng 6 – Kết quả UIT-VSFC (test):**
+**Bảng 5 – Kết quả UIT-VSFC (test):**
 
 | Backbone | Setup | Sent acc | Sent macro-F1 | F1 Neutral | Topic acc | Topic macro-F1 |
 |---|---|---:|---:|---:|---:|---:|
@@ -184,14 +196,14 @@ Cùng siêu tham số, cùng pipeline, không tinh chỉnh. Teacher dựng lại
 | ViSoBERT | `mtl_mlm_smart` | 92.42 ± 0.24 | 78.32 ± 0.66 | 46.5 | 88.85 ± 0.25 | 79.43 ± 0.65 |
 | ViSoBERT | **ED** | **93.08 ± 0.10** | 80.34 ± 0.49 | 51.3 | **89.32 ± 0.16** | **80.42 ± 0.34** |
 
-- Topic: ED cao nhất ở cả 2 backbone, cả accuracy và macro-F1, có ý nghĩa so với baseline tốt nhất từng cột (p ≤ 0.019). Lý do: ensemble 30 model đạt 90.05 trên test, cao hơn `mtl` (89.05 / 88.77) khoảng 1 điểm, nên teacher còn cái để dạy; ED lấp 66% (PhoBERT) và 43% (ViSoBERT) khoảng cách này.
-- Sentiment, accuracy: ED cao nhất. PhoBERT `mtl` (93.77) đã ngang ensemble 30 (93.75) nên teacher không còn gì để dạy, ED chỉ ngang `mtl_mlm` (+0.03, p = 0.54). ViSoBERT `mtl` (92.71) còn cách ensemble 1.04 điểm, ED hơn `mtl` +0.37 (p < 0.001) và hơn `mtl_mlm` +0.28 (p = 0.013).
-- Sentiment, macro-F1: `mtl_mlm` cao nhất, ED thấp hơn −0.57 (PhoBERT, p = 0.022) và −0.37 (ViSoBERT, p = 0.26), do lớp Neutral (~5%; F1 Neutral −1.76, p = 0.016 và −1.48, p = 0.13). So với `mtl`, ED ngang (−0.09 và −0.13, p > 0.7). Riêng ViSoBERT, ensemble 30 có macro-F1 81.81, cao hơn `mtl` 1.34 điểm, nhưng ED không tăng.
+- Topic: ED cao nhất ở cả 2 backbone, cả accuracy và macro-F1. So với baseline tốt nhất từng cột, p gốc ≤ 0.019; sau Holm vẫn có ý nghĩa ở accuracy cả 2 backbone (p Holm ≤ 0.001) và macro-F1 ViSoBERT (0.011), nhưng macro-F1 PhoBERT thì không (+0.69, p Holm = 0.131). Lý do: ensemble 30 model đạt 90.05 trên test, cao hơn `mtl` (89.05 / 88.77) khoảng 1 điểm, nên teacher còn cái để dạy; ED lấp 66% (PhoBERT) và 43% (ViSoBERT) khoảng cách này.
+- Sentiment, accuracy: ED cao nhất. PhoBERT `mtl` (93.77) đã ngang ensemble 30 (93.75) nên teacher không còn gì để dạy, ED chỉ ngang `mtl_mlm` (+0.03, p = 0.54). ViSoBERT `mtl` (92.71) còn cách ensemble 1.04 điểm, ED hơn `mtl` +0.37 (p < 0.001) và hơn `mtl_mlm` +0.28 (p = 0.013, nhưng p Holm = 0.121 nên không còn có ý nghĩa).
+- Sentiment, macro-F1: `mtl_mlm` cao nhất, ED thấp hơn −0.57 (PhoBERT, p = 0.022, p Holm = 0.135) và −0.37 (ViSoBERT, p = 0.26, p Holm = 1), nên sau hiệu chỉnh không còn khác có ý nghĩa. Phần chênh này đi cùng lớp Neutral (~5%; F1 Neutral −1.76, p gốc = 0.016 và −1.48, p gốc = 0.13). So với `mtl`, ED ngang (−0.09 và −0.13, p > 0.7). Riêng ViSoBERT, ensemble 30 có macro-F1 81.81, cao hơn `mtl` 1.34 điểm, nhưng ED không tăng.
 - So với `mtl_smart` (baseline chính của paper): ED thắng ở cả 4 ô, cả accuracy lẫn macro-F1.
 - SMART **làm hại** trên UIT-VSFC (PhoBERT sentiment −1.3 acc, −5 macro-F1 so với `mtl`), còn ED thì không.
 - Mốc ngoài: bài gốc UIT-VSFC (MaxEnt) F1 87.94 / 84.03, chỉ là mốc sàn (khác metric, khác mô hình).
 
-**Kết luận phần này:** về accuracy, mức tăng của ED đi cùng khoảng cách giữa teacher và một model đơn lẻ. Khoảng cách lớn (NEU-ESC, topic UIT, sentiment UIT với ViSoBERT) → tăng; gần bằng 0 (sentiment UIT với PhoBERT) → không tăng. Macro-F1 sentiment không theo quy luật này: ED ngang `mtl` và thấp hơn `mtl_mlm` trên cả 2 backbone (có ý nghĩa với PhoBERT).
+**Kết luận phần này:** về accuracy, mức tăng của ED đi cùng khoảng cách giữa teacher và một model đơn lẻ. Khoảng cách lớn (NEU-ESC, topic UIT, sentiment UIT với ViSoBERT) → tăng; gần bằng 0 (sentiment UIT với PhoBERT) → không tăng. Macro-F1 sentiment không theo quy luật này: ED ngang `mtl` và thấp hơn `mtl_mlm` trên cả 2 backbone (không có ý nghĩa sau Holm).
 
 ## 8. Discussion
 
@@ -201,9 +213,9 @@ Cùng siêu tham số, cùng pipeline, không tinh chỉnh. Teacher dựng lại
 
 ## 9. Hạn chế
 
-- **Lớp hiếm:** F1 Toxic (NEU) của ED thấp hơn single-task và các setup có SMART, dù vẫn cao hơn MTL và MTL + MLM. F1 Neutral (UIT) ngang `mtl` (p > 0.4), thấp hơn `mtl_mlm` (PhoBERT p = 0.016, ViSoBERT p = 0.13), và cao hơn các setup có SMART. Nguyên nhân có thể là KD kéo dự đoán về phân phối mềm, nơi lớp hiếm có xác suất nhỏ (chưa kiểm chứng). Logit bias chỉ sửa được ở UIT-VSFC (Bảng 7).
+- **Lớp hiếm:** F1 Toxic (NEU) của ED thấp hơn single-task và các setup có SMART, dù vẫn cao hơn MTL và MTL + MLM. F1 Neutral (UIT) ngang `mtl` (p > 0.4), thấp hơn `mtl_mlm` (p gốc: PhoBERT 0.016, ViSoBERT 0.13), và cao hơn các setup có SMART. Nguyên nhân có thể là KD kéo dự đoán về phân phối mềm, nơi lớp hiếm có xác suất nhỏ (chưa kiểm chứng). Logit bias chỉ sửa được ở UIT-VSFC (Bảng 6).
 
-**Bảng 7 – Logit bias trên lớp hiếm của ED (test, NEU-ESC 15 seed, UIT-VSFC 10 seed):** bias chọn theo macro-F1 val, áp dụng một lần lên test. Δ và p (t-test ghép cặp theo seed) so với ED không có bias.
+**Bảng 6 – Logit bias trên lớp hiếm của ED (test, NEU-ESC 15 seed, UIT-VSFC 10 seed):** bias chọn theo macro-F1 val, áp dụng một lần lên test. Δ và p (t-test ghép cặp theo seed) so với ED không có bias.
 
 | Dataset | Backbone | Lớp | Δ acc (p) | Δ macro-F1 (p) | F1 lớp hiếm: gốc → bias | Δ (p) |
 |---|---|---|---:|---:|---:|---:|
@@ -215,23 +227,23 @@ Cùng siêu tham số, cùng pipeline, không tinh chỉnh. Teacher dựng lại
 - **UIT-VSFC:** F1 Neutral và macro-F1 tăng, accuracy không giảm có ý nghĩa. Khi mọi setup cùng dùng bias, ED không còn thua `mtl_mlm` về macro-F1: PhoBERT +0.03 (p = 0.905), ViSoBERT +0.59 (p = 0.052).
 - **NEU-ESC:** không đổi có ý nghĩa. Khi cùng dùng bias, F1 Toxic của ED vẫn thấp hơn setup có SMART tốt nhất (83.21 so với 85.40; 83.26 so với 85.37).
 - **Một bias cho mỗi lớp:** không dùng, vì accuracy của ED giảm có ý nghĩa (NEU-ESC sentiment −0.40 / −0.53, topic −0.20 / −0.45; UIT-VSFC sentiment −0.10 / −0.34; p ≤ 0.042).
-- **Cách đọc:** kết quả chính của paper vẫn là ED không có bias. Đây là phân tích sau huấn luyện, p chưa hiệu chỉnh đa so sánh.
+- **Cách đọc:** kết quả chính của paper vẫn là ED không có bias. Đây là phân tích sau huấn luyện, p của Bảng 6 chưa hiệu chỉnh đa so sánh.
 - **Hướng tiếp theo:** giảm trọng số distill (γ) cho lớp hiếm, nhất là Toxic. Có thể thử thêm loss cân bằng lớp cùng ED, nhưng cách này có thể làm giảm accuracy.
 
 **Hạn chế khác:**
-- **Chi phí teacher:** ~16 giờ GPU một lần.
+- **Thời gian train lâu hơn:** tính cả tạo teacher (~16 giờ GPU, làm một lần cho mỗi dataset), ED mất 16.30 giờ để có model đầu tiên trên NEU-ESC, so với 0.65–2.19 giờ của các baseline MTL. Thời gian suy luận không đổi.
 - **Siêu tham số không tinh chỉnh:** γ = 1, 30 teacher.
 
 **Ablation có thể thêm nếu còn quota (chưa chạy):**
 - γ ∈ {0.5, 2}.
 - Số teacher (5 / 15 / 30 model) và teacher một backbone.
-- Teacher in-sample (không out-of-fold) để chứng minh vai trò của out-of-fold.
 
 ## 10. Conclusion
 
 - Reproduce NEU-ESC theo code công khai với 15 seed. 16/20 ô có seed đạt số của paper; 4 ô không có seed nào đạt, trong đó 83.58 và 83.66 không giải thích được bằng may rủi hay cách chọn epoch.
-- ED: một model MTL học từ ensemble out-of-fold, không đổi kiến trúc, không tăng chi phí suy luận, train nhanh hơn `mtl_smart` ~2.7 lần.
-- NEU-ESC: thắng mọi baseline ở mọi ô, cả accuracy và macro-F1. UIT-VSFC: thắng rõ ở topic; ở sentiment, accuracy ngang hoặc cao hơn, macro-F1 thấp hơn `mtl_mlm`.
+- ED: một model MTL học từ ensemble out-of-fold, không đổi kiến trúc, không tăng chi phí suy luận; đổi lại, thời gian train lâu hơn do phải tạo teacher (§9).
+- NEU-ESC: thắng mọi baseline ở mọi ô, cả accuracy và macro-F1. Kết quả này giữ nguyên sau hiệu chỉnh Holm. UIT-VSFC: topic tăng có ý nghĩa ở accuracy, riêng macro-F1 PhoBERT không còn có ý nghĩa sau Holm; sentiment không khác có ý nghĩa so với baseline mạnh nhất.
+- Vai trò của out-of-fold (chỉ kiểm tra trên NEU-ESC): tăng accuracy có ý nghĩa so với teacher in-sample, không khác có ý nghĩa về macro-F1; phần lớn mức tăng macro-F1 đến từ chính việc distill.
 - Hướng tiếp: xử lý lớp hiếm khi distill; thử teacher nhỏ hơn để giảm chi phí.
 
 ## Phụ lục (nếu cần)
