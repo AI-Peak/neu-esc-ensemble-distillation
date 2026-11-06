@@ -1,0 +1,84 @@
+[07:52:58] phobert-mtl_ed-s42: tokenized in 5s, train tokens mean 22.5, truncated 2.0%
+Some weights of RobertaModel were not initialized from the model checkpoint at vinai/phobert-base-v2 and are newly initialized: ['pooler.dense.bias', 'pooler.dense.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+[07:53:29] phobert-mtl_ed-s42 epoch 1 step 50/181 loss 1.1126
+[07:53:58] phobert-mtl_ed-s42 epoch 1 step 100/181 loss 0.9067
+[07:54:29] phobert-mtl_ed-s42 epoch 1 step 150/181 loss 0.9336
+[07:54:49] phobert-mtl_ed-s42 epoch 1/20 train 108s val 1s | sentiment: acc 0.8045 mF1 0.7036 topic: acc 0.7773 mF1 0.5779
+[07:55:20] phobert-mtl_ed-s42 epoch 2 step 50/181 loss 0.6364
+[07:55:51] phobert-mtl_ed-s42 epoch 2 step 100/181 loss 0.5450
+[07:56:22] phobert-mtl_ed-s42 epoch 2 step 150/181 loss 0.7474
+[07:56:42] phobert-mtl_ed-s42 epoch 2/20 train 111s val 1s | sentiment: acc 0.8079 mF1 0.7303 topic: acc 0.7858 mF1 0.6101
+[07:57:13] phobert-mtl_ed-s42 epoch 3 step 50/181 loss 0.5333
+[07:57:44] phobert-mtl_ed-s42 epoch 3 step 100/181 loss 0.5657
+[07:58:15] phobert-mtl_ed-s42 epoch 3 step 150/181 loss 0.5710
+[07:58:34] phobert-mtl_ed-s42 epoch 3/20 train 111s val 1s | sentiment: acc 0.8287 mF1 0.7492 topic: acc 0.8000 mF1 0.6473
+[07:59:05] phobert-mtl_ed-s42 epoch 4 step 50/181 loss 0.5039
+[07:59:36] phobert-mtl_ed-s42 epoch 4 step 100/181 loss 0.4821
+[08:00:07] phobert-mtl_ed-s42 epoch 4 step 150/181 loss 0.4569
+[08:00:27] phobert-mtl_ed-s42 epoch 4/20 train 111s val 1s | sentiment: acc 0.8281 mF1 0.7431 topic: acc 0.7879 mF1 0.6491
+[08:00:58] phobert-mtl_ed-s42 epoch 5 step 50/181 loss 0.5376
+[08:01:29] phobert-mtl_ed-s42 epoch 5 step 100/181 loss 0.4671
+[08:01:59] phobert-mtl_ed-s42 epoch 5 step 150/181 loss 0.4239
+[08:02:19] phobert-mtl_ed-s42 epoch 5/20 train 112s val 1s | sentiment: acc 0.8369 mF1 0.7560 topic: acc 0.8015 mF1 0.6595
+[08:02:50] phobert-mtl_ed-s42 epoch 6 step 50/181 loss 0.3851
+[08:03:21] phobert-mtl_ed-s42 epoch 6 step 100/181 loss 0.4744
+[08:03:53] phobert-mtl_ed-s42 epoch 6 step 150/181 loss 0.4394
+[08:04:13] phobert-mtl_ed-s42 epoch 6/20 train 112s val 1s | sentiment: acc 0.8263 mF1 0.7529 topic: acc 0.7967 mF1 0.6505
+[08:04:43] phobert-mtl_ed-s42 epoch 7 step 50/181 loss 0.4200
+[08:05:14] phobert-mtl_ed-s42 epoch 7 step 100/181 loss 0.4470
+[08:05:44] phobert-mtl_ed-s42 epoch 7 step 150/181 loss 0.4505
+[08:06:04] phobert-mtl_ed-s42 epoch 7/20 train 110s val 1s | sentiment: acc 0.8387 mF1 0.7537 topic: acc 0.7952 mF1 0.6469
+[08:06:36] phobert-mtl_ed-s42 epoch 8 step 50/181 loss 0.5045
+[08:07:06] phobert-mtl_ed-s42 epoch 8 step 100/181 loss 0.4241
+[08:07:37] phobert-mtl_ed-s42 epoch 8 step 150/181 loss 0.4167
+[08:07:57] phobert-mtl_ed-s42 epoch 8/20 train 111s val 1s | sentiment: acc 0.8306 mF1 0.7625 topic: acc 0.7955 mF1 0.6508
+[08:08:28] phobert-mtl_ed-s42 epoch 9 step 50/181 loss 0.3520
+[08:08:59] phobert-mtl_ed-s42 epoch 9 step 100/181 loss 0.4685
+[08:09:30] phobert-mtl_ed-s42 epoch 9 step 150/181 loss 0.3566
+[08:09:49] phobert-mtl_ed-s42 epoch 9/20 train 112s val 1s | sentiment: acc 0.8254 mF1 0.7542 topic: acc 0.7952 mF1 0.6570
+[08:10:21] phobert-mtl_ed-s42 epoch 10 step 50/181 loss 0.3708
+[08:10:52] phobert-mtl_ed-s42 epoch 10 step 100/181 loss 0.4334
+[08:11:23] phobert-mtl_ed-s42 epoch 10 step 150/181 loss 0.3810
+[08:11:43] phobert-mtl_ed-s42 epoch 10/20 train 112s val 1s | sentiment: acc 0.8402 mF1 0.7601 topic: acc 0.8021 mF1 0.6645
+[08:12:14] phobert-mtl_ed-s42 epoch 11 step 50/181 loss 0.4333
+[08:12:45] phobert-mtl_ed-s42 epoch 11 step 100/181 loss 0.4204
+[08:13:16] phobert-mtl_ed-s42 epoch 11 step 150/181 loss 0.3289
+[08:13:36] phobert-mtl_ed-s42 epoch 11/20 train 112s val 1s | sentiment: acc 0.8330 mF1 0.7519 topic: acc 0.8054 mF1 0.6653
+[08:14:07] phobert-mtl_ed-s42 epoch 12 step 50/181 loss 0.3353
+[08:14:38] phobert-mtl_ed-s42 epoch 12 step 100/181 loss 0.4225
+[08:15:09] phobert-mtl_ed-s42 epoch 12 step 150/181 loss 0.3730
+[08:15:29] phobert-mtl_ed-s42 epoch 12/20 train 111s val 1s | sentiment: acc 0.8396 mF1 0.7611 topic: acc 0.8051 mF1 0.6630
+[08:16:00] phobert-mtl_ed-s42 epoch 13 step 50/181 loss 0.3899
+[08:16:30] phobert-mtl_ed-s42 epoch 13 step 100/181 loss 0.3315
+[08:17:02] phobert-mtl_ed-s42 epoch 13 step 150/181 loss 0.3454
+[08:17:21] phobert-mtl_ed-s42 epoch 13/20 train 111s val 1s | sentiment: acc 0.8402 mF1 0.7613 topic: acc 0.7985 mF1 0.6576
+[08:17:52] phobert-mtl_ed-s42 epoch 14 step 50/181 loss 0.3532
+[08:18:23] phobert-mtl_ed-s42 epoch 14 step 100/181 loss 0.3022
+[08:18:54] phobert-mtl_ed-s42 epoch 14 step 150/181 loss 0.2696
+[08:19:14] phobert-mtl_ed-s42 epoch 14/20 train 111s val 1s | sentiment: acc 0.8369 mF1 0.7588 topic: acc 0.8042 mF1 0.6632
+[08:19:44] phobert-mtl_ed-s42 epoch 15 step 50/181 loss 0.3664
+[08:20:15] phobert-mtl_ed-s42 epoch 15 step 100/181 loss 0.3755
+[08:20:46] phobert-mtl_ed-s42 epoch 15 step 150/181 loss 0.4086
+[08:21:06] phobert-mtl_ed-s42 epoch 15/20 train 111s val 1s | sentiment: acc 0.8363 mF1 0.7554 topic: acc 0.8042 mF1 0.6600
+[08:21:37] phobert-mtl_ed-s42 epoch 16 step 50/181 loss 0.3077
+[08:22:07] phobert-mtl_ed-s42 epoch 16 step 100/181 loss 0.2599
+[08:22:38] phobert-mtl_ed-s42 epoch 16 step 150/181 loss 0.3849
+[08:22:58] phobert-mtl_ed-s42 epoch 16/20 train 111s val 1s | sentiment: acc 0.8366 mF1 0.7581 topic: acc 0.8030 mF1 0.6572
+[08:23:29] phobert-mtl_ed-s42 epoch 17 step 50/181 loss 0.3070
+[08:23:59] phobert-mtl_ed-s42 epoch 17 step 100/181 loss 0.3317
+[08:24:31] phobert-mtl_ed-s42 epoch 17 step 150/181 loss 0.3104
+[08:24:50] phobert-mtl_ed-s42 epoch 17/20 train 111s val 1s | sentiment: acc 0.8363 mF1 0.7582 topic: acc 0.8024 mF1 0.6569
+[08:25:21] phobert-mtl_ed-s42 epoch 18 step 50/181 loss 0.3344
+[08:25:52] phobert-mtl_ed-s42 epoch 18 step 100/181 loss 0.3443
+[08:26:23] phobert-mtl_ed-s42 epoch 18 step 150/181 loss 0.3301
+[08:26:42] phobert-mtl_ed-s42 epoch 18/20 train 111s val 1s | sentiment: acc 0.8372 mF1 0.7610 topic: acc 0.8064 mF1 0.6562
+[08:27:13] phobert-mtl_ed-s42 epoch 19 step 50/181 loss 0.3398
+[08:27:44] phobert-mtl_ed-s42 epoch 19 step 100/181 loss 0.3122
+[08:28:15] phobert-mtl_ed-s42 epoch 19 step 150/181 loss 0.3128
+[08:28:35] phobert-mtl_ed-s42 epoch 19/20 train 112s val 1s | sentiment: acc 0.8384 mF1 0.7601 topic: acc 0.8057 mF1 0.6634
+[08:29:06] phobert-mtl_ed-s42 epoch 20 step 50/181 loss 0.3284
+[08:29:36] phobert-mtl_ed-s42 epoch 20 step 100/181 loss 0.3071
+[08:30:07] phobert-mtl_ed-s42 epoch 20 step 150/181 loss 0.3217
+[08:30:27] phobert-mtl_ed-s42 epoch 20/20 train 111s val 1s | sentiment: acc 0.8384 mF1 0.7619 topic: acc 0.8067 mF1 0.6601
+[08:30:31] phobert-mtl_ed-s42: best epoch 10 | test sentiment: acc 0.8361 mF1 0.7796 test topic: acc 0.7937 mF1 0.6350

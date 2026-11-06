@@ -1,0 +1,108 @@
+{
+  "run_name": "phobert-mtl_ed-s42",
+  "dataset": "neu",
+  "backbone": "phobert",
+  "setup": "mtl_ed",
+  "seed": 42,
+  "code": {
+    "runner_sha256": "089210981c275b25f52b0b3cd698108719ba4261b1eb80913d5fd2399e11c10b",
+    "git_commit": null,
+    "git_dirty": null
+  },
+  "model_id": "vinai/phobert-base-v2",
+  "revision": "86cd7fd4c148980922ac11a2cf5e257f2ba639e1",
+  "model_path_override": null,
+  "text_source": "author _processed.csv",
+  "data_files": {
+    "train_set_processed.csv": "7ca23b39e8e917de5c81745b0be2f4bb0e085fdc6173882479ecb2ed8e9ebe96",
+    "val_set_processed.csv": "948578e4b92df56117fd38d8edaee8d98f11adbd38611d6faee655008adea626",
+    "test_set_processed.csv": "bf850a67db6f9dd48df2adc5aa181e63e052e526361a1e9f0e6179bf582dc2e4"
+  },
+  "tasks": [
+    "sentiment",
+    "topic"
+  ],
+  "epochs": 20,
+  "adam_eps": 5e-09,
+  "lr_end_factor": 0.1,
+  "early_stopping_patience": null,
+  "smart": null,
+  "lr": 2e-05,
+  "weight_decay": 0.01,
+  "batch_size": 128,
+  "max_length": 128,
+  "eval_batch_size": 128,
+  "mtl_task_weight": 0.5,
+  "micro_batch": 64,
+  "mlm": null,
+  "precision": "fp16_autocast",
+  "selection": "mean val macro-F1 over both tasks",
+  "max_steps_per_epoch": null,
+  "limit_eval": null,
+  "benchmark_eligible": true,
+  "environment": {
+    "python": "3.13.16",
+    "platform": "Linux-6.18.55+-x86_64-with-glibc2.39",
+    "torch": "2.11.0+cu130",
+    "transformers": "4.57.6",
+    "sklearn": "1.6.1",
+    "cuda": "13.0",
+    "device": "cuda",
+    "gpu": "Tesla T4",
+    "cuda_visible_devices": "0",
+    "sentencepiece": "0.2.2"
+  },
+  "loading_info": {
+    "missing_keys": [
+      "pooler.dense.bias",
+      "pooler.dense.weight"
+    ],
+    "unexpected_keys": [
+      "lm_head.bias",
+      "lm_head.dense.bias",
+      "lm_head.dense.weight",
+      "lm_head.layer_norm.bias",
+      "lm_head.layer_norm.weight"
+    ],
+    "mismatched_keys": [],
+    "error_msgs": []
+  },
+  "tokenize_seconds": 4.528999325999962,
+  "ensemble_teacher": {
+    "targets": "/tmp/code/ens_targets.npz",
+    "gamma": 1.0,
+    "sources": [
+      "phobert-mtl-s42-f0of5",
+      "phobert-mtl-s42-f1of5",
+      "phobert-mtl-s42-f2of5",
+      "phobert-mtl-s42-f3of5",
+      "phobert-mtl-s42-f4of5",
+      "phobert-mtl-s43-f0of5",
+      "phobert-mtl-s43-f1of5",
+      "phobert-mtl-s43-f2of5",
+      "phobert-mtl-s43-f3of5",
+      "phobert-mtl-s43-f4of5",
+      "phobert-mtl-s44-f0of5",
+      "phobert-mtl-s44-f1of5",
+      "phobert-mtl-s44-f2of5",
+      "phobert-mtl-s44-f3of5",
+      "phobert-mtl-s44-f4of5",
+      "visobert-mtl-s42-f0of5",
+      "visobert-mtl-s42-f1of5",
+      "visobert-mtl-s42-f2of5",
+      "visobert-mtl-s42-f3of5",
+      "visobert-mtl-s42-f4of5",
+      "visobert-mtl-s43-f0of5",
+      "visobert-mtl-s43-f1of5",
+      "visobert-mtl-s43-f2of5",
+      "visobert-mtl-s43-f3of5",
+      "visobert-mtl-s43-f4of5",
+      "visobert-mtl-s44-f0of5",
+      "visobert-mtl-s44-f1of5",
+      "visobert-mtl-s44-f2of5",
+      "visobert-mtl-s44-f3of5",
+      "visobert-mtl-s44-f4of5"
+    ]
+  },
+  "fold": null
+}

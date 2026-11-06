@@ -708,6 +708,17 @@ def train(args):
         if test_history[task]:
             arrays[f"test_by_epoch_{task}"] = np.stack(test_history[task])
     np.savez_compressed(run_dir / "logits.npz", **arrays)
+    if args.save_model:
+        # Runs after test, so it uses no RNG and leaves every other output of the run unchanged.
+        model_dir = run_dir / "model"
+        model_dir.mkdir(exist_ok=True)
+        torch.save(best["state"], model_dir / "model.pt")
+        tokenizer.save_pretrained(model_dir / "tokenizer")
+        write_json(model_dir / "model_info.json", {
+            "run_name": run_name, "backbone": args.backbone, "setup": args.setup, "seed": args.seed,
+            "model_id": backbone["model_id"], "revision": backbone["revision"],
+            "best_epoch": best["epoch"], "max_length": COMMON["max_length"],
+            "num_labels": {task: NUM_LABELS[task] for task in tasks}})
     if args.save_train_preds:
         # In-sample teacher for the out-of-fold ablation: predictions on the rows this model trained on,
         # in the same file format, so ensemble-targets reads them unchanged.
@@ -829,6 +840,8 @@ def main(argv=None):
                          "its out-of-fold predictions (oof.npz)")
     p_train.add_argument("--num-folds", type=int)
     p_train.add_argument("--ens-targets", help="ensemble-targets output, required by mtl_ed")
+    p_train.add_argument("--save-model", action="store_true",
+                         help="save the selected weights and tokenizer to <run>/model (for inference/demo)")
     p_train.add_argument("--save-train-preds", action="store_true",
                          help="save predictions on the training rows to oof.npz (in-sample teacher ablation)")
     debug = p_train.add_argument_group("smoke/debug (marks the run benchmark_eligible=false)")
