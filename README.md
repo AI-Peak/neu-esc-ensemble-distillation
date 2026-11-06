@@ -1,5 +1,14 @@
 # NEU-ESC reproduction
 
+## Công cụ phân tích phản hồi local
+
+Web app React/TypeScript + FastAPI + SQLite đã có trong `apps/web` và `services`.
+Chạy PowerShell tại repo: `./scripts/setup-local.ps1`, sau đó `./scripts/start-local.ps1`.
+Mở [http://127.0.0.1:8765](http://127.0.0.1:8765).
+
+Hướng dẫn [setup, sử dụng và backup](docs/LOCAL_APP.md), [model export/training](docs/MODEL_WORKFLOW.md), [kết quả kiểm thử](docs/VALIDATION_REPORT.md).
+Checkout chưa có student ED fine-tune hoặc OOF: nhập/lưu/rà soát/xuất hoạt động; live AI báo thiếu model. Test double chỉ tồn tại trong tests.
+
 Repo này của Group 5 (DPL302m) tái lập Table 6 của paper [NEU-ESC](https://arxiv.org/abs/2506.23524) trên Kaggle GPU T4, cải tiến bằng ED (Ensemble Distillation) và kiểm tra thêm trên UIT-VSFC. Bản nháp paper: [reports/draft_paper.md](reports/draft_paper.md).
 
 ## Baseline đã chạy: 12 setup × 15 seed (42–56) = 180 run

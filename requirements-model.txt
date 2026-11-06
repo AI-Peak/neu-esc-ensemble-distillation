@@ -1,0 +1,11 @@
+# Python 3.10/3.11. CPU wheels: https://download.pytorch.org/whl/cpu
+# GPU training: install the matching CUDA torch wheel before the remaining packages.
+torch==2.14.1
+transformers==4.44.2
+numpy==2.2.6
+safetensors==0.8.0
+sentencepiece==0.2.1
+pandas==2.3.3
+scikit-learn==1.7.2
+protobuf==5.29.3
+psutil==7.2.2

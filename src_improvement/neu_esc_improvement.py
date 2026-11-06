@@ -22,8 +22,8 @@ Deliberate deviations from that code, all recorded in each run's config.json:
     because `.long()` cuts the graph, so that forward never changes the result.
   - MTL selection uses the best mean validation macro-F1 over both tasks; the authors saved
     every epoch from 4 on and picked one by hand.
-No checkpoints are written: the best weights stay in CPU RAM; each run saves logits, predictions
-keyed by sample ID, metrics, and the SHA-256 of this file.
+By default best weights stay in CPU RAM. With --export-model-root a full pinned ViSoBERT ED
+student is saved, reloaded and parity-verified before atomic deployment publication.
 
 Subcommands:
   fetch     download the authors' CSV splits and check SHA-256
@@ -459,6 +459,14 @@ def train(args):
         raise ValueError("--fold and --num-folds go together, with 0 <= fold < num_folds")
     if setup.get("ens_kd") and not args.ens_targets:
         raise ValueError(f"{args.setup} needs --ens-targets (see the ensemble-targets command)")
+    if args.export_model_root:
+        if (args.backbone != "visobert" or args.setup != "mtl_ed" or args.fold is not None or debug):
+            raise ValueError("export requires a full pinned raw ViSoBERT MTL-ED student run")
+        validation = Path(args.ens_targets).with_suffix(".validation.json")
+        checked = json.loads(validation.read_text(encoding="utf-8"))
+        if (not checked.get("validated") or checked.get("targets_sha256") != sha256_file(args.ens_targets)
+                or checked.get("dataset") != DATASET):
+            raise ValueError("validate OOF targets with scripts/model_oof.py before deployment training")
     run_name = f"{args.backbone}-{args.setup}-s{args.seed}"
     if DATASET != "neu":
         run_name = f"{DATASET}-{run_name}"
@@ -692,6 +700,17 @@ def train(args):
 
     # ---- test with the selected weights
     model.load_state_dict(best["state"])
+    if args.export_model_root:
+        # Training may be invoked by file path; make the root package importable explicitly.
+        root = str(Path(__file__).resolve().parents[1])
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        from services.inference.export import export_selected
+        probes = [data["val"][0][i] for i in (7, 0, 3, 1, 12, 2, 20, 4, 30)]
+        probes.append("kiểm tra " * 200)  # Exercise real tokenizer truncation as well as padding.
+        exported = export_selected(model, tokenizer, config, best, args.export_model_root,
+                                   probes, args.ens_targets)
+        log(f"published verified student artifact: {exported}")
     test_start = time.perf_counter()
     test_logits, test_metrics = evaluate("test")
     test_seconds = time.perf_counter() - test_start
@@ -820,6 +839,7 @@ def main(argv=None):
                          "its out-of-fold predictions (oof.npz)")
     p_train.add_argument("--num-folds", type=int)
     p_train.add_argument("--ens-targets", help="ensemble-targets output, required by mtl_ed")
+    p_train.add_argument("--export-model-root", help="publish verified selected ViSoBERT ED student under this model root")
     debug = p_train.add_argument_group("smoke/debug (marks the run benchmark_eligible=false)")
     debug.add_argument("--epochs", type=int)
     debug.add_argument("--max-steps-per-epoch", type=int)

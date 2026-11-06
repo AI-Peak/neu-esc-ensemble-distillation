@@ -1,0 +1,2 @@
+# API-only local installation. ML dependencies are optional until a bundle exists.
+-r requirements-api.lock.txt

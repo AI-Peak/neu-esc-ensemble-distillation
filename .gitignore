@@ -70,3 +70,12 @@ secrets.json
 Thumbs.db
 .DS_Store
 /tmp/
+
+# Local feedback application data and frontend build/test output
+/runtime/
+/backups/
+node_modules/
+/apps/web/dist/
+/test-results/
+/playwright-report/
+*.tsbuildinfo
