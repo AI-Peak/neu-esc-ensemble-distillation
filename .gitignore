@@ -62,6 +62,8 @@ secrets.json
 
 # Papers/proposals stay outside the repo (copyright unclear; originals live in the parent folder)
 *.pdf
+# Manuscript source (LaTeX, figures, build files) stays local
+/Paper/
 
 # Machine-specific notebooks/editors/temp output
 .ipynb_checkpoints/

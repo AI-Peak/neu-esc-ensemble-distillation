@@ -22,7 +22,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from scipy import stats
 
-OUT = Path("Springer_Nature_LaTeX_Paper/figures")
+OUT = Path("Paper/figures")
 BLUE, ORANGE = "#2a78d6", "#eb6834"  # first two categorical slots, checked with validate_palette
 INK, MUTED, GRID = "#0b0b0b", "#52514e", "#e4e3df"
 WIDTH = 5.17  # \textwidth of the template (372 pt), so the fonts below stay at their true size
