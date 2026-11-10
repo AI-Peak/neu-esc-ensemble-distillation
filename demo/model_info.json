@@ -1,0 +1,14 @@
+{
+  "run_name": "phobert-mtl_ed-s42",
+  "backbone": "phobert",
+  "setup": "mtl_ed",
+  "seed": 42,
+  "model_id": "vinai/phobert-base-v2",
+  "revision": "86cd7fd4c148980922ac11a2cf5e257f2ba639e1",
+  "best_epoch": 10,
+  "max_length": 128,
+  "num_labels": {
+    "sentiment": 4,
+    "topic": 10
+  }
+}

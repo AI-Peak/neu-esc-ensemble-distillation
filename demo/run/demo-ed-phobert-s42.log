@@ -1,0 +1,58 @@
+[{"stream_name":"stdout","time":0.864414146,"data":"$ /usr/bin/python3 -m pip install -q transformers==4.57.6 sentencepiece\n"}
+,{"stream_name":"stderr","time":17.399971804,"data":"ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\n"}
+,{"stream_name":"stderr","time":17.399998114,"data":"gradio-client 2.7.2 requires huggingface-hub\u003c3.0,\u003e=1.16.0, but you have huggingface-hub 0.36.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":17.400004996,"data":"gradio 6.30.0 requires huggingface-hub\u003c3.0,\u003e=1.16.0, but you have huggingface-hub 0.36.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":17.400011101,"data":"gradio 6.30.0 requires pillow\u003c13.0,\u003e=8.0, but you have pillow 13.0.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":17.400016021,"data":"diffusers 0.42.0 requires huggingface-hub\u003c3.0,\u003e=1.32.0, but you have huggingface-hub 0.36.2 which is incompatible.\n"}
+,{"stream_name":"stdout","time":17.633896862,"data":"$ nvidia-smi --query-gpu=index,name,memory.total --format=csv\n"}
+,{"stream_name":"stdout","time":17.663358794,"data":"index, name, memory.total [MiB]\n"}
+,{"stream_name":"stdout","time":17.663394187,"data":"0, Tesla T4, 15360 MiB\n"}
+,{"stream_name":"stdout","time":17.663453261,"data":"1, Tesla T4, 15360 MiB\n"}
+,{"stream_name":"stdout","time":17.670644317,"data":"$ /usr/bin/python3 /tmp/code/neu_esc_improvement.py fetch --data-dir /tmp/neu-esc-data\n"}
+,{"stream_name":"stdout","time":18.021415756,"data":"[07:51:29] download train_set.csv\n"}
+,{"stream_name":"stdout","time":18.252093743,"data":"[07:51:29] download val_set.csv\n"}
+,{"stream_name":"stdout","time":18.348037426,"data":"[07:51:29] download test_set.csv\n"}
+,{"stream_name":"stdout","time":18.495882798,"data":"[07:51:29] download train_set_processed.csv\n"}
+,{"stream_name":"stdout","time":18.700173706,"data":"[07:51:29] download val_set_processed.csv\n"}
+,{"stream_name":"stdout","time":18.832535766,"data":"[07:51:29] download test_set_processed.csv\n"}
+,{"stream_name":"stdout","time":18.966057364,"data":"[07:51:30] data OK in /tmp/neu-esc-data\n"}
+,{"stream_name":"stdout","time":18.996937878,"data":"$ /usr/bin/python3 /tmp/code/neu_esc_improvement.py train --backbone phobert --setup mtl_ed --seed 42 --data-dir /tmp/neu-esc-data --out-dir /tmp/smoke --ens-targets /tmp/code/ens_targets.npz --save-model --epochs 1 --max-steps-per-epoch 3 --limit-eval 200\n"}
+,{"stream_name":"stdout","time":42.256689979,"data":"[07:51:53] phobert-mtl_ed-s42: tokenized in 5s, train tokens mean 22.5, truncated 2.0%\n"}
+,{"stream_name":"stderr","time":51.386854918,"data":"Some weights of RobertaModel were not initialized from the model checkpoint at vinai/phobert-base-v2 and are newly initialized: ['pooler.dense.bias', 'pooler.dense.weight']\n"}
+,{"stream_name":"stderr","time":51.386888803,"data":"You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.\n"}
+,{"stream_name":"stdout","time":59.947458762,"data":"[07:52:11] phobert-mtl_ed-s42 epoch 1/1 train 8s val 0s | sentiment: acc 0.6700 mF1 0.2006 topic: acc 0.4250 mF1 0.0887\n"}
+,{"stream_name":"stdout","time":61.040685499,"data":"[07:52:12] phobert-mtl_ed-s42: best epoch 1 | test sentiment: acc 0.6850 mF1 0.2710 test topic: acc 0.4350 mF1 0.0842\n"}
+,{"stream_name":"stdout","time":64.916025862,"data":"$ /usr/bin/python3 /tmp/verify.py /tmp/smoke/phobert-mtl_ed-s42 /tmp/neu-esc-data smoke\n"}
+,{"stream_name":"stdout","time":69.784451903,"data":"files [('added_tokens.json', 22), ('bpe.codes', 1135173), ('model.pt', 542458551), ('model_info.json', 294), ('special_tokens_map.json', 167), ('tokenizer_config.json', 1203), ('vocab.txt', 895321)]\n"}
+,{"stream_name":"stderr","time":81.26793017,"data":"WARNING: All log messages before absl::InitializeLog() is called are written to STDERR\n"}
+,{"stream_name":"stderr","time":81.267960842,"data":"I0000 00:00:1793951552.407123      84 cudart_stub.cc:31] Could not find cuda drivers on your machine, GPU will not be used.\n"}
+,{"stream_name":"stderr","time":85.471737106,"data":"Some weights of RobertaModel were not initialized from the model checkpoint at vinai/phobert-base-v2 and are newly initialized: ['pooler.dense.bias', 'pooler.dense.weight']\n"}
+,{"stream_name":"stderr","time":85.471775502,"data":"You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.\n"}
+,{"stream_name":"stdout","time":86.085961185,"data":"load \u003cAll keys matched successfully\u003e\n"}
+,{"stream_name":"stdout","time":86.867876137,"data":"VERIFY_OK\n"}
+,{"stream_name":"stdout","time":88.999532702,"data":"SMOKE_OK\n"}
+,{"stream_name":"stdout","time":88.999575439,"data":"$ /usr/bin/python3 /tmp/code/run_queue.py --data-dir /tmp/neu-esc-data --out-dir /kaggle/working/runs --gpus 0 --jobs phobert:mtl_ed:42 -- --ens-targets /tmp/code/ens_targets.npz --save-model\n"}
+,{"stream_name":"stderr","time":96.374795108,"data":"Some weights of RobertaModel were not initialized from the model checkpoint at vinai/phobert-base-v2 and are newly initialized: ['pooler.dense.bias', 'pooler.dense.weight']\n"}
+,{"stream_name":"stderr","time":96.374829252,"data":"You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.\n"}
+,{"stream_name":"stdout","time":96.376625393,"data":"[07:52:47] cached vinai/phobert-base-v2@86cd7fd4\n"}
+,{"stream_name":"stdout","time":97.786761668,"data":"[07:52:48] gpu0 start phobert-mtl_ed-s42\n"}
+,{"stream_name":"stdout","time":2361.98003168,"data":"[08:30:33] gpu0 done  phobert-mtl_ed-s42 37.7 min ok\n"}
+,{"stream_name":"stdout","time":2361.980341963,"data":"queue finished in 0.63 h; 1 ok, 0 failed\n"}
+,{"stream_name":"stdout","time":2361.994936084,"data":"$ /usr/bin/python3 /tmp/verify.py /kaggle/working/runs/phobert-mtl_ed-s42 /tmp/neu-esc-data full\n"}
+,{"stream_name":"stdout","time":2366.908544363,"data":"files [('added_tokens.json', 22), ('bpe.codes', 1135173), ('model.pt', 542458551), ('model_info.json', 295), ('special_tokens_map.json', 167), ('tokenizer_config.json', 1203), ('vocab.txt', 895321)]\n"}
+,{"stream_name":"stderr","time":2369.949405123,"data":"WARNING: All log messages before absl::InitializeLog() is called are written to STDERR\n"}
+,{"stream_name":"stderr","time":2369.949436072,"data":"I0000 00:00:1793953841.088494     139 cudart_stub.cc:31] Could not find cuda drivers on your machine, GPU will not be used.\n"}
+,{"stream_name":"stderr","time":2372.151962249,"data":"Some weights of RobertaModel were not initialized from the model checkpoint at vinai/phobert-base-v2 and are newly initialized: ['pooler.dense.bias', 'pooler.dense.weight']\n"}
+,{"stream_name":"stderr","time":2372.151999848,"data":"You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.\n"}
+,{"stream_name":"stdout","time":2372.785614559,"data":"load \u003cAll keys matched successfully\u003e\n"}
+,{"stream_name":"stdout","time":2376.849463431,"data":"sentiment rows 6613 max_abs_logit_diff 0.0 pred_agree 1.0\n"}
+,{"stream_name":"stdout","time":2376.855036712,"data":"topic rows 6613 max_abs_logit_diff 0.0 pred_agree 1.0\n"}
+,{"stream_name":"stdout","time":2376.85505653,"data":"VERIFY_OK\n"}
+,{"stream_name":"stdout","time":2378.898911465,"data":"DONE queue_exit 0 verify_exit 0\n"}
+,{"stream_name":"stderr","time":2380.8996535,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":2380.89969554,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":2381.165915907,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":2381.165942309,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":2382.025943136,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":2382.558714379,"data":"[NbConvertApp] Writing 1109757 bytes to __results__.html\n"}
+]

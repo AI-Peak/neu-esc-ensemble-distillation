@@ -1,0 +1,9 @@
+{
+  "hashes": {
+    "neu_esc_improvement.py": "089210981c275b25f52b0b3cd698108719ba4261b1eb80913d5fd2399e11c10b",
+    "run_queue.py": "3209a7a5cb311a6bf62244787c892202e4d3e8e42685b6931b44a7a695c7b6ca",
+    "ens_targets.npz": "ba8a532a5d03d27c8bc905b32d1fb0dc4deb3680c6ac06790444e093a4dcab4b"
+  },
+  "queue_exit": 0,
+  "verify_exit": 0
+}
