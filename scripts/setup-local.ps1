@@ -22,6 +22,12 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Cap nhat pip that bai.' }
         & $pythonExe -m pip install -r requirements-model.lock.txt --extra-index-url https://download.pytorch.org/whl/cpu
         if ($LASTEXITCODE -ne 0) { throw 'Cai dependency model that bai.' }
+        $prepareArgs = @('scripts\model_prepare_phobert.py', '--out', 'runtime\cache\phobert-base-v2')
+        if (Test-Path -LiteralPath 'demo\model.pt') {
+            $prepareArgs += @('--source', 'demo')
+        }
+        & $pythonExe @prepareArgs
+        if ($LASTEXITCODE -ne 0) { throw 'Chuan bi config PhoBERT that bai.' }
     }
     if ($WithTests) {
         & $pythonExe -m pip install -r requirements-test.lock.txt

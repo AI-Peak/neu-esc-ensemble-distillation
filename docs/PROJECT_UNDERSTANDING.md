@@ -1,6 +1,8 @@
 # Bản hiểu dự án NEU-ESC
 
-Ngày đọc: 2026-11-05; hoàn tất tổng hợp 2026-11-06. Checkout gốc: `c539171`. Phạm vi: toàn bộ file làm việc hiện hữu của repo, không bao gồm lịch sử Git, tài liệu được nhắc tới nhưng không có trên disk, hoặc artifact ở Kaggle/Drive bên ngoài.
+> **Cập nhật triển khai (2026-11-10, nhánh `webapp`)**: Webapp React + FastAPI + Worker + SQLite đã được triển khai hoàn chỉnh, và checkpoint local `demo/model.pt` (`phobert-mtl_ed-s42`, seed 42, best epoch 10, `vinai/phobert-base-v2@86cd7fd4c148980922ac11a2cf5e257f2ba639e1`) đã được import và kích hoạt cho profile `neu` (`neu-phobert-mtl-ed-s42`). Profile `uit` chưa có checkpoint riêng nên tiếp tục ở trạng thái `unavailable`. Khi suy luận cho `neu`, hệ thống dùng adapter tách từ offline `underthesea 9.5.0` (`equivalence: "approximate"` so với pipeline NEU gốc của tác giả) và giữ nguyên văn bản gốc trong SQLite/CSV. Các kết luận thống kê trong `Springer_Nature_LaTeX_Paper/paper.tex` hiện áp dụng hiệu chỉnh **Holm-Bonferroni** riêng cho từng họ kiểm định (40 phép thử trên NEU-ESC, 32 trên UIT-VSFC, 8 cho ablation OOF vs in-sample), trong đó Sentiment trên UIT-VSFC không khác biệt có ý nghĩa so với `MTL + MLM` sau hiệu chỉnh ($p_{\text{adj}} \ge 0,121$). Phần nội dung bên dưới được giữ làm hồ sơ audit kiến trúc và dữ liệu gốc của repo.
+
+Ngày đọc gốc: 2026-11-05; hoàn tất tổng hợp 2026-11-06. Checkout gốc: `c539171`. Phạm vi: toàn bộ file làm việc hiện hữu của repo, không bao gồm lịch sử Git, tài liệu được nhắc tới nhưng không có trên disk, hoặc artifact ở Kaggle/Drive bên ngoài.
 
 Ba subagent GPT-6.1 Sol đọc độc lập ba phần: baseline và code tác giả; improvement và kết quả ED/UIT/bias; dữ liệu, notebook tương quan/oracle và audit paper. Agent chính tổng hợp và chuyển yêu cầu thành kế hoạch sản phẩm. Đây là đọc/audit tĩnh, không chạy lại các thí nghiệm huấn luyện.
 

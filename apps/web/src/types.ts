@@ -6,6 +6,17 @@ export type Model = {
   model_id: string | null;
   model_version: string | null;
   schema_id: string;
+  backbone?: string | null;
+  setup?: string | null;
+  preprocessing?: {
+    kind: string;
+    equivalence?: string;
+  } | null;
+  provenance?: {
+    seed: number;
+    best_epoch: number;
+    oof_status?: string;
+  } | null;
 };
 export type Profile = {
   id: string;

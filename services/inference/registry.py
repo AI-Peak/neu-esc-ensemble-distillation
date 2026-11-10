@@ -10,8 +10,13 @@ import re
 import threading
 import time
 
+from .preprocessing import (TextPreprocessor, check_preprocessing_ready,
+                            validate_preprocessing_spec)
+from .phobert_config import verify_phobert_config_object
+
 PROFILES_PATH = Path(__file__).resolve().parents[1] / "profiles.json"
 REVISION = "196a62afad9cbe4f52a54aabad828b13f0eec59a"
+PHOBERT_REVISION = "86cd7fd4c148980922ac11a2cf5e257f2ba639e1"
 ARCHITECTURE = "linear2head-v1"
 CRITERION = "mean val macro-F1 over both tasks"
 
@@ -45,22 +50,27 @@ def _digest(value):
     return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
 
 
-def validate_artifact(directory, profile):
-    """Validate every consumed file before any tensor/tokenizer deserialization."""
-    directory = Path(directory).resolve()
-    manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
-    if manifest.get("format_version") != 1 or manifest.get("architecture") != ARCHITECTURE:
-        raise ValueError("unsupported artifact format or architecture")
-    if manifest.get("profile") != profile["id"] or manifest.get("schema_id") != profile["schema_id"]:
-        raise ValueError("profile/schema mismatch (NEU and UIT checkpoints are separate)")
-    if manifest.get("labels") != label_schema(profile):
-        raise ValueError("canonical label IDs/order mismatch")
+def _verify_file_inventory(directory: Path, files: dict, required: set[str]) -> None:
+    if not isinstance(files, dict) or not required.issubset(files) or not all(_digest(v) for v in files.values()):
+        raise ValueError("incomplete artifact file hash inventory")
+    actual = set()
+    for path in directory.rglob("*"):
+        if path.is_symlink():
+            raise ValueError("artifact symlinks are forbidden")
+        if path.is_file() and path.relative_to(directory).as_posix() != "manifest.json":
+            actual.add(path.relative_to(directory).as_posix())
+    if actual != set(files):
+        raise ValueError("artifact has missing or unlisted files")
+    for relative, expected in files.items():
+        path = (directory / relative).resolve()
+        if not path.is_relative_to(directory) or sha256(path) != expected:
+            raise ValueError(f"artifact integrity failure: {relative}")
+
+
+def _validate_format_1(directory: Path, profile: dict, manifest: dict) -> dict:
     if manifest.get("backbone") != {"model_id": "uitnlp/visobert", "revision": REVISION}:
         raise ValueError("only the pinned ViSoBERT backbone is supported")
-    if manifest.get("preprocessing") != {"kind": "raw", "use_fast": False, "max_length": 128}:
-        raise ValueError("unsupported preprocessing; raw ViSoBERT required")
-    if manifest.get("setup") != "mtl_ed" or not manifest.get("model_id") or not manifest.get("model_version"):
-        raise ValueError("a named fine-tuned MTL-ED student is required")
+    validate_preprocessing_spec(manifest.get("preprocessing"), "raw")
     provenance = manifest.get("provenance", {})
     if (type(provenance.get("seed")) is not int or type(provenance.get("best_epoch")) is not int
             or provenance["best_epoch"] < 1 or provenance.get("criterion") != CRITERION
@@ -83,20 +93,7 @@ def validate_artifact(directory, profile):
     files = manifest.get("files", {})
     required = {"model.safetensors", "encoder/config.json", "tokenizer/tokenizer_config.json",
                 "training_config.json", "oof_validation.json", "parity.json"}
-    if not required.issubset(files) or not all(_digest(v) for v in files.values()):
-        raise ValueError("incomplete artifact file hash inventory")
-    actual = set()
-    for path in directory.rglob("*"):
-        if path.is_symlink():
-            raise ValueError("artifact symlinks are forbidden")
-        if path.is_file() and path.relative_to(directory).as_posix() != "manifest.json":
-            actual.add(path.relative_to(directory).as_posix())
-    if actual != set(files):
-        raise ValueError("artifact has missing or unlisted files")
-    for relative, expected in files.items():
-        path = (directory / relative).resolve()
-        if not path.is_relative_to(directory) or sha256(path) != expected:
-            raise ValueError(f"artifact integrity failure: {relative}")
+    _verify_file_inventory(directory, files, required)
     config = json.loads((directory / "training_config.json").read_text(encoding="utf-8"))
     expected_dataset = "vsfc" if profile["id"] == "uit" else "neu"
     if (config.get("dataset") != expected_dataset or config.get("backbone") != "visobert"
@@ -117,34 +114,149 @@ def validate_artifact(directory, profile):
     return manifest
 
 
+def _validate_format_2(directory: Path, profile: dict, manifest: dict) -> dict:
+    if manifest.get("backbone") != {"model_id": "vinai/phobert-base-v2", "revision": PHOBERT_REVISION}:
+        raise ValueError("only the pinned PhoBERT-base-v2 backbone is supported")
+    validate_preprocessing_spec(manifest.get("preprocessing"), "underthesea_word_tokenize")
+    provenance = manifest.get("provenance", {})
+    if (type(provenance.get("seed")) is not int or type(provenance.get("best_epoch")) is not int
+            or provenance["best_epoch"] < 1 or provenance.get("criterion") != CRITERION
+            or not _digest(provenance.get("original_checkpoint_sha256"))
+            or not _digest(provenance.get("runner_sha256"))
+            or not _digest(provenance.get("importer_sha256"))
+            or provenance.get("benchmark_eligible") is not True
+            or not isinstance(provenance.get("selection_score"), (int, float))
+            or not math.isfinite(provenance["selection_score"])):
+        raise ValueError("incomplete imported checkpoint training/epoch selection provenance")
+    data = provenance.get("data_sha256", {})
+    if (set(data) != {"train_set_processed.csv", "val_set_processed.csv", "test_set_processed.csv"}
+            or not all(map(_digest, data.values()))):
+        raise ValueError("processed split SHA-256 provenance required")
+    oof = provenance.get("oof", {})
+    if (oof.get("status") != "reported" or oof.get("audited") is not False
+            or oof.get("source_count") != 30 or oof.get("predictions_per_row") != 6):
+        raise ValueError("honest reported 30-teacher OOF provenance required (audited must be false)")
+    parity = manifest.get("parity", {})
+    if (parity.get("passed") is not True or parity.get("batch_sizes") != [1, 2, 8]
+            or parity.get("rows", 0) < 3 or parity.get("reversed_order") is not True):
+        raise ValueError("reload/batch/order parity verification required")
+    verification = manifest.get("verification", {})
+    if verification.get("passed") is not True:
+        raise ValueError("checkpoint verification report required")
+    dataset_ver = verification.get("dataset_verification")
+    if isinstance(dataset_ver, dict):
+        if dataset_ver.get("status") == "failed" or (
+            dataset_ver.get("requested") is True and dataset_ver.get("passed") is not True
+        ):
+            raise ValueError("requested dataset verification did not pass")
+    files = manifest.get("files", {})
+    required = {
+        "model.safetensors",
+        "encoder/config.json",
+        "tokenizer/tokenizer_config.json",
+        "preprocessing.json",
+        "training_config.json",
+        "source_model_info.json",
+        "source_metrics.json",
+        "parity.json",
+        "verification.json",
+    }
+    _verify_file_inventory(directory, files, required)
+    if json.loads((directory / "preprocessing.json").read_text(encoding="utf-8")) != manifest["preprocessing"]:
+        raise ValueError("preprocessing report and manifest disagree")
+    config = json.loads((directory / "training_config.json").read_text(encoding="utf-8"))
+    expected_dataset = "vsfc" if profile["id"] == "uit" else "neu"
+    if (config.get("dataset") != expected_dataset or config.get("backbone") != "phobert"
+            or config.get("setup") != "mtl_ed" or config.get("fold") is not None
+            or config.get("model_path_override") or config.get("revision") != PHOBERT_REVISION
+            or config.get("seed") != provenance["seed"] or not config.get("benchmark_eligible")
+            or config.get("selection") != CRITERION or config.get("data_files") != data
+            or config.get("code", {}).get("runner_sha256") != provenance["runner_sha256"]):
+        raise ValueError("training config and manifest provenance disagree")
+    model_info = json.loads((directory / "source_model_info.json").read_text(encoding="utf-8"))
+    expected_num_labels = {"sentiment": len(profile["sentiment"]), "topic": len(profile["topic"])}
+    if (model_info.get("backbone") != "phobert" or model_info.get("setup") != "mtl_ed"
+            or model_info.get("seed") != provenance["seed"]
+            or model_info.get("best_epoch") != provenance["best_epoch"]
+            or model_info.get("max_length") != manifest["preprocessing"]["max_length"]
+            or model_info.get("model_id") != "vinai/phobert-base-v2"
+            or model_info.get("revision") != PHOBERT_REVISION
+            or model_info.get("num_labels") != expected_num_labels):
+        raise ValueError("source model_info and manifest provenance disagree")
+    metrics = json.loads((directory / "source_metrics.json").read_text(encoding="utf-8"))
+    if (metrics.get("status") != "COMPLETED" or not metrics.get("benchmark_eligible")
+            or metrics.get("best_epoch") != provenance["best_epoch"]
+            or metrics.get("runner_sha256") != provenance["runner_sha256"]
+            or not isinstance(metrics.get("selection_score"), (int, float))
+            or not math.isclose(metrics["selection_score"], provenance["selection_score"], rel_tol=1e-9, abs_tol=1e-9)):
+        raise ValueError("source metrics and manifest provenance disagree")
+    if json.loads((directory / "parity.json").read_text(encoding="utf-8")) != parity:
+        raise ValueError("parity report and manifest disagree")
+    if json.loads((directory / "verification.json").read_text(encoding="utf-8")) != verification:
+        raise ValueError("verification report and manifest disagree")
+    return manifest
+
+
+def validate_artifact(directory, profile):
+    """Validate every consumed file before any tensor/tokenizer deserialization."""
+    directory = Path(directory).resolve()
+    manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+    fmt = manifest.get("format_version")
+    if fmt not in (1, 2) or manifest.get("architecture") != ARCHITECTURE:
+        raise ValueError("unsupported artifact format or architecture")
+    if manifest.get("profile") != profile["id"] or manifest.get("schema_id") != profile["schema_id"]:
+        raise ValueError("profile/schema mismatch (NEU and UIT checkpoints are separate)")
+    if manifest.get("labels") != label_schema(profile):
+        raise ValueError("canonical label IDs/order mismatch")
+    if manifest.get("setup") != "mtl_ed" or not manifest.get("model_id") or not manifest.get("model_version"):
+        raise ValueError("a named fine-tuned MTL-ED student is required")
+    if fmt == 1:
+        return _validate_format_1(directory, profile, manifest)
+    return _validate_format_2(directory, profile, manifest)
+
+
 def load_artifact(directory, manifest):
+    import torch
     from safetensors import SafetensorError
     from safetensors.torch import load_file
     from transformers import AutoConfig, AutoTokenizer
     from .architecture import build_model
 
+    fmt = manifest.get("format_version", 1)
     config = AutoConfig.from_pretrained(str(directory / "encoder"), local_files_only=True,
                                         trust_remote_code=False)
-    if config.model_type != "xlm-roberta":
-        raise _ArtifactError("the pinned ViSoBERT requires an XLM-RoBERTa encoder")
+    expected_model_type = "roberta" if fmt == 2 else "xlm-roberta"
+    if config.model_type != expected_model_type:
+        raise _ArtifactError(f"backbone requires a {expected_model_type} encoder")
+    if fmt == 2:
+        try:
+            verify_phobert_config_object(config)
+        except ValueError as exc:
+            raise _ArtifactError(str(exc)) from exc
     model = build_model(config, {t: len(manifest["labels"][t]) for t in ("sentiment", "topic")})
     try:
         state = load_file(str(directory / "model.safetensors"), device="cpu")
     except SafetensorError:
         raise _ArtifactError("invalid safetensors artifact") from None
     expected = model.state_dict()
-    if set(state) != set(expected) or any(state[key].shape != expected[key].shape for key in expected):
-        raise _ArtifactError("incompatible encoder/head tensor keys or shapes")
+    if (set(state) != set(expected)
+            or any(state[key].shape != expected[key].shape for key in expected)
+            or any(not torch.isfinite(state[key]).all() for key in expected)):
+        raise _ArtifactError("incompatible or non-finite encoder/head tensors")
     # Structural defects are proved above; resource/runtime failures during allocation
     # or loading remain retryable instead of invalidating unchanged healthy bundles.
     model.load_state_dict(state, strict=True)
+    if fmt == 2:
+        model.to("cpu").float()
     model.eval()
     tokenizer = AutoTokenizer.from_pretrained(str(directory / "tokenizer"), use_fast=False,
                                                local_files_only=True, trust_remote_code=False)
-    # Pinned ViSoBERT has 15002 tokenizer entries and 15004 encoder embeddings. Its two
-    # reserved rows are intentional; exact equality would reject the real backbone.
+    vocab_gap = config.vocab_size - len(tokenizer)
+    # Pinned ViSoBERT (format 1) has 15002 tokenizer entries and 15004 encoder embeddings;
+    # pinned PhoBERT (format 2) has exact 64001 == 64001 match.
+    valid_vocab = (vocab_gap == 0) if fmt == 2 else (vocab_gap in (0, 2))
     if (tokenizer.pad_token_id is None or tokenizer.pad_token_id != config.pad_token_id
-            or config.vocab_size - len(tokenizer) not in (0, 2)
+            or not valid_vocab
             or min(tokenizer.get_vocab().values()) < 0
             or max(tokenizer.get_vocab().values()) >= config.vocab_size):
         raise _ArtifactError("tokenizer vocabulary/padding incompatible with encoder")
@@ -219,7 +331,24 @@ class ModelRegistry:
                 for dependency in ("torch", "transformers", "safetensors", "sentencepiece"):
                     if importlib.util.find_spec(dependency) is None:
                         raise ModelUnavailable(f"Missing model dependency: {dependency}; install requirements-model.txt")
-                result.update(available=True, model_id=manifest["model_id"], model_version=manifest["model_version"])
+                check_preprocessing_ready(manifest["preprocessing"])
+                oof = manifest["provenance"]["oof"]
+                result.update(
+                    available=True,
+                    model_id=manifest["model_id"],
+                    model_version=manifest["model_version"],
+                    backbone=manifest["backbone"]["model_id"],
+                    setup=manifest["setup"],
+                    preprocessing={
+                        "kind": manifest["preprocessing"]["kind"],
+                        "equivalence": manifest["preprocessing"].get("equivalence", "exact"),
+                    },
+                    provenance={
+                        "seed": manifest["provenance"]["seed"],
+                        "best_epoch": manifest["provenance"]["best_epoch"],
+                        "oof_status": oof.get("status", "validated" if manifest["format_version"] == 1 else "reported"),
+                    },
+                )
         except Exception as exc:
             result["reason"] = f"Model unavailable: {exc}"
         return result
@@ -241,11 +370,19 @@ class ModelRegistry:
                     self._loaded = None  # Keep at most one encoder in memory.
                     phase = "artifact load"
                     model, tokenizer = load_artifact(directory, manifest)
-                    self._loaded = key, model, tokenizer
+                    preprocessor = TextPreprocessor(manifest["preprocessing"])
+                    self._loaded = key, model, tokenizer, preprocessor
                     self._failures.pop(str(directory), None)
-                _, model, tokenizer = self._loaded
+                _, model, tokenizer, preprocessor = self._loaded
+                phase = "preprocessing"
+                processed_texts = preprocessor.transform([x["text"] for x in items])
                 phase = "inference"
-                logits, lengths = run_logits(model, tokenizer, [x["text"] for x in items])
+                max_length = manifest["preprocessing"]["max_length"]
+                logits, lengths = (
+                    run_logits(model, tokenizer, processed_texts)
+                    if max_length == 128
+                    else run_logits(model, tokenizer, processed_texts, 8, max_length)
+                )
                 if len(logits) != len(items) or len(lengths) != len(items):
                     raise _ArtifactError("model output row count mismatch")
                 duration = (time.perf_counter() - started) * 1000 / len(items)
@@ -262,8 +399,8 @@ class ModelRegistry:
                     result.append(dict(item_id=item["item_id"], revision_id=item["revision_id"],
                                        model_id=manifest["model_id"], model_version=manifest["model_version"],
                                        schema_id=manifest["schema_id"], **tasks,
-                                       token_count_before_truncation=count, truncated=count > 128,
-                                       warnings=["INPUT_TRUNCATED"] if count > 128 else [], duration_ms=duration))
+                                       token_count_before_truncation=count, truncated=count > max_length,
+                                       warnings=["INPUT_TRUNCATED"] if count > max_length else [], duration_ms=duration))
                 self._failures.pop(str(directory), None)
                 return result
             except Exception as exc:

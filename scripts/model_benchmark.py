@@ -1,12 +1,34 @@
 """Measure a real local artifact: cold first inference, warm single, batches 10/100/500."""
 import argparse
+import importlib.metadata
 import json
+import os
 from pathlib import Path
+import platform
 import sys
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from services.inference.registry import ModelRegistry
+
+
+def _runtime_metadata() -> dict:
+    import torch
+    versions = {}
+    for pkg in ("torch", "transformers", "safetensors", "sentencepiece", "underthesea", "numpy"):
+        try:
+            versions[pkg] = importlib.metadata.version(pkg)
+        except importlib.metadata.PackageNotFoundError:
+            versions[pkg] = None
+    return {
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "processor": platform.processor(),
+        "cpu_count": os.cpu_count(),
+        "torch_num_threads": torch.get_num_threads(),
+        "torch_num_interop_threads": torch.get_num_interop_threads(),
+        "dependencies": versions,
+    }
 
 
 def main():
@@ -33,11 +55,21 @@ def main():
                             rows_per_second=count / seconds, rss_bytes=memory.rss,
                             peak_rss_bytes=getattr(memory, "peak_wset", None),
                             truncated=sum(x["truncated"] for x in predictions)))
-    report = dict(profile=args.profile, model=registry.status(args.profile), measurements=results,
-                  note="Local CPU FP32; includes tokenization. Scores are uncalibrated. Texts not saved.")
+    report = dict(
+        profile=args.profile,
+        model=registry.status(args.profile),
+        environment=_runtime_metadata(),
+        definitions={
+            "cold_first": "First predict() call on a fresh ModelRegistry instance (includes lazy model/tokenizer/segmenter load + inference).",
+            "warm_single": "Second 1-row predict() call after model and segmenter are cached in memory.",
+            "batch_10_100_500": "End-to-end predict() wall time including preprocessing, tokenization, dynamic length-sorted microbatches of 8, and softmax.",
+        },
+        measurements=results,
+        note="Local CPU FP32; includes preprocessing and tokenization. Scores are uncalibrated. Texts not saved.",
+    )
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    print(json.dumps(report, indent=2))
+    args.out.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(json.dumps(report, indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":

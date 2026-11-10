@@ -296,6 +296,9 @@ export function Workspace({
             <span>
               {profile.model.available ? "Model sẵn sàng" : "Chưa có model"}
             </span>
+            {profile.model.available && profile.model.model_id
+              ? ` · ${profile.model.model_id}`
+              : ""}
           </p>
         </div>
         <div className="inline-actions">
@@ -338,6 +341,26 @@ export function Workspace({
           </details>
         </div>
       </div>
+      {profile.model.available &&
+        profile.model.preprocessing?.equivalence === "approximate" && (
+          <div className="notice small">
+            <span>
+              Văn bản được tách từ trước khi phân tích. Kết quả trên dữ liệu bạn
+              nhập có thể khác benchmark nghiên cứu.
+            </span>
+            <details>
+              <summary>Chi tiết kỹ thuật & giới hạn</summary>
+              <p className="technical-reason small">
+                Model đang dùng: {profile.model.model_id} ·{" "}
+                {profile.model.model_version}. Văn bản gốc được giữ nguyên khi
+                lưu và xuất CSV; bước tách từ nội bộ dùng underthesea 9.5.0
+                (khác pipeline tách từ NEU gốc của tác giả, tối đa 128 token).
+                {profile.id === "neu" &&
+                  " Trên NEU-ESC, nhãn Ngôn từ độc hại (Toxic) là lớp hiếm (2,5% dữ liệu huấn luyện) và ED có F1 Toxic thấp hơn SMART; chỉ dùng hỗ trợ rà soát, không tự động kết luận về người viết."}
+              </p>
+            </details>
+          </div>
+        )}
       {!profile.model.available && (
         <div className="notice warning">
           <strong>Chưa thể phân tích AI</strong>

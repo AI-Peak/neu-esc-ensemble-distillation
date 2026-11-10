@@ -4,58 +4,51 @@
 
 ## Platform
 
-web
+web (local-first loopback on Windows)
 
 ## Stack
 
-Người dùng giao quyền đề xuất công nghệ, đang cân nhắc JavaScript và Python. Đề xuất ngày 2026-11-05: TypeScript + React cho giao diện; Python + FastAPI + PyTorch/Transformers cho suy luận; SQLite cho dữ liệu local. Đây là lựa chọn trong kế hoạch, chưa phải stack đã triển khai.
+Đã triển khai cục bộ trên nhánh `webapp`:
+- **Giao diện**: TypeScript + React 19 + TanStack Query + TanStack Table + Vite (`apps/web/`, build tĩnh được FastAPI phục vụ cùng origin tại `http://127.0.0.1:8765`).
+- **API & Worker**: Python 3.10 + FastAPI + Uvicorn (`services/api/`) và tiến trình worker suy luận độc lập (`services/worker.py`).
+- **Suy luận & Tiền xử lý**: PyTorch CPU FP32 + Transformers (`use_fast=False`, `max_length=128`) + `underthesea==9.5.0` (tách từ offline cho PhoBERT).
+- **Lưu trữ**: SQLite WAL cục bộ (`runtime/workspace.sqlite3`) và bundle model phân phiên bản (`runtime/models/`).
 
 ## Users
 
-- Đã xác nhận: người dùng muốn một công cụ sử dụng được, ưu tiên hơn việc thuyết trình; slide đã có.
-- Đã xác nhận: chạy trên máy cá nhân trước, có thể đưa lên web sau.
-- Chưa xác nhận người vận hành cuối cùng là giảng viên, trợ giảng, cán bộ đào tạo hay thành viên nhóm nghiên cứu. Kế hoạch lấy người cần đọc và tổng hợp nhiều phản hồi sinh viên làm đối tượng thiết kế tạm thời.
+- Công cụ làm việc cục bộ cho giảng viên, trợ giảng, cán bộ đào tạo hoặc nhóm nghiên cứu cần nhập phản hồi sinh viên tiếng Việt, phân loại cảm xúc và chủ đề, rà soát các trường hợp cần chú ý và xuất CSV.
+- Chạy trên máy cá nhân trước (loopback `127.0.0.1`), không gửi văn bản phản hồi ra dịch vụ đám mây bên ngoài.
 
 ## Product Purpose
 
-Đề xuất công cụ giúp nhập phản hồi tiếng Việt, tự động gán nhãn cảm xúc và chủ đề, tìm nhóm phản hồi cần quan tâm, kiểm tra/sửa kết quả, rồi xuất dữ liệu để sử dụng tiếp.
-
-Luồng hoàn chỉnh được đề xuất: tạo bộ phản hồi → nhập dữ liệu → phân tích → lọc/tổng hợp → rà soát → xuất kết quả. Báo cáo nghiên cứu là tab phụ, không phải trang chủ.
+Nhập phản hồi tiếng Việt (dán dòng hoặc CSV UTF-8), tự động gán nhãn cảm xúc và chủ đề bằng student MTL-ED đã fine-tune, lọc/tổng hợp phân bố, rà soát và sửa nhãn độc lập theo từng tác vụ, sau đó xuất bản chụp CSV cố định. Báo cáo nghiên cứu là tab phụ (`#/research`), không thay thế quy trình làm việc chính.
 
 ## Positioning
 
-Dự án gốc tái lập mô hình phân loại đồng thời sentiment/topic trên NEU-ESC, cải tiến bằng Ensemble Distillation (ED), và huấn luyện/đánh giá thêm trên UIT-VSFC. ED chuyển thông tin từ ensemble giáo viên sang một student; khi triển khai chỉ cần student đã huấn luyện.
+Dự án tái lập đa seed các baseline của NEU-ESC theo code công khai, cải tiến bằng Out-of-Fold Ensemble Distillation (ED) với 30 teacher theo fold (2 backbone × 3 seed × 5 fold), và kiểm chứng mở rộng trên UIT-VSFC (`Springer_Nature_LaTeX_Paper/paper.tex`). Khi suy luận, hệ thống chỉ chạy **một** student MTL duy nhất (không chạy ensemble 30 model, SMART hay MLM).
 
 ## Operating Context
 
-- Repo hiện là code nghiên cứu Python, notebook, CSV và báo cáo; chưa có web app, HTTP API hoặc checkpoint fine-tune để phục vụ câu mới.
-- Thông tin máy được kiểm tra ngày 2026-11-05: AMD Ryzen 7 PRO 5850U, khoảng 30,8 GiB RAM, GPU tích hợp AMD Radeon. Kế hoạch local lấy CPU làm mặc định; chưa đo latency.
-- Nội dung phản hồi và kết quả xử lý ở local trong phiên bản đầu; không cần gửi văn bản cho API LLM bên ngoài.
-- Huấn luyện và xuất artifact là tác vụ riêng, không chạy trong request web.
+- **Checkpoint hiện có**: `demo/model.pt` (`phobert-mtl_ed-s42`, `vinai/phobert-base-v2@86cd7fd4c148980922ac11a2cf5e257f2ba639e1`, seed 42, best epoch 10) đã được kiểm chứng và import thành bundle versioned tại `runtime/models/neu` (`neu-phobert-mtl-ed-s42`). Profile `uit` chưa có checkpoint riêng nên tiếp tục hiển thị `unavailable` và vẫn cho phép nhập/rà soát thủ công.
+- **Phần cứng kiểm thử local**: AMD Ryzen 7 PRO 5850U (~30,8 GiB RAM, Windows 10/11, Python 3.10.11, CPU FP32).
+- **Ranh giới thực thi**: Không huấn luyện, không tải teacher ensemble và không tải trọng số từ mạng trong request web.
 
 ## Capabilities and Constraints
 
-- NEU: 4 lớp cảm xúc, 10 chủ đề thảo luận sinh viên; UIT: 3 lớp cảm xúc, 4 chủ đề đánh giá đào tạo. Hai hệ nhãn và hai checkpoint riêng; không hoán đổi.
-- Dữ liệu sẵn có chỉ có `text`, `sentiment`, `classification`. Không có trường thời gian, giảng viên, môn học hoặc khoa để mặc định tạo các thống kê đó.
-- Checkpoint tốt nhất hiện chỉ nằm trong RAM khi train; phải bổ sung xuất/nạp artifact trước khi bật suy luận thật.
-- ViSoBERT dùng raw text. PhoBERT dùng processed text; công cụ xử lý NEU gốc chưa xác định đầy đủ. Kế hoạch ưu tiên ViSoBERT ED để đưa raw text vào công cụ local trước, không khẳng định nhanh hơn khi chưa đo.
-- Điểm softmax không phải xác suất đúng đã được hiệu chuẩn. Điểm benchmark trung bình nhiều seed không phải chất lượng bảo đảm của một câu hoặc một checkpoint.
-- Kết quả người dùng sửa phải lưu riêng với dự đoán gốc; thao tác sửa không tự huấn luyện lại model.
-- Repo có mâu thuẫn thông tin quyền tái phân phối dataset. Bản public cần kiểm tra quyền trước khi đưa toàn văn dataset mẫu lên mạng.
-
-## Evidence on Hand
-
-- `src_baseline/`: pipeline tái lập, kiểm tra và tổng hợp thí nghiệm.
-- `src_improvement/`: ED, OOF teachers, runner hỗ trợ hai dataset, phân tích logit bias.
-- `data/NEU/`: 32.966 câu raw, 3 split; `data/UIT-VSFC/`: 16.175 câu, raw và processed.
-- `reports/`: thống kê baseline, ED, UIT và bias; `reports/draft_paper.md` là bản nháp, không phải nguồn để sao chép mọi kết luận không kiểm tra.
-- Không có `runs/`, weights fine-tune, OOF teacher artifact hoặc logits cấp câu trong checkout được kiểm tra.
-- Bản đọc dự án và kế hoạch chi tiết: `docs/PROJECT_UNDERSTANDING.md`, `docs/WEB_APP_DEMO_PLAN.md`.
+- **Hai hệ nhãn tách biệt**:
+  - `neu` (`neu-v1`): 4 lớp cảm xúc (`Neutral`, `Positive`, `Negative`, `Toxic`) và 10 chủ đề thảo luận sinh viên.
+  - `uit` (`uit-v1`): 3 lớp cảm xúc (`negative`, `neutral`, `positive`) và 4 chủ đề đánh giá đào tạo (`lecturer`, `training_program`, `facility`, `others`). Không hoán đổi checkpoint giữa hai profile.
+- **Tiền xử lý PhoBERT trên NEU**: Checkpoint PhoBERT học trên file `_processed.csv` đã tách từ của tác giả NEU (pipeline gốc của tác giả không được công bố đầy đủ). Khi chạy câu raw của người dùng, hệ thống dùng adapter `underthesea==9.5.0` (`word_tokenize(..., format="text")`) ở bước nội bộ trước tokenizer, gắn cờ `equivalence: "approximate"`, và **giữ nguyên văn bản gốc** trong database cũng như file xuất CSV.
+- **Giới hạn thống kê theo paper (`paper.tex`)**:
+  - Trên NEU-ESC (15 seed 42–56), ED vượt cả 5 baseline trên cả hai backbone và cả hai tác vụ về Accuracy và Macro-F1 sau hiệu chỉnh Holm (40 phép kiểm định Welch, $p_{\text{adj}} \le 0,022$). Tuy nhiên, F1 lớp hiếm `Toxic` (2,5% dữ liệu huấn luyện) của ED (`83,28%` PhoBERT) thấp hơn SMART (`85,35%`) và Single-task (`85,32%`); do đó `Toxic` chỉ dùng hỗ trợ rà soát, không dùng tự động kết luận về người viết.
+  - Trên UIT-VSFC (10 seed 42–51, 4 baseline MTL), ED cải thiện rõ Topic Accuracy (`89,71%` PhoBERT, $p_{\text{adj}} \le 0,002$), trong khi Sentiment Accuracy và Macro-F1 không khác biệt có ý nghĩa so với `MTL + MLM` sau hiệu chỉnh Holm ($p_{\text{adj}} \ge 0,121$).
+- **Điểm số & kiểm soát con người**: Điểm softmax chưa hiệu chuẩn, không phải xác suất đúng. Nhãn người duyệt (`confirmed`/`corrected`) lưu tách biệt với dự đoán AI gốc và không tự huấn luyện lại model.
+- **Quyền dữ liệu**: Dữ liệu và weights local nằm trong thư mục gitignore; kiểm tra quyền tái phân phối trước khi công khai dataset mẫu.
 
 ## Product Principles
 
 1. Đưa người dùng tới dữ liệu và thao tác cần làm; phần nghiên cứu đứng sau công việc chính.
 2. Giữ rõ nguồn của nhãn: model dự đoán, nhãn tham chiếu, hay người dùng đã xác nhận.
 3. Cho phép tìm, rà soát, sửa và xuất kết quả; không chỉ hiển thị biểu đồ.
-4. Hiển thị trạng thái thiếu model, lỗi dữ liệu và tiến độ thực; không thay bằng kết quả giả.
-5. Giữ dữ liệu local theo mặc định và giữ đường nâng cấp lên web khi có nhu cầu.
+4. Hiển thị trung thực trạng thái model, giới hạn tiền xử lý, lỗi dữ liệu và tiến độ thực; không dùng kết quả giả.
+5. Giữ dữ liệu local theo mặc định và giữ đường mở rộng khi có nhu cầu.

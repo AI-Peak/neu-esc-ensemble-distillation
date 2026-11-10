@@ -433,6 +433,8 @@ function DetailContent({
               <p className="muted small">
                 Điểm softmax chưa được hiệu chuẩn; không phải xác suất dự đoán
                 đúng.
+                {profile.id === "neu" &&
+                  " Nhãn Ngôn từ độc hại (Toxic) chỉ hỗ trợ người rà soát, không tự động kết luận về người viết."}
               </p>
               {tasks.map((task) => (
                 <div className="score-group" key={task}>

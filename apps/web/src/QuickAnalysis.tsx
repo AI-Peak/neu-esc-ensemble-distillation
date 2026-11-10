@@ -127,6 +127,24 @@ export function QuickAnalysis({
             placeholder="Nhập một phản hồi tiếng Việt…"
           />
         </label>
+        {profile.model.available &&
+          profile.model.preprocessing?.equivalence === "approximate" && (
+            <div className="notice small">
+              <span>
+                Văn bản được tách từ trước khi phân tích. Kết quả trên dữ liệu
+                bạn nhập có thể khác benchmark nghiên cứu.
+              </span>
+              <details>
+                <summary>Chi tiết kỹ thuật</summary>
+                <p className="technical-reason small">
+                  Model: {profile.model.model_id} ({profile.model.backbone ?? "PhoBERT"} ·{" "}
+                  {profile.model.setup ?? "mtl_ed"}). Tách từ nội bộ bằng
+                  underthesea 9.5.0 trước khi mã hóa tối đa 128 token; văn bản
+                  gốc được giữ nguyên.
+                </p>
+              </details>
+            </div>
+          )}
         {!profile.model.available && (
           <div className="notice warning">
             <strong>Model chưa sẵn sàng</strong>
@@ -223,6 +241,8 @@ export function QuickAnalysis({
             <summary>Điểm mô hình</summary>
             <p className="muted small">
               Điểm softmax chưa hiệu chuẩn, không phải xác suất dự đoán đúng.
+              {profile.id === "neu" &&
+                " Nhãn Ngôn từ độc hại (Toxic) chỉ dùng hỗ trợ rà soát, không tự động kết luận về người viết."}
             </p>
             {(["sentiment", "topic"] as Task[]).map((task) => (
               <div className="score-group" key={task}>

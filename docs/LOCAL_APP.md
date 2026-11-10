@@ -20,10 +20,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup-local.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\start-local.ps1
 ```
 
-Script cài dependency API từ `requirements-api.lock.txt` (khóa cả dependency gián tiếp trên Windows/Python 3.10), ML/test từ các file `requirements-model.lock.txt`/`requirements-test.lock.txt` khi chọn, và frontend bằng `npm ci` với `package-lock.json`, rồi build assets cục bộ. Model chưa có thì vẫn dùng được nhập/lưu/rà soát thủ công/xuất CSV. Để nạp model thật, cài thêm runtime và bundle theo [MODEL_WORKFLOW.md](MODEL_WORKFLOW.md):
+Script cài dependency API từ `requirements-api.lock.txt` (khóa cả dependency gián tiếp trên Windows/Python 3.10), ML/preprocessing (`torch`, `transformers`, `safetensors`, `sentencepiece`, `underthesea==9.5.0`) và test từ `requirements-model.lock.txt`/`requirements-test.lock.txt` khi chọn, chuẩn bị sẵn `config.json` của `vinai/phobert-base-v2` vào `runtime\cache\phobert-base-v2` (chỉ tải file cấu hình nhỏ, không tải weights pretrained), và frontend bằng `npm ci` với `package-lock.json`, rồi build assets cục bộ. Để import checkpoint PhoBERT local (`demo\model.pt`) cho profile NEU (offline sau khi chuẩn bị config) và kiểm tra trạng thái, xem [MODEL_WORKFLOW.md](MODEL_WORKFLOW.md):
 
 ```powershell
 .\scripts\setup-local.ps1 -WithModelRuntime -WithTests
+.\.venv\Scripts\python.exe scripts\model_prepare_phobert.py --out runtime\cache\phobert-base-v2 --source demo
+.\.venv\Scripts\python.exe scripts\model_import_phobert.py --source demo --encoder-config runtime\cache\phobert-base-v2 --model-root runtime\models --profile neu
+.\.venv\Scripts\python.exe scripts\model_status.py --model-root runtime\models --profile neu --load
+```
+
+Khi đã có dữ liệu NEU đã chuẩn bị (`data\cache\neu`), có thể chạy kiểm chứng đối chiếu bổ sung (kết quả lưu trong `runtime\models\neu\versions\<version>\verification.json` và file `--report-out` nếu chỉ định):
+
+```powershell
+.\.venv\Scripts\python.exe scripts\model_import_phobert.py --source demo --encoder-config runtime\cache\phobert-base-v2 --data-dir data\cache\neu --model-root runtime\models --profile neu --report-out runtime\validation\phobert-neu-verification.json
 ```
 
 Tùy chọn `-ReuseInstalledPackages` tạo venv dùng các package đã cài trên máy; chỉ dùng khi chủ động muốn tái sử dụng môi trường hiện hữu. Lần setup đầu cần mạng để cài dependency; inference sau khi có bundle dùng file local, không gọi API LLM hay tải backbone tự động.
@@ -42,7 +51,7 @@ Khởi động dùng `.venv\Scripts\python.exe`, bind loopback, chạy một API
 1. Tạo bộ phản hồi, chọn **Thảo luận sinh viên** (NEU) hoặc **Đánh giá đào tạo** (UIT). Profile cố định; sao chép sang bộ mới để đổi loại, chỉ sao chép văn bản và metadata.
 2. Dán từng dòng hoặc nhập CSV UTF-8 có/không BOM. Xem preview, chọn cột văn bản. CSV hỗ trợ dấu phẩy/chấm phẩy/tab và newline đã quote. Dòng trùng được giữ. Dòng lỗi cần sửa hoặc chủ động bỏ qua; tối đa 500 phản hồi, 5 MB/file, 5.000 ký tự/văn bản.
 3. Cột nhãn chỉ thành nhãn tham chiếu sau khi chọn cột, map giá trị theo schema và xác nhận nguồn. Chúng không thay dự đoán AI và không làm đầu vào model.
-4. Phân tích khi profile có bundle hợp lệ. Worker lưu tiến độ từng batch, hủy giữa batch, retry phần chưa xong; kết quả đã commit vẫn giữ khi restart.
+4. Phân tích khi profile có bundle hợp lệ (`neu` dùng PhoBERT MTL-ED với tách từ nội bộ `underthesea 9.5.0`, giữ nguyên văn bản gốc trong SQLite và CSV xuất; `uit` chưa có checkpoint nên chỉ dùng nhập/rà soát thủ công). Worker lưu tiến độ từng batch, hủy giữa batch, retry phần chưa xong; kết quả đã commit vẫn giữ khi restart.
 5. Tìm/lọc, bấm biểu đồ để lọc, xem chi tiết và duyệt riêng cảm xúc/chủ đề. Sửa một task không xác nhận task còn lại. Nhãn AI gốc được giữ riêng. Khi xem run khác, sửa ghi chú giữ nguyên nhãn và prediction nguồn đã xác nhận; nút **Xác nhận dự đoán đang xem** chủ động chọn nguồn mới. Nếu bản duyệt thay đổi ở tab khác, bản nháp được giữ và nút Lưu bị khóa: đối chiếu bản server rồi chọn **Tải bản server, bỏ bản nháp** hoặc **Áp lại bản nháp trên bản server**, sau đó Lưu. Refetch không tự nâng revision của bản nháp.
 6. Xuất toàn bộ hoặc đúng phần lọc. CSV UTF-8 BOM đọc được bằng Excel Windows, có AI/reference/review/run/version và warnings riêng. `selected_run_id` là run chọn cho bản xuất; `run_id`/model từng dòng chỉ có khi prediction khớp revision đó. `prediction_status` cho biết `processed`, `failed` hoặc `unprocessed`; văn bản mới sửa/thêm chưa phân tích không mang model provenance cũ. Chọn run lịch sử sẽ xuất đúng văn bản/revision của run đó. File đã tạo là snapshot, không thay đổi khi tiếp tục sửa.
 

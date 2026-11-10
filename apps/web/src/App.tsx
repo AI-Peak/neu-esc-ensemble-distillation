@@ -179,7 +179,7 @@ export default function App() {
                 }}
               />
             ) : route === "/research" ? (
-              <Research />
+              <Research profiles={profiles.data} />
             ) : route === "/help" ? (
               <Help profiles={profiles.data} />
             ) : selected ? (
@@ -456,37 +456,101 @@ export default function App() {
     </>
   );
 }
-function Research() {
+type ResearchRow = {
+  dataset: string;
+  backbone: string;
+  setup: string;
+  setup_label?: string;
+  task: string;
+  metric: string;
+  mean: number;
+  std: number;
+  seeds: number;
+  seed_ids?: number[];
+  source: string;
+};
+type AblationRow = {
+  backbone: string;
+  task: string;
+  metric: string;
+  in_sample_mean: number;
+  in_sample_std: number;
+  oof_mean: number;
+  oof_std: number;
+  delta: number;
+  holm_adjusted_p: string;
+  seeds: number;
+};
+type ResearchPayload = {
+  rows: ResearchRow[];
+  oof_ablation?: AblationRow[];
+  note: string;
+  method_summary?: {
+    teacher_models: number;
+    teacher_structure: string;
+    held_out_predictions_per_train_row: number;
+    student_architecture: string;
+    inference_cost: string;
+    training_cost: string;
+  };
+  statistical_protocol?: {
+    test: string;
+    families: Record<string, number>;
+    logit_bias_policy: string;
+  };
+  findings?: { id: string; title: string; detail: string }[];
+};
+function Research({ profiles }: { profiles: Profile[] }) {
+  const [datasetFilter, setDatasetFilter] = useState("all");
+  const [backboneFilter, setBackboneFilter] = useState("all");
+  const [taskFilter, setTaskFilter] = useState("all");
+  const [metricFilter, setMetricFilter] = useState("all");
   const result = useQuery({
     queryKey: ["research"],
-    queryFn: () =>
-      api<{
-        rows: {
-          dataset: string;
-          backbone: string;
-          setup: string;
-          task: string;
-          metric: string;
-          mean: number;
-          std: number;
-          seeds: number;
-          source: string;
-        }[];
-        note: string;
-      }>("/research/summary"),
+    queryFn: () => api<ResearchPayload>("/research/summary"),
   });
+  const filteredRows = (result.data?.rows ?? []).filter(
+    (r) =>
+      (datasetFilter === "all" || r.dataset === datasetFilter) &&
+      (backboneFilter === "all" || r.backbone === backboneFilter) &&
+      (taskFilter === "all" || r.task === taskFilter) &&
+      (metricFilter === "all" || r.metric === metricFilter),
+  );
   return (
     <>
       <div className="page-heading">
         <div>
           <h1>Báo cáo nghiên cứu</h1>
-          <p>Bằng chứng thực nghiệm lịch sử từ báo cáo của dự án.</p>
+          <p>
+            Tổng hợp thực nghiệm nhiều seed từ paper và các file CSV đã kiểm
+            chứng trong repo.
+          </p>
         </div>
         <Badge>Tham khảo</Badge>
       </div>
       <div className="notice">
-        Kết quả trung bình qua các seed không bảo đảm chất lượng của một câu
-        hoặc model đang cài trên máy.
+        <strong>Tách bạch 3 lớp thông tin:</strong>
+        <p className="small">
+          1) <strong>Benchmark nhiều seed bên dưới</strong> là trung bình ± độ
+          lệch chuẩn mẫu trên tập test nghiên cứu (NEU-ESC: 15 seed 42–56;
+          UIT-VSFC: 10 seed 42–51).
+        </p>
+        <p className="small">
+          2) <strong>Checkpoint đang cài trên máy</strong>:{" "}
+          {profiles
+            .map((p) =>
+              p.model.available
+                ? `${p.id.toUpperCase()}: ${p.model.model_id} (${p.model.model_version})`
+                : `${p.id.toUpperCase()}: chưa cài checkpoint`,
+            )
+            .join(" · ")}
+          .
+        </p>
+        <p className="small">
+          3) <strong>Thống kê trong từng bộ phản hồi</strong> là phân bố nhãn
+          dự đoán/đã duyệt trên dữ liệu bạn nhập, không phải độ chính xác (do
+          thường không có nhãn thật).
+        </p>
       </div>
       {result.isPending ? (
         <Loading />
@@ -495,72 +559,230 @@ function Research() {
       ) : (
         <>
           <p>{result.data.note}</p>
-          {result.data.rows.length ? (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    {[
-                      "Dataset",
-                      "Backbone",
-                      "Thiết lập",
-                      "Tác vụ",
-                      "Chỉ số",
-                      "Trung bình",
-                      "Độ lệch chuẩn",
-                      "Số seed",
-                      "Nguồn",
-                    ].map((h) => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.data.rows.map((r, i) => (
-                    <tr key={i}>
-                      <td>{r.dataset}</td>
-                      <td>{r.backbone}</td>
-                      <td>{r.setup}</td>
-                      <td>
-                        {r.task === "sentiment"
-                          ? "Cảm xúc"
-                          : r.task === "topic"
-                            ? "Chủ đề"
-                            : r.task}
-                      </td>
-                      <td>
-                        {r.metric.toLowerCase().includes("f1")
-                          ? "Macro-F1"
-                          : r.metric.toLowerCase().includes("acc")
-                            ? "Accuracy"
-                            : r.metric}
-                      </td>
-                      <td>
-                        {r.mean.toLocaleString("vi-VN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                        %
-                      </td>
-                      <td>
-                        ±{" "}
-                        {r.std.toLocaleString("vi-VN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                        %
-                      </td>
-                      <td>{r.seeds}</td>
-                      <td className="small">{r.source}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {result.data.method_summary && (
+            <section className="section">
+              <h2>Tóm tắt phương pháp Ensemble Distillation (ED)</h2>
+              <p className="small">
+                <strong>Giai đoạn 1 (Teacher OOF):</strong>{" "}
+                {result.data.method_summary.teacher_models} mô hình (
+                {result.data.method_summary.teacher_structure}); mỗi dòng huấn
+                luyện nhận{" "}
+                {result.data.method_summary.held_out_predictions_per_train_row}{" "}
+                dự đoán held-out và lấy trung bình xác suất softmax làm nhãn
+                mềm.
+              </p>
+              <p className="small">
+                <strong>Giai đoạn 2 (Student & Suy luận):</strong>{" "}
+                {result.data.method_summary.student_architecture}.{" "}
+                {result.data.method_summary.inference_cost}
+              </p>
+              <p className="small muted">
+                Chi phí huấn luyện: {result.data.method_summary.training_cost}
+              </p>
+              {result.data.statistical_protocol && (
+                <p className="small muted">
+                  Kiểm định thống kê: {result.data.statistical_protocol.test} —
+                  hiệu chỉnh Holm riêng cho từng họ kiểm định (NEU:{" "}
+                  {result.data.statistical_protocol.families.neu_ed_vs_baselines}{" "}
+                  phép thử; UIT:{" "}
+                  {result.data.statistical_protocol.families.uit_ed_vs_baselines}{" "}
+                  phép thử; Ablation OOF:{" "}
+                  {
+                    result.data.statistical_protocol.families
+                      .neu_oof_vs_insample_ablation
+                  }{" "}
+                  phép thử). {result.data.statistical_protocol.logit_bias_policy}
+                </p>
+              )}
+            </section>
+          )}
+          {result.data.findings && result.data.findings.length > 0 && (
+            <section className="section">
+              <h2>Kết luận chính đối chiếu paper</h2>
+              {result.data.findings.map((f) => (
+                <p key={f.id} className="small">
+                  <strong>{f.title}:</strong> {f.detail}
+                </p>
+              ))}
+            </section>
+          )}
+          <section className="section">
+            <h2>Bảng kết quả test theo thiết lập ({filteredRows.length} dòng)</h2>
+            <div className="filterbar">
+              <label>
+                Dataset
+                <select
+                  aria-label="Lọc dataset nghiên cứu"
+                  value={datasetFilter}
+                  onChange={(e) => setDatasetFilter(e.target.value)}
+                >
+                  <option value="all">Tất cả (NEU & UIT)</option>
+                  <option value="neu">NEU-ESC (15 seed)</option>
+                  <option value="uit">UIT-VSFC (10 seed)</option>
+                </select>
+              </label>
+              <label>
+                Backbone
+                <select
+                  aria-label="Lọc backbone nghiên cứu"
+                  value={backboneFilter}
+                  onChange={(e) => setBackboneFilter(e.target.value)}
+                >
+                  <option value="all">Tất cả</option>
+                  <option value="phobert">PhoBERT-base-v2</option>
+                  <option value="visobert">ViSoBERT</option>
+                </select>
+              </label>
+              <label>
+                Tác vụ
+                <select
+                  aria-label="Lọc tác vụ nghiên cứu"
+                  value={taskFilter}
+                  onChange={(e) => setTaskFilter(e.target.value)}
+                >
+                  <option value="all">Tất cả</option>
+                  <option value="sentiment">Cảm xúc</option>
+                  <option value="topic">Chủ đề</option>
+                </select>
+              </label>
+              <label>
+                Chỉ số
+                <select
+                  aria-label="Lọc chỉ số nghiên cứu"
+                  value={metricFilter}
+                  onChange={(e) => setMetricFilter(e.target.value)}
+                >
+                  <option value="all">Tất cả</option>
+                  <option value="accuracy">Accuracy</option>
+                  <option value="macro_f1">Macro-F1</option>
+                </select>
+              </label>
             </div>
-          ) : (
-            <Empty title="Chưa có số liệu được xác minh">
-              <p>Báo cáo sẽ xuất hiện khi có nguồn thực nghiệm phù hợp.</p>
-            </Empty>
+            {filteredRows.length ? (
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      {[
+                        "Dataset",
+                        "Backbone",
+                        "Thiết lập",
+                        "Tác vụ",
+                        "Chỉ số",
+                        "Trung bình",
+                        "Độ lệch chuẩn",
+                        "Số seed",
+                        "Nguồn",
+                      ].map((h) => (
+                        <th key={h}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRows.map((r, i) => (
+                      <tr key={i}>
+                        <td>{r.dataset.toUpperCase()}</td>
+                        <td>
+                          {r.backbone === "phobert"
+                            ? "PhoBERT"
+                            : r.backbone === "visobert"
+                              ? "ViSoBERT"
+                              : r.backbone}
+                        </td>
+                        <td>{r.setup_label ?? r.setup}</td>
+                        <td>
+                          {r.task === "sentiment"
+                            ? "Cảm xúc"
+                            : r.task === "topic"
+                              ? "Chủ đề"
+                              : r.task}
+                        </td>
+                        <td>
+                          {r.metric.toLowerCase().includes("f1")
+                            ? "Macro-F1"
+                            : r.metric.toLowerCase().includes("acc")
+                              ? "Accuracy"
+                              : r.metric}
+                        </td>
+                        <td>
+                          {r.mean.toLocaleString("vi-VN", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                          %
+                        </td>
+                        <td>
+                          ±{" "}
+                          {r.std.toLocaleString("vi-VN", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                          %
+                        </td>
+                        <td>{r.seeds}</td>
+                        <td className="small">{r.source}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <Empty title="Không có số liệu khớp bộ lọc">
+                <p>Thử chọn lại điều kiện lọc ở trên.</p>
+              </Empty>
+            )}
+          </section>
+          {result.data.oof_ablation && result.data.oof_ablation.length > 0 && (
+            <details className="section">
+              <summary>
+                So sánh bổ trợ: Out-of-fold (OOF) vs In-sample teacher trên
+                NEU-ESC (8 kiểm định Holm)
+              </summary>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      {[
+                        "Backbone",
+                        "Tác vụ",
+                        "Chỉ số",
+                        "In-sample teacher",
+                        "OOF teacher",
+                        "Chênh lệch",
+                        "Holm p",
+                      ].map((h) => (
+                        <th key={h}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.data.oof_ablation.map((a, idx) => (
+                      <tr key={idx}>
+                        <td>
+                          {a.backbone === "phobert" ? "PhoBERT" : "ViSoBERT"}
+                        </td>
+                        <td>{a.task === "sentiment" ? "Cảm xúc" : "Chủ đề"}</td>
+                        <td>
+                          {a.metric === "accuracy" ? "Accuracy" : "Macro-F1"}
+                        </td>
+                        <td>
+                          {a.in_sample_mean.toFixed(2)}% ±{" "}
+                          {a.in_sample_std.toFixed(2)}%
+                        </td>
+                        <td>
+                          {a.oof_mean.toFixed(2)}% ± {a.oof_std.toFixed(2)}%
+                        </td>
+                        <td>
+                          {a.delta >= 0 ? "+" : ""}
+                          {a.delta.toFixed(2)}%
+                        </td>
+                        <td>{a.holm_adjusted_p}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
           )}
         </>
       )}
@@ -616,8 +838,30 @@ function Help({ profiles }: { profiles: Profile[] }) {
               <p className="small muted">
                 {p.model.available
                   ? `${p.model.model_id} · ${p.model.model_version}`
-                  : "Cần cài bộ model hợp lệ để phân tích."}
+                  : "Chưa có bộ model hợp lệ cho hệ nhãn này (vẫn có thể nhập, rà soát thủ công và xuất CSV)."}
               </p>
+              {p.model.available &&
+                p.model.preprocessing?.equivalence === "approximate" && (
+                  <p className="small muted">
+                    Văn bản được tách từ trước khi phân tích. Kết quả trên dữ
+                    liệu bạn nhập có thể khác benchmark nghiên cứu.
+                  </p>
+                )}
+              {p.model.available && (
+                <details>
+                  <summary>Chi tiết kỹ thuật</summary>
+                  <p className="technical-reason small">
+                    Backbone: {p.model.backbone ?? "không rõ"} · Thiết lập:{" "}
+                    {p.model.setup ?? "mtl_ed"}
+                    {p.model.provenance
+                      ? ` · Seed ${p.model.provenance.seed}, best epoch ${p.model.provenance.best_epoch}, OOF ${p.model.provenance.oof_status ?? "reported"}`
+                      : ""}
+                    {p.model.preprocessing
+                      ? ` · Tiền xử lý: ${p.model.preprocessing.kind}`
+                      : ""}
+                  </p>
+                </details>
+              )}
               {!p.model.available && p.model.reason && (
                 <details>
                   <summary>Chi tiết kỹ thuật</summary>
@@ -659,9 +903,11 @@ function Help({ profiles }: { profiles: Profile[] }) {
           hiện mọi lỗi.
         </p>
         <p>
-          Model có thể cắt phản hồi dài theo giới hạn token. Dấu cảnh báo cho
-          biết model chưa đọc toàn bộ văn bản. Việc sửa nhãn được lưu riêng và
-          không tự huấn luyện lại model.
+          Model có thể cắt phản hồi dài theo giới hạn 128 token. Dấu cảnh báo
+          cho biết model chưa đọc toàn bộ văn bản. Việc sửa nhãn được lưu riêng
+          và không tự huấn luyện lại model. Nhãn Ngôn từ độc hại (Toxic) trên
+          NEU-ESC là lớp hiếm (2,5% tập huấn luyện) và ED không đạt F1 Toxic cao
+          nhất; chỉ dùng để ưu tiên rà soát, không tự động kết luận hay kỷ luật.
         </p>
         <h2>Lưu trữ</h2>
         <p>
