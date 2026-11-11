@@ -12,7 +12,7 @@ web (local-first loopback on Windows)
 - **Giao diện**: TypeScript + React 19 + TanStack Query + TanStack Table + Vite (`apps/web/`, build tĩnh được FastAPI phục vụ cùng origin tại `http://127.0.0.1:8765`).
 - **API & Worker**: Python 3.10 + FastAPI + Uvicorn (`services/api/`) và tiến trình worker suy luận độc lập (`services/worker.py`).
 - **Suy luận & Tiền xử lý**: PyTorch CPU FP32 + Transformers (`use_fast=False`, `max_length=128`) + `underthesea==9.5.0` (tách từ offline cho PhoBERT).
-- **Lưu trữ**: SQLite WAL cục bộ (`runtime/workspace.sqlite3`) và bundle model phân phiên bản (`runtime/models/`).
+- **Lưu trữ**: SQLite WAL cục bộ (`runtime/workspace.sqlite3`, schema v2 với hàng đợi ưu tiên và thử nghiệm độ nhạy TTL 15 phút) và bundle model phân phiên bản (`runtime/models/`).
 
 ## Users
 
@@ -42,7 +42,11 @@ Dự án tái lập đa seed các baseline của NEU-ESC theo code công khai, c
 - **Giới hạn thống kê theo paper (`paper.tex`)**:
   - Trên NEU-ESC (15 seed 42–56), ED vượt cả 5 baseline trên cả hai backbone và cả hai tác vụ về Accuracy và Macro-F1 sau hiệu chỉnh Holm (40 phép kiểm định Welch, $p_{\text{adj}} \le 0,022$). Tuy nhiên, F1 lớp hiếm `Toxic` (2,5% dữ liệu huấn luyện) của ED (`83,28%` PhoBERT) thấp hơn SMART (`85,35%`) và Single-task (`85,32%`); do đó `Toxic` chỉ dùng hỗ trợ rà soát, không dùng tự động kết luận về người viết.
   - Trên UIT-VSFC (10 seed 42–51, 4 baseline MTL), ED cải thiện rõ Topic Accuracy (`89,71%` PhoBERT, $p_{\text{adj}} \le 0,002$), trong khi Sentiment Accuracy và Macro-F1 không khác biệt có ý nghĩa so với `MTL + MLM` sau hiệu chỉnh Holm ($p_{\text{adj}} \ge 0,121$).
-- **Điểm số & kiểm soát con người**: Điểm softmax chưa hiệu chuẩn, không phải xác suất đúng. Nhãn người duyệt (`confirmed`/`corrected`) lưu tách biệt với dự đoán AI gốc và không tự huấn luyện lại model.
+- **Khả năng 3 tầng trên giao diện làm việc (`T01–T11`)**:
+  - **Prediction & Decision Support (`Chủ đề cần chú ý`)**: Tổng hợp động theo bộ lọc hiện hành và lựa chọn nguồn nhãn (`Đã duyệt nếu có, còn lại AI` vs `Chỉ dự đoán AI gốc`), sắp xếp giảm dần theo số câu Tiêu cực, hiển thị mẫu số đủ hai nhãn, gắn cờ `Ít dữ liệu` (`n < 5`, quy ước hiển thị), đếm tách riêng `Toxic`, và lọc thẳng danh sách phản hồi tiêu cực theo chủ đề.
+  - **Interpretability — Tín hiệu model (`review-signals-v1`)**: Cờ heuristic *thử nghiệm, chưa hiệu chuẩn* (`LOW_TOP1`, `SMALL_MARGIN`) tính từ điểm softmax gốc, tách riêng theo cảm xúc/chủ đề và tách biệt với cảnh báo **Đầu vào bị cắt ngắn** (`> 128` token). Giữ nguyên dấu hiệu gốc sau khi rà soát; chỉ cập nhật trạng thái đối chiếu ở hàng chờ tín hiệu.
+  - **Interpretability — Khám phá dự đoán (`Sensitivity Exploration`)**: Cho phép chọn hoặc nhập cụm từ nguyên văn trên văn bản gốc (an toàn ranh giới Unicode/NFD/emoji qua UTF-16) để chạy lại cặp `baseline` vs `variant` bất đồng bộ trên đúng model identity và chế độ `cpu-fp32-eval`, hiển thị bảng chênh lệch điểm trên **cùng tập nhãn** với cảnh báo giới hạn phi nhân quả và cảnh báo cắt ngắn; không sửa hay ghi đè văn bản nguồn, nhãn duyệt hoặc bản chụp CSV.
+- **Điểm số & kiểm soát con người**: Điểm softmax chưa hiệu chuẩn, không phải xác suất đúng; thử nghiệm độ nhạy không phải bằng chứng nhân quả hay phân bổ trọng số token (`attribution`). Nhãn người duyệt (`confirmed`/`corrected`) lưu tách biệt với dự đoán AI gốc và không tự huấn luyện lại model.
 - **Quyền dữ liệu**: Dữ liệu và weights local nằm trong thư mục gitignore; kiểm tra quyền tái phân phối trước khi công khai dataset mẫu.
 
 ## Product Principles

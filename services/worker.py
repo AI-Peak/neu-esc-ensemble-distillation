@@ -1,5 +1,6 @@
 """Single local inference worker. Run with ``python -m services.worker``."""
 import argparse
+import json
 import math
 import os
 import sqlite3
@@ -87,7 +88,9 @@ class Worker:
         if any(prediction.get(k) != run[k] for k in ('model_id','model_version','schema_id')):
             raise ValueError('Prediction model/schema differs from frozen run')
         for task in ('sentiment','topic'):
-            value = prediction.get(task,{})
+            value = prediction.get(task)
+            if not isinstance(value, dict):
+                raise ValueError('Invalid prediction task payload')
             scores = value.get('scores',[])
             if len(scores) != len(profile[task]) or any(type(s) not in (float,int) or not math.isfinite(s) or s < 0 or s > 1 for s in scores) or abs(sum(scores)-1) > .001:
                 raise ValueError('Invalid probability distribution')
@@ -97,8 +100,93 @@ class Worker:
             raise ValueError('Invalid truncation metadata')
         if not isinstance(prediction.get('warnings'),list) or any(not isinstance(x,str) for x in prediction['warnings']):
             raise ValueError('Invalid warnings')
-        if not isinstance(prediction.get('duration_ms'), (int,float)) or not math.isfinite(prediction['duration_ms']) or prediction['duration_ms'] < 0:
+        if type(prediction.get('duration_ms')) not in (int, float) or not math.isfinite(prediction['duration_ms']) or prediction['duration_ms'] < 0:
             raise ValueError('Invalid inference duration')
+
+    def _fail_sensitivity_tx(self, c, job, run, context, error_code):
+        safe_error = f'Sensitivity pair failed ({error_code}).'
+        context_next = dict(context)
+        context_next['attempt'] = {'error_code': error_code, 'model_input_equal': None}
+        stamp = now()
+        c.execute('UPDATE sensitivity_experiments SET context_json=? WHERE job_id=?', (encode(context_next), job['id']))
+        c.execute('UPDATE run_items SET error=? WHERE run_id=?', (safe_error, run['id']))
+        c.execute('UPDATE jobs SET completed=0,failed=2,heartbeat_at=?,updated_at=? WHERE id=?', (stamp, stamp, job['id']))
+        c.execute('UPDATE runs SET completed=0,failed=2 WHERE id=?', (run['id'],))
+        self.finish(c, job, 'failed', error=safe_error)
+
+    def _run_sensitivity_once(self, job, run, dataset, exp, inputs, expected_identity):
+        pair_outputs = None
+        model_input_equal = None
+        error_code = None
+        pair_result = None
+        try:
+            pair_result = self.registry.predict_pair(dataset['profile'], inputs, expected_identity)
+        except Exception as exc:
+            # Never persist exception strings which could contain private input text.
+            from services.inference.registry import ModelIdentityChanged
+            if isinstance(exc, ModelIdentityChanged) or type(exc).__name__ == 'ModelIdentityChanged':
+                error_code = 'MODEL_IDENTITY_CHANGED'
+            else:
+                error_code = 'INFERENCE_FAILED'
+
+        if error_code is None:
+            try:
+                if not isinstance(pair_result, dict):
+                    raise ValueError('Pair result must be an object')
+                if pair_result.get('execution_identity') != expected_identity:
+                    raise ValueError('Returned execution identity mismatch')
+                if type(pair_result.get('model_input_equal')) is not bool:
+                    raise ValueError('model_input_equal must be a bool')
+                raw_preds = pair_result.get('predictions')
+                if not isinstance(raw_preds, list) or len(raw_preds) != 2:
+                    raise ValueError('Pair predictions must contain exactly 2 entries')
+                by_id = {}
+                for pred in raw_preds:
+                    if not isinstance(pred, dict):
+                        raise ValueError('Prediction entry must be an object')
+                    key = (pred.get('item_id'), pred.get('revision_id'))
+                    if key in by_id:
+                        raise ValueError('Duplicate pair prediction IDs')
+                    by_id[key] = pred
+                expected_keys = [(x['item_id'], x['revision_id']) for x in inputs]
+                if set(by_id) != set(expected_keys):
+                    raise ValueError('Pair prediction IDs do not match inputs')
+                ordered_outputs = [by_id[k] for k in expected_keys]
+                profile = profile_for(dataset['profile'])
+                for output, request in zip(ordered_outputs, inputs):
+                    self.validate_prediction(output, request, run, profile)
+                pair_outputs = ordered_outputs
+                model_input_equal = pair_result['model_input_equal']
+            except Exception:
+                error_code = 'INVALID_PAIR_RESULT'
+
+        with self.store.tx() as c:
+            live = self.valid_lease(c, job)
+            if not live:
+                return True
+            exp_now = c.execute('SELECT * FROM sensitivity_experiments WHERE job_id=?', (job['id'],)).fetchone()
+            if not exp_now:
+                return True
+            if live['cancel_requested']:
+                self.finish(c, job, 'cancelled')
+                return True
+            context_now = json.loads(exp_now['context_json'])
+            if error_code is not None:
+                self._fail_sensitivity_tx(c, job, run, context_now, error_code)
+                return True
+            stamp = now()
+            for n, request in enumerate(inputs):
+                c.execute(
+                    'INSERT INTO predictions VALUES(?,?,?,?,?,?)',
+                    (uid(), run['id'], request['item_id'], request['revision_id'], encode(pair_outputs[n]), stamp),
+                )
+            context_now['attempt'] = {'error_code': None, 'model_input_equal': model_input_equal}
+            c.execute('UPDATE sensitivity_experiments SET context_json=? WHERE job_id=?', (encode(context_now), job['id']))
+            c.execute('UPDATE run_items SET error=NULL WHERE run_id=?', (run['id'],))
+            c.execute('UPDATE jobs SET completed=2,failed=0,heartbeat_at=?,updated_at=? WHERE id=?', (stamp, stamp, job['id']))
+            c.execute('UPDATE runs SET completed=2,failed=0 WHERE id=?', (run['id'],))
+            self.finish(c, job, 'completed')
+        return True
 
     def run_once(self):
         """Process at most one microbatch, allowing quick jobs to preempt between batches."""
@@ -108,6 +196,10 @@ class Worker:
         if not job:
             return False
         with self.keepalive(job):
+            is_sensitivity = False
+            sens_inputs = None
+            sens_expected_identity = None
+            sens_exp = None
             with self.store.tx() as c:
                 live = self.valid_lease(c,job)
                 if not live: return True
@@ -115,10 +207,40 @@ class Worker:
                     self.finish(c,job,'cancelled'); return True
                 run = self.store.run(job['run_id'],c)
                 dataset = self.store.require_dataset(c,run['dataset_id'])
-                rows = c.execute('SELECT ri.item_id,ri.revision_id,r.text FROM run_items ri JOIN revisions r ON r.id=ri.revision_id WHERE ri.run_id=? AND ri.error IS NULL AND NOT EXISTS(SELECT 1 FROM predictions p WHERE p.run_id=ri.run_id AND p.item_id=ri.item_id) ORDER BY (SELECT source_row FROM items WHERE id=ri.item_id) LIMIT ?', (run['id'],self.batch_size)).fetchall()
-                inputs = [dict(r) for r in rows]
-                c.execute("UPDATE jobs SET status='running' WHERE id=?",(job['id'],))
-                c.execute("UPDATE runs SET status='running' WHERE id=?",(run['id'],))
+                sens_exp = c.execute('SELECT * FROM sensitivity_experiments WHERE job_id=?', (job['id'],)).fetchone()
+                if sens_exp is not None:
+                    is_sensitivity = True
+                    context = json.loads(sens_exp['context_json'])
+                    sens_expected_identity = context['execution']
+                    existing_preds = c.execute('SELECT COUNT(*) FROM predictions WHERE run_id=?', (run['id'],)).fetchone()[0]
+                    rows = c.execute(
+                        '''SELECT ri.item_id, ri.revision_id, r.text, ri.error
+                           FROM run_items ri
+                           JOIN items i ON i.id=ri.item_id
+                           JOIN revisions r ON r.id=ri.revision_id
+                           WHERE ri.run_id=?
+                           ORDER BY i.source_row ASC''',
+                        (run['id'],),
+                    ).fetchall()
+                    expected_ids = [sens_exp['baseline_item_id'], sens_exp['variant_item_id']]
+                    if (
+                        existing_preds != 0
+                        or len(rows) != 2
+                        or [r['item_id'] for r in rows] != expected_ids
+                        or any(r['error'] is not None for r in rows)
+                    ):
+                        self._fail_sensitivity_tx(c, job, run, context, 'INVALID_PAIR_RESULT')
+                        return True
+                    sens_inputs = [{'item_id': r['item_id'], 'revision_id': r['revision_id'], 'text': r['text']} for r in rows]
+                    c.execute("UPDATE jobs SET status='running' WHERE id=?", (job['id'],))
+                    c.execute("UPDATE runs SET status='running' WHERE id=?", (run['id'],))
+                else:
+                    rows = c.execute('SELECT ri.item_id,ri.revision_id,r.text FROM run_items ri JOIN revisions r ON r.id=ri.revision_id WHERE ri.run_id=? AND ri.error IS NULL AND NOT EXISTS(SELECT 1 FROM predictions p WHERE p.run_id=ri.run_id AND p.item_id=ri.item_id) ORDER BY (SELECT source_row FROM items WHERE id=ri.item_id) LIMIT ?', (run['id'],self.batch_size)).fetchall()
+                    inputs = [dict(r) for r in rows]
+                    c.execute("UPDATE jobs SET status='running' WHERE id=?",(job['id'],))
+                    c.execute("UPDATE runs SET status='running' WHERE id=?",(run['id'],))
+            if is_sensitivity:
+                return self._run_sensitivity_once(job, run, dataset, sens_exp, sens_inputs, sens_expected_identity)
             if not inputs:
                 with self.store.tx() as c:
                     live = self.valid_lease(c,job)

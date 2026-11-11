@@ -2,6 +2,7 @@ import csv
 import hashlib
 import io
 import json
+import math
 import os
 import sqlite3
 import time
@@ -9,6 +10,9 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+
+from services.analytics import aggregate_attention, selected_labels
+from services.review_signals import evaluate_item_signals, resolve_policy_metadata
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILES = json.loads((ROOT / 'services/profiles.json').read_text(encoding='utf-8-sig'))
@@ -48,6 +52,16 @@ def check_text(text):
     return text
 
 
+def _task_scores_need_review(prediction, task):
+    task_pred = prediction.get(task) if isinstance(prediction, dict) else None
+    scores = task_pred.get('scores') if isinstance(task_pred, dict) else None
+    if not isinstance(scores, list) or not scores:
+        return True
+    if any(type(v) not in (int, float) or not math.isfinite(v) for v in scores):
+        return True
+    return max(scores) < .6
+
+
 class ClosingConnection(sqlite3.Connection):
     def __exit__(self, *args):
         try: return super().__exit__(*args)
@@ -74,6 +88,28 @@ CREATE INDEX jobs_queue ON jobs(status,priority DESC,created_at);
 CREATE INDEX predictions_revision ON predictions(revision_id,created_at DESC);
 '''
 
+MIGRATION_2 = '''
+CREATE TABLE sensitivity_experiments (
+  job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
+  temporary_dataset_id TEXT NOT NULL UNIQUE REFERENCES datasets(id) ON DELETE CASCADE,
+  source_dataset_id TEXT NOT NULL REFERENCES datasets(id) ON DELETE CASCADE,
+  source_item_id TEXT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  source_revision_id TEXT NOT NULL REFERENCES revisions(id) ON DELETE CASCADE,
+  baseline_item_id TEXT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  variant_item_id TEXT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  context_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX sensitivity_source_item ON sensitivity_experiments(source_item_id);
+CREATE INDEX sensitivity_source_dataset ON sensitivity_experiments(source_dataset_id);
+CREATE INDEX sensitivity_created ON sensitivity_experiments(created_at);
+CREATE TABLE sensitivity_rate_limits (
+  id TEXT PRIMARY KEY,
+  created_ts REAL NOT NULL
+);
+CREATE INDEX sensitivity_rate_created ON sensitivity_rate_limits(created_ts);
+'''
+
 
 class Store:
     def __init__(self, runtime_dir=None):
@@ -91,14 +127,24 @@ class Store:
                 except sqlite3.OperationalError as exc:
                     if 'locked' not in str(exc).lower() or time.monotonic() >= deadline: raise
                     time.sleep(.025)
-            conn.execute('CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)')
-            conn.execute('BEGIN IMMEDIATE')
-            if not conn.execute('SELECT 1 FROM schema_migrations WHERE version=1').fetchone():
-                for statement in MIGRATION_1.split(';'):
-                    if statement.strip(): conn.execute(statement)
-                conn.execute('INSERT INTO schema_migrations VALUES(1,?)', (now(),))
-            conn.commit()
+            for version, sql in ((1, MIGRATION_1), (2, MIGRATION_2)):
+                conn.execute('BEGIN IMMEDIATE')
+                try:
+                    conn.execute('CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)')
+                    if not conn.execute('SELECT 1 FROM schema_migrations WHERE version=?', (version,)).fetchone():
+                        for statement in sql.split(';'):
+                            if statement.strip(): conn.execute(statement)
+                        conn.execute('INSERT INTO schema_migrations VALUES(?,?)', (version, now()))
+                    conn.commit()
+                except BaseException:
+                    conn.rollback()
+                    raise
         self.cleanup()
+
+    def database_version(self):
+        with self.connect() as c:
+            row = c.execute('SELECT COALESCE(MAX(version), 0) FROM schema_migrations').fetchone()
+            return int(row[0]) if row else 0
 
     def connect(self):
         conn = sqlite3.connect(self.path, timeout=30, isolation_level=None, factory=ClosingConnection)
@@ -120,15 +166,21 @@ class Store:
         finally:
             conn.close()
 
+    def cleanup_expired_in_tx(self, c):
+        self.recover(c)
+        now_ts = time.time()
+        # A stale expiry marker must never revoke queued or live inference.
+        c.execute("""DELETE FROM datasets WHERE temporary=1 AND expires_at IS NOT NULL AND expires_at<?
+                     AND NOT EXISTS (SELECT 1 FROM runs r JOIN jobs j ON j.run_id=r.id
+                         WHERE r.dataset_id=datasets.id AND j.status NOT IN
+                         ('completed','completed_with_errors','failed','cancelled','interrupted'))""", (now_ts,))
+        c.execute("DELETE FROM idempotency WHERE operation='sensitivity' AND result_id NOT IN (SELECT job_id FROM sensitivity_experiments)")
+        c.execute('DELETE FROM sensitivity_rate_limits WHERE created_ts<=?', (now_ts - 60.0,))
+
     def cleanup(self):
         with self.tx() as c:
-            self.recover(c)
             c.execute('DELETE FROM previews WHERE expires_at<?', (time.time(),))
-            # A stale expiry marker must never revoke queued or live inference.
-            c.execute("""DELETE FROM datasets WHERE temporary=1 AND expires_at IS NOT NULL AND expires_at<?
-                         AND NOT EXISTS (SELECT 1 FROM runs r JOIN jobs j ON j.run_id=r.id
-                             WHERE r.dataset_id=datasets.id AND j.status NOT IN
-                             ('completed','completed_with_errors','failed','cancelled','interrupted'))""", (time.time(),))
+            self.cleanup_expired_in_tx(c)
 
     def recover(self, c):
         expired = c.execute("SELECT id,run_id FROM jobs WHERE status IN ('running','loading_model') AND lease_expires_at<?", (time.time(),)).fetchall()
@@ -154,7 +206,7 @@ class Store:
         d = dict(self.require_dataset(c, dataset_id))
         items = self.query_items(dataset_id, {}, c)
         d.update(item_count=len(items), processed_count=sum(bool(i['prediction']) for i in items), reviewed_count=sum(self.review_count(i) == 2 for i in items), partial_review_count=sum(self.review_count(i) == 1 for i in items))
-        latest = c.execute('SELECT id FROM runs WHERE dataset_id=? ORDER BY created_at DESC LIMIT 1', (dataset_id,)).fetchone()
+        latest = c.execute('SELECT id FROM runs WHERE dataset_id=? ORDER BY created_at DESC, rowid DESC LIMIT 1', (dataset_id,)).fetchone()
         d['latest_run_id'] = latest['id'] if latest else None
         d.pop('temporary'); d.pop('expires_at')
         return d
@@ -219,72 +271,103 @@ class Store:
             c.execute('INSERT INTO previews VALUES(?,?,?)', (result['preview_id'], encode(result), time.time() + 900))
         return result
 
+    def _require_not_sensitivity_dataset(self, c, dataset_id):
+        if c.execute('SELECT 1 FROM sensitivity_experiments WHERE temporary_dataset_id=? LIMIT 1', (dataset_id,)).fetchone():
+            raise DomainError('EXPERIMENT_READ_ONLY', 'Không thể chỉnh sửa dữ liệu tạm của thử nghiệm độ nhạy.', 409)
+
+    def _require_not_sensitivity_item(self, c, item_id):
+        if c.execute(
+            'SELECT 1 FROM sensitivity_experiments se JOIN items i ON i.dataset_id=se.temporary_dataset_id WHERE i.id=? LIMIT 1',
+            (item_id,),
+        ).fetchone():
+            raise DomainError('EXPERIMENT_READ_ONLY', 'Không thể chỉnh sửa phản hồi tạm của thử nghiệm độ nhạy.', 409)
+
+    @staticmethod
+    def _resolve_execution_identity(execution_resolver, profile):
+        if execution_resolver is None:
+            raise DomainError('MODEL_UNAVAILABLE', 'Model chưa sẵn sàng.', 409)
+        try:
+            return execution_resolver(profile)
+        except DomainError:
+            raise
+        except Exception as exc:
+            if type(exc).__name__ == 'ModelUnavailable':
+                raise DomainError('MODEL_UNAVAILABLE', str(exc) or 'Model chưa sẵn sàng.', 409) from None
+            raise
+
     def create_dataset(self, body, key=None, temporary=False):
         profile = profile_for(body.get('profile'))
         name = body.get('name', '').strip()
         if not name or len(name) > 200:
             raise DomainError('INVALID_NAME', 'Tên bộ phản hồi cần từ 1 đến 200 ký tự.', 422)
         with self.tx() as c:
-            prior = self.remember(c, key, 'dataset', body)
-            if prior:
-                return self.dataset(prior, c)
-            if bool(body.get('preview_id')) == (body.get('items') is not None):
-                raise DomainError('INVALID_INPUT', 'Chọn CSV đã kiểm tra hoặc danh sách nội dung.', 422)
-            reference = body.get('reference')
-            if reference and not str(reference.get('source', '')).strip():
-                raise DomainError('INVALID_REFERENCE', 'Cần xác nhận nguồn nhãn tham chiếu.', 422)
-            records = body.get('items')
-            if body.get('preview_id'):
-                prev = c.execute('SELECT * FROM previews WHERE id=? AND expires_at>?', (body['preview_id'], time.time())).fetchone()
-                if not prev:
-                    raise DomainError('PREVIEW_EXPIRED', 'Bản xem trước đã hết hạn.', 410)
-                preview = json.loads(prev['payload'])
-                col = body.get('text_column')
-                if col not in preview['columns']:
-                    raise DomainError('INVALID_COLUMN', 'Chọn cột nội dung hợp lệ.', 422)
-                for task in ('sentiment', 'topic'):
-                    refcol = (reference or {}).get(task + '_column')
-                    if refcol and refcol not in preview['columns']:
-                        raise DomainError('INVALID_REFERENCE', 'Cột tham chiếu không tồn tại.', 422)
-                records = [dict(text=r.get(col, ''), metadata={k:v for k,v in r.items() if k != col}, _row=n, _raw=r) for n,r in enumerate(preview['rows'], 1)]
-            if not isinstance(records, list) or not 1 <= len(records) <= 500:
-                raise DomainError('INVALID_ROW_COUNT', 'Cần từ 1 đến 500 phản hồi.', 422)
-            clean, invalid = [], []
-            for n, record in enumerate(records, 1):
-                if body.get('preview_id') and any(issue['row'] == n and issue['code'] == 'COLUMN_COUNT' for issue in preview['issues']):
-                    invalid.append(dict(row=n, code='COLUMN_COUNT')); continue
-                try:
-                    check_text(record.get('text'))
-                except DomainError as exc:
-                    invalid.append(dict(row=n, code=exc.code)); continue
-                refs = {}
-                for task in ('sentiment', 'topic'):
-                    refcol = (reference or {}).get(task + '_column')
-                    if refcol:
-                        raw = record.get('_raw', {}).get(refcol, '')
-                        mapping = reference.get(task + '_map', {})
-                        value = mapping.get(raw)
-                        if value is None and not mapping:
-                            try: value = int(raw)
-                            except (ValueError, TypeError): pass
-                        if type(value) is not int or value not in [x['id'] for x in profile[task]]:
-                            raise DomainError('INVALID_REFERENCE', 'Nhãn tham chiếu chưa map hợp lệ theo loại nội dung.', 422, dict(row=n, task=task, value=raw))
-                        refs[task] = value
-                clean.append((record, refs))
-            if invalid and not body.get('skip_invalid', False):
-                raise DomainError('INVALID_ROWS', 'Có phản hồi trống hoặc quá dài. Chọn bỏ dòng lỗi để tiếp tục.', 422, invalid)
-            if not clean:
-                raise DomainError('NO_VALID_ROWS', 'Không có phản hồi hợp lệ.', 422)
-            ident, stamp = uid(), now()
-            c.execute('INSERT INTO datasets VALUES(?,?,?,?,?,?,?,?)', (ident, name, profile['id'], profile['schema_id'], stamp, stamp, int(temporary), time.time()+900 if temporary else None))
-            for n, (record, refs) in enumerate(clean, 1):
-                revision_id = self.add_item(c, ident, record, record.get('_row', n))
-                for task, value in refs.items():
-                    c.execute('INSERT INTO reference_labels VALUES(?,?,?,?,?)', (revision_id, task, profile['schema_id'], value, reference['source']))
-            self.remember(c, key, 'dataset', body, ident)
-            result = self.dataset(ident, c)
-            if invalid: result.update(skipped_count=len(invalid),issues=invalid)
-            return result
+            return self._create_dataset_tx(c, body, key=key, temporary=temporary, profile=profile, name=name)
+
+    def _create_dataset_tx(self, c, body, key=None, temporary=False, profile=None, name=None):
+        profile = profile or profile_for(body.get('profile'))
+        name = name if name is not None else body.get('name', '').strip()
+        if not name or len(name) > 200:
+            raise DomainError('INVALID_NAME', 'Tên bộ phản hồi cần từ 1 đến 200 ký tự.', 422)
+        prior = self.remember(c, key, 'dataset', body)
+        if prior:
+            return self.dataset(prior, c)
+        if bool(body.get('preview_id')) == (body.get('items') is not None):
+            raise DomainError('INVALID_INPUT', 'Chọn CSV đã kiểm tra hoặc danh sách nội dung.', 422)
+        reference = body.get('reference')
+        if reference and not str(reference.get('source', '')).strip():
+            raise DomainError('INVALID_REFERENCE', 'Cần xác nhận nguồn nhãn tham chiếu.', 422)
+        records = body.get('items')
+        if body.get('preview_id'):
+            prev = c.execute('SELECT * FROM previews WHERE id=? AND expires_at>?', (body['preview_id'], time.time())).fetchone()
+            if not prev:
+                raise DomainError('PREVIEW_EXPIRED', 'Bản xem trước đã hết hạn.', 410)
+            preview = json.loads(prev['payload'])
+            col = body.get('text_column')
+            if col not in preview['columns']:
+                raise DomainError('INVALID_COLUMN', 'Chọn cột nội dung hợp lệ.', 422)
+            for task in ('sentiment', 'topic'):
+                refcol = (reference or {}).get(task + '_column')
+                if refcol and refcol not in preview['columns']:
+                    raise DomainError('INVALID_REFERENCE', 'Cột tham chiếu không tồn tại.', 422)
+            records = [dict(text=r.get(col, ''), metadata={k:v for k,v in r.items() if k != col}, _row=n, _raw=r) for n,r in enumerate(preview['rows'], 1)]
+        if not isinstance(records, list) or not 1 <= len(records) <= 500:
+            raise DomainError('INVALID_ROW_COUNT', 'Cần từ 1 đến 500 phản hồi.', 422)
+        clean, invalid = [], []
+        for n, record in enumerate(records, 1):
+            if body.get('preview_id') and any(issue['row'] == n and issue['code'] == 'COLUMN_COUNT' for issue in preview['issues']):
+                invalid.append(dict(row=n, code='COLUMN_COUNT')); continue
+            try:
+                check_text(record.get('text'))
+            except DomainError as exc:
+                invalid.append(dict(row=n, code=exc.code)); continue
+            refs = {}
+            for task in ('sentiment', 'topic'):
+                refcol = (reference or {}).get(task + '_column')
+                if refcol:
+                    raw = record.get('_raw', {}).get(refcol, '')
+                    mapping = reference.get(task + '_map', {})
+                    value = mapping.get(raw)
+                    if value is None and not mapping:
+                        try: value = int(raw)
+                        except (ValueError, TypeError): pass
+                    if type(value) is not int or value not in [x['id'] for x in profile[task]]:
+                        raise DomainError('INVALID_REFERENCE', 'Nhãn tham chiếu chưa map hợp lệ theo loại nội dung.', 422, dict(row=n, task=task, value=raw))
+                    refs[task] = value
+            clean.append((record, refs))
+        if invalid and not body.get('skip_invalid', False):
+            raise DomainError('INVALID_ROWS', 'Có phản hồi trống hoặc quá dài. Chọn bỏ dòng lỗi để tiếp tục.', 422, invalid)
+        if not clean:
+            raise DomainError('NO_VALID_ROWS', 'Không có phản hồi hợp lệ.', 422)
+        ident, stamp = uid(), now()
+        c.execute('INSERT INTO datasets VALUES(?,?,?,?,?,?,?,?)', (ident, name, profile['id'], profile['schema_id'], stamp, stamp, int(temporary), time.time()+900 if temporary else None))
+        for n, (record, refs) in enumerate(clean, 1):
+            revision_id = self.add_item(c, ident, record, record.get('_row', n))
+            for task, value in refs.items():
+                c.execute('INSERT INTO reference_labels VALUES(?,?,?,?,?)', (revision_id, task, profile['schema_id'], value, reference['source']))
+        self.remember(c, key, 'dataset', body, ident)
+        result = self.dataset(ident, c)
+        if invalid: result.update(skipped_count=len(invalid),issues=invalid)
+        return result
 
     def add_item(self, c, dataset_id, record, row):
         text = check_text(record.get('text'))
@@ -299,6 +382,7 @@ class Store:
     def add_items(self, dataset_id, records):
         with self.tx() as c:
             self.require_dataset(c, dataset_id)
+            self._require_not_sensitivity_dataset(c, dataset_id)
             count = c.execute('SELECT COUNT(*) FROM items WHERE dataset_id=?', (dataset_id,)).fetchone()[0]
             if not records or count + len(records) > 500:
                 raise DomainError('INVALID_ROW_COUNT', 'Bộ phản hồi tối đa 500 dòng.', 422)
@@ -313,37 +397,59 @@ class Store:
             raise DomainError('INVALID_NAME', 'Tên bộ phản hồi cần từ 1 đến 200 ký tự.', 422)
         with self.tx() as c:
             self.require_dataset(c, dataset_id)
+            self._require_not_sensitivity_dataset(c, dataset_id)
             c.execute('UPDATE datasets SET name=?,updated_at=? WHERE id=?', (name.strip(), now(), dataset_id))
         return self.dataset(dataset_id)
 
     def delete_dataset(self, dataset_id):
         with self.tx() as c:
             self.require_dataset(c, dataset_id)
+            self._require_not_sensitivity_dataset(c, dataset_id)
+            # Remove linked temporary experiment datasets first so source deletion never orphans temp data.
+            exp_rows = c.execute(
+                'SELECT temporary_dataset_id, job_id FROM sensitivity_experiments WHERE source_dataset_id=?',
+                (dataset_id,),
+            ).fetchall()
+            for exp in exp_rows:
+                temp_ds_id = exp['temporary_dataset_id']
+                c.execute(
+                    'DELETE FROM idempotency WHERE result_id=? OR result_id=? OR result_id IN (SELECT id FROM runs WHERE dataset_id=?)',
+                    (exp['job_id'], temp_ds_id, temp_ds_id),
+                )
+                c.execute('DELETE FROM datasets WHERE id=?', (temp_ds_id,))
             # Cascades revoke all job leases and remove every owned snapshot atomically.
             c.execute('DELETE FROM idempotency WHERE result_id=? OR result_id IN (SELECT id FROM runs WHERE dataset_id=?)', (dataset_id, dataset_id))
             c.execute('DELETE FROM datasets WHERE id=?', (dataset_id,))
 
     def copy_dataset(self, dataset_id, body):
         with self.connect() as c:
+            c.execute('BEGIN')
+            self.require_dataset(c, dataset_id)
+            self._require_not_sensitivity_dataset(c, dataset_id)
             items = self.query_items(dataset_id, {}, c)
         return self.create_dataset(dict(name=body.get('name'), profile=body.get('profile'), items=[dict(text=i['text'], metadata=i['metadata']) for i in items]))
 
     def create_run(self, dataset_id, model, key=None, body=None):
         with self.tx() as c:
-            previous = self.remember(c, key, 'run', body or dict(dataset_id=dataset_id))
-            if previous:
-                return self.run(previous, c)
-            d = self.require_dataset(c, dataset_id)
-            if not model.get('available') or model.get('schema_id') != d['schema_id']:
-                raise DomainError('MODEL_UNAVAILABLE', model.get('reason') or 'Model không tương thích hoặc chưa được cài.', 409)
-            rows = c.execute('SELECT id,current_revision_id FROM items WHERE dataset_id=? ORDER BY source_row', (dataset_id,)).fetchall()
-            run_id, job_id, stamp = uid(), uid(), now()
-            c.execute('INSERT INTO runs VALUES(?,?,?,?,?,?,?,0,0,?)', (run_id, dataset_id, d['schema_id'], model['model_id'], model['model_version'], 'queued', len(rows), stamp))
-            c.executemany('INSERT INTO run_items VALUES(?,?,?,NULL)', [(run_id, r['id'], r['current_revision_id']) for r in rows])
-            c.execute('INSERT INTO jobs(id,run_id,status,total,created_at,updated_at,priority) VALUES(?,?,?,?,?,?,?)', (job_id, run_id, 'queued', len(rows), stamp, stamp, 1 if d['temporary'] else 0))
-            c.execute('UPDATE datasets SET updated_at=?,expires_at=NULL WHERE id=?', (stamp, dataset_id))
-            self.remember(c, key, 'run', body or dict(dataset_id=dataset_id), run_id)
-            return self.run(run_id, c)
+            return self._create_run_tx(c, dataset_id, model, key=key, body=body, allow_sensitivity=False)
+
+    def _create_run_tx(self, c, dataset_id, model, key=None, body=None, allow_sensitivity=False):
+        previous = self.remember(c, key, 'run', body or dict(dataset_id=dataset_id))
+        if previous:
+            return self.run(previous, c)
+        d = self.require_dataset(c, dataset_id)
+        if not allow_sensitivity:
+            self._require_not_sensitivity_dataset(c, d['id'])
+        if not model.get('available') or model.get('schema_id') != d['schema_id']:
+            raise DomainError('MODEL_UNAVAILABLE', model.get('reason') or 'Model không tương thích hoặc chưa được cài.', 409)
+        rows = c.execute('SELECT id,current_revision_id FROM items WHERE dataset_id=? ORDER BY source_row', (dataset_id,)).fetchall()
+        run_id, job_id, stamp = uid(), uid(), now()
+        c.execute('INSERT INTO runs VALUES(?,?,?,?,?,?,?,0,0,?)', (run_id, dataset_id, d['schema_id'], model['model_id'], model['model_version'], 'queued', len(rows), stamp))
+        c.executemany('INSERT INTO run_items VALUES(?,?,?,NULL)', [(run_id, r['id'], r['current_revision_id']) for r in rows])
+        c.execute('INSERT INTO jobs(id,run_id,status,total,created_at,updated_at,priority) VALUES(?,?,?,?,?,?,?)', (job_id, run_id, 'queued', len(rows), stamp, stamp, 1 if d['temporary'] else 0))
+        c.execute('UPDATE datasets SET updated_at=?,expires_at=NULL WHERE id=?', (stamp, dataset_id))
+        self.remember(c, key, 'run', body or dict(dataset_id=dataset_id), run_id)
+        return self.run(run_id, c)
 
     def run(self, run_id, c=None):
         if c is None:
@@ -355,7 +461,7 @@ class Store:
     def runs(self, dataset_id):
         with self.connect() as c:
             self.require_dataset(c, dataset_id)
-            return [self.run(r['id'], c) for r in c.execute('SELECT id FROM runs WHERE dataset_id=? ORDER BY created_at DESC', (dataset_id,))]
+            return [self.run(r['id'], c) for r in c.execute('SELECT id FROM runs WHERE dataset_id=? ORDER BY created_at DESC, rowid DESC', (dataset_id,))]
 
     def job(self, job_id, c=None):
         if c is None:
@@ -369,7 +475,11 @@ class Store:
         errors = c.execute('SELECT item_id,revision_id,error FROM run_items WHERE run_id=? AND error IS NOT NULL', (row['run_id'],)).fetchall()
         value['errors'] = [dict(x) for x in errors]
         dataset = c.execute('SELECT d.* FROM datasets d JOIN runs r ON r.dataset_id=d.id WHERE r.id=?', (row['run_id'],)).fetchone()
-        if dataset['temporary'] and row['status'] in TERMINAL:
+        is_sensitivity = bool(c.execute('SELECT 1 FROM sensitivity_experiments WHERE job_id=?', (job_id,)).fetchone())
+        value['kind'] = 'sensitivity' if is_sensitivity else ('quick' if dataset['temporary'] else 'analysis')
+        if is_sensitivity:
+            value['result'] = None
+        elif dataset['temporary'] and row['status'] in TERMINAL:
             values = self.query_items(dataset['id'], dict(run_id=row['run_id']), c)
             value['result'] = values[0] if values else None
         return value
@@ -385,14 +495,68 @@ class Store:
                     self.expire_quick(c, j['run_id'])
             return self.job(job_id, c)
 
-    def retry(self, job_id, model):
+    def retry(self, job_id, model=None, execution_resolver=None):
         with self.tx() as c:
-            self.recover(c)
+            self.cleanup_expired_in_tx(c)
             j = self.job(job_id, c)
             run = self.run(j['run_id'], c)
             if j['status'] not in TERMINAL or j['status'] == 'completed':
                 raise DomainError('JOB_NOT_RETRYABLE', 'Chỉ chạy lại công việc đã dừng và còn dòng chưa hoàn tất.', 409)
-            if not model.get('available') or (model.get('model_id'), model.get('model_version'), model.get('schema_id')) != (run['model_id'], run['model_version'], run['schema_id']):
+            exp = c.execute('SELECT * FROM sensitivity_experiments WHERE job_id=?', (job_id,)).fetchone()
+            if exp:
+                context = json.loads(exp['context_json'])
+                pred_count = c.execute('SELECT COUNT(*) FROM predictions WHERE run_id=?', (run['id'],)).fetchone()[0]
+                if pred_count >= 2:
+                    raise DomainError('JOB_NOT_RETRYABLE', 'Thử nghiệm đã có đủ hai kết quả.', 409)
+                src_item = c.execute('SELECT current_revision_id FROM items WHERE id=?', (exp['source_item_id'],)).fetchone()
+                if not src_item:
+                    raise DomainError('NOT_FOUND', 'Không tìm thấy phản hồi nguồn.', 404)
+                cur_rev = c.execute('SELECT text_hash FROM revisions WHERE id=?', (src_item['current_revision_id'],)).fetchone()
+                if (
+                    src_item['current_revision_id'] != context['source']['revision_id']
+                    or not cur_rev
+                    or cur_rev['text_hash'] != context['source']['text_sha256']
+                ):
+                    raise DomainError('REVISION_CONFLICT', 'Nội dung phản hồi nguồn đã thay đổi. Tạo thử nghiệm mới để chạy trên nội dung hiện tại.', 409)
+                current_identity = self._resolve_execution_identity(execution_resolver, context['execution']['profile'])
+                if current_identity != context['execution']:
+                    raise DomainError('MODEL_IDENTITY_CHANGED', 'Model hoặc cấu hình tiền xử lý đã thay đổi so với lần thử nghiệm trước.', 409)
+                existing_active = c.execute(
+                    """SELECT se.job_id FROM sensitivity_experiments se
+                       JOIN jobs j ON j.id=se.job_id
+                       WHERE se.source_item_id=? AND se.job_id!=?
+                         AND j.status NOT IN ('completed','completed_with_errors','failed','cancelled','interrupted')
+                       LIMIT 1""",
+                    (exp['source_item_id'], job_id),
+                ).fetchone()
+                if existing_active:
+                    raise DomainError(
+                        'EXPERIMENT_IN_PROGRESS',
+                        'Phản hồi này đang có một thử nghiệm độ nhạy chưa kết thúc.',
+                        409,
+                        {'existing_job_id': existing_active['job_id']},
+                    )
+                active_count = c.execute(
+                    """SELECT COUNT(*) FROM sensitivity_experiments se
+                       JOIN jobs j ON j.id=se.job_id
+                       WHERE j.status NOT IN ('completed','completed_with_errors','failed','cancelled','interrupted')"""
+                ).fetchone()[0]
+                if active_count >= 4:
+                    raise DomainError(
+                        'EXPERIMENT_LIMIT',
+                        'Đã đạt giới hạn 4 thử nghiệm độ nhạy đang chạy đồng thời.',
+                        429,
+                        {'limit': 4, 'reason': 'CONCURRENT_LIMIT'},
+                    )
+                context['attempt'] = {'error_code': None, 'model_input_equal': None}
+                c.execute('UPDATE sensitivity_experiments SET context_json=? WHERE job_id=?', (encode(context), job_id))
+                c.execute('DELETE FROM predictions WHERE run_id=?', (run['id'],))
+                c.execute("UPDATE jobs SET status='queued',completed=0,failed=0,error=NULL,cancel_requested=0,attempt_id=attempt_id+1,lease_owner=NULL,lease_expires_at=NULL,updated_at=? WHERE id=?", (now(), job_id))
+                c.execute("UPDATE runs SET status='queued',completed=0,failed=0 WHERE id=?", (run['id'],))
+                c.execute('UPDATE run_items SET error=NULL WHERE run_id=?', (run['id'],))
+                c.execute('UPDATE datasets SET expires_at=NULL WHERE temporary=1 AND id=?', (run['dataset_id'],))
+                return self.job(job_id, c)
+            if not model or not model.get('available') or (model.get('model_id'), model.get('model_version'), model.get('schema_id')) != (run['model_id'], run['model_version'], run['schema_id']):
                 raise DomainError('MODEL_UNAVAILABLE', 'Cần đúng phiên bản model của lần chạy để tiếp tục.', 409)
             c.execute("UPDATE jobs SET status='queued',failed=0,error=NULL,cancel_requested=0,attempt_id=attempt_id+1,lease_owner=NULL,lease_expires_at=NULL,updated_at=? WHERE id=?", (now(), job_id))
             c.execute("UPDATE runs SET status='queued',failed=0 WHERE id=?", (run['id'],))
@@ -407,7 +571,7 @@ class Store:
     def latest_run_id(self, dataset_id, c=None):
         if c is None:
             with self.connect() as conn: return self.latest_run_id(dataset_id,conn)
-        run = c.execute('SELECT id FROM runs WHERE dataset_id=? ORDER BY created_at DESC LIMIT 1',(dataset_id,)).fetchone()
+        run = c.execute('SELECT id FROM runs WHERE dataset_id=? ORDER BY created_at DESC, rowid DESC LIMIT 1',(dataset_id,)).fetchone()
         return run['id'] if run else None
 
     def item(self, item_id, run_id=None, c=None):
@@ -415,7 +579,7 @@ class Store:
             with self.connect() as conn:
                 conn.execute('BEGIN')
                 return self.item(item_id, run_id, conn)
-        row = c.execute('SELECT i.*,d.schema_id FROM items i JOIN datasets d ON d.id=i.dataset_id WHERE i.id=?', (item_id,)).fetchone()
+        row = c.execute('SELECT i.*,d.schema_id,d.profile FROM items i JOIN datasets d ON d.id=i.dataset_id WHERE i.id=?', (item_id,)).fetchone()
         if not row: raise DomainError('NOT_FOUND', 'Không tìm thấy phản hồi.', 404)
         revision_id, error = row['current_revision_id'], None
         if run_id:
@@ -430,14 +594,35 @@ class Store:
             pred = c.execute('SELECT * FROM predictions WHERE item_id=? AND revision_id=? AND run_id=?', (item_id, revision_id,latest_run)).fetchone()
             last = c.execute('SELECT error FROM run_items WHERE item_id=? AND revision_id=? AND run_id=?', (item_id,revision_id,latest_run)).fetchone()
             error = last['error'] if last else None
-        prediction = dict(json.loads(pred['payload']), id=pred['id'], run_id=pred['run_id'], created_at=pred['created_at']) if pred else None
+        raw_payload = json.loads(pred['payload'], parse_constant=lambda _: None) if pred else None
+        prediction = dict(raw_payload if isinstance(raw_payload, dict) else {}, id=pred['id'], run_id=pred['run_id'], created_at=pred['created_at']) if pred else None
         refs = {r['task']:dict(label_id=r['label_id'], source=r['source']) for r in c.execute('SELECT * FROM reference_labels WHERE revision_id=?', (revision_id,))}
         reviews, effective = {}, {}
         for task in ('sentiment', 'topic'):
             r = c.execute('SELECT * FROM reviews WHERE revision_id=? AND task=? AND schema_id=? ORDER BY review_revision DESC LIMIT 1', (revision_id, task, row['schema_id'])).fetchone()
             reviews[task] = self.review_json(r) if r else None
-            effective[task] = r['label_id'] if r and r['status'] != 'unreviewed' else (prediction[task]['label_id'] if prediction else None)
-        return dict(id=item_id, dataset_id=row['dataset_id'], revision_id=revision_id, revision=rev['revision'], source_row=row['source_row'], text=rev['text'], metadata=json.loads(rev['metadata_json']), reference=refs, prediction=prediction, reviews=reviews, effective=effective, stale=revision_id != row['current_revision_id'], error=error)
+            if r and r['status'] != 'unreviewed':
+                effective[task] = r['label_id']
+            else:
+                task_pred = prediction.get(task) if isinstance(prediction, dict) else None
+                effective[task] = task_pred['label_id'] if isinstance(task_pred, dict) and type(task_pred.get('label_id')) is int else None
+        review_signals = evaluate_item_signals(prediction, reviews, profile_for(row['profile']))
+        return dict(id=item_id, dataset_id=row['dataset_id'], revision_id=revision_id, revision=rev['revision'], source_row=row['source_row'], text=rev['text'], metadata=json.loads(rev['metadata_json']), reference=refs, prediction=prediction, reviews=reviews, effective=effective, review_signals=review_signals, stale=revision_id != row['current_revision_id'], error=error)
+
+    def run_snapshot(self, dataset_id, filters=None, c=None):
+        if c is None:
+            with self.connect() as conn:
+                conn.execute('BEGIN')
+                return self.run_snapshot(dataset_id, filters, conn)
+        self.require_dataset(c, dataset_id)
+        run_id = (filters or {}).get('run_id') or None
+        if run_id:
+            run = self.run(run_id, c)
+            if run['dataset_id'] != dataset_id:
+                raise DomainError('RUN_DATASET_MISMATCH', 'Lần chạy không thuộc bộ phản hồi.', 422)
+            return dict(revision_scope='run', resolved_run_id=run['id'], run_status=run['status'])
+        latest = c.execute('SELECT id,status FROM runs WHERE dataset_id=? ORDER BY created_at DESC, rowid DESC LIMIT 1', (dataset_id,)).fetchone()
+        return dict(revision_scope='current', resolved_run_id=latest['id'] if latest else None, run_status=latest['status'] if latest else None)
 
     def query_items(self, dataset_id, filters, c=None):
         if c is None:
@@ -458,10 +643,28 @@ class Store:
         items = [self.item(r['id'], run_id, c) for r in ids]
         source = filters.get('label_source', 'effective')
         review_status = filters.get('review_status', 'all')
-        if source not in ('effective', 'ai') or review_status not in ('all', 'unreviewed', 'partial', 'reviewed', 'needs_review'):
+        review_signal = filters.get('review_signal', 'all')
+        if (
+            source not in ('effective', 'ai')
+            or review_status not in ('all', 'unreviewed', 'partial', 'reviewed', 'needs_review')
+            or review_signal not in ('all', 'model_uncertain', 'sentiment_uncertain', 'topic_uncertain', 'truncated', 'pending_signal_review')
+        ):
             raise DomainError('INVALID_FILTER', 'Bộ lọc không hợp lệ.', 422)
         def labels(i):
-            return i['effective'] if source == 'effective' else {t:i['prediction'][t]['label_id'] if i['prediction'] else None for t in ('sentiment', 'topic')}
+            return selected_labels(i, source)
+        def matches_signal(i):
+            if review_signal == 'all':
+                return True
+            sig = i['review_signals']
+            if review_signal == 'model_uncertain':
+                return sig['sentiment']['state'] == 'flagged' or sig['topic']['state'] == 'flagged'
+            if review_signal == 'sentiment_uncertain':
+                return sig['sentiment']['state'] == 'flagged'
+            if review_signal == 'topic_uncertain':
+                return sig['topic']['state'] == 'flagged'
+            if review_signal == 'truncated':
+                return sig['truncated'] is True
+            return sig['pending_signal_review'] is True
         def keep(i):
             if filters.get('q') and str(filters['q']).casefold() not in i['text'].casefold(): return False
             for task in ('sentiment', 'topic'):
@@ -469,30 +672,80 @@ class Store:
             n = self.review_count(i)
             if review_status in ('unreviewed', 'partial', 'reviewed') and n != {'unreviewed':0, 'partial':1, 'reviewed':2}[review_status]: return False
             p = i['prediction']
-            needs = n < 2 or bool(i['error']) or bool(p and (p.get('truncated') or any(max(p[t]['scores']) < .6 for t in ('sentiment', 'topic'))))
-            return review_status != 'needs_review' or needs
+            needs = n < 2 or bool(i['error']) or bool(isinstance(p, dict) and p and (p.get('truncated') or any(_task_scores_need_review(p, t) for t in ('sentiment', 'topic'))))
+            if review_status == 'needs_review' and not needs: return False
+            return matches_signal(i)
         items = [i for i in items if keep(i)]
         sort, direction = filters.get('sort', 'source_row'), filters.get('direction', 'asc')
         if sort not in ('source_row', 'text', 'sentiment', 'topic') or direction not in ('asc', 'desc'):
             raise DomainError('INVALID_FILTER', 'Thứ tự sắp xếp không hợp lệ.', 422)
-        items.sort(key=lambda i: (labels(i)[sort] is None, labels(i)[sort] if labels(i)[sort] is not None else -1, i['source_row']) if sort in ('sentiment', 'topic') else (i[sort], i['source_row']), reverse=direction == 'desc')
+        items.sort(key=lambda i: (labels(i)[sort] is None, labels(i)[sort] if labels(i)[sort] is not None else -1, i['source_row'], i['id']) if sort in ('sentiment', 'topic') else (i[sort], i['source_row'], i['id']), reverse=direction == 'desc')
         return items
 
-    def summary(self, dataset_id, filters):
-        items = self.query_items(dataset_id, filters)
+    def items_page(self, dataset_id, filters, page=1, page_size=25, c=None):
+        if page < 1 or page_size < 1 or page_size > 500:
+            raise DomainError('INVALID_PAGINATION', 'Trang không hợp lệ.', 422)
+        filters = filters or {}
+        if c is None:
+            with self.connect() as conn:
+                conn.execute('BEGIN')
+                return self.items_page(dataset_id, filters, page, page_size, conn)
+        items = self.query_items(dataset_id, filters, c)
+        snapshot = self.run_snapshot(dataset_id, filters, c)
+        start = (page - 1) * page_size
+        return dict(
+            items=items[start:start + page_size],
+            total=len(items),
+            page=page,
+            page_size=page_size,
+            run_id=filters.get('run_id') or None,
+            **snapshot,
+        )
+
+    def summary(self, dataset_id, filters, c=None):
+        filters = filters or {}
+        if c is None:
+            with self.connect() as conn:
+                conn.execute('BEGIN')
+                return self.summary(dataset_id, filters, conn)
+        dataset = self.require_dataset(c, dataset_id)
+        profile = profile_for(dataset['profile'])
+        items = self.query_items(dataset_id, filters, c)
+        snapshot = self.run_snapshot(dataset_id, filters, c)
+        source = filters.get('label_source', 'effective')
         sentiment, topic, cross = {}, {}, {}
         for i in items:
-            labels = i['effective'] if filters.get('label_source', 'effective') == 'effective' else {t:i['prediction'][t]['label_id'] if i['prediction'] else None for t in ('sentiment', 'topic')}
+            labels = selected_labels(i, source)
             s, t = labels['sentiment'], labels['topic']
             if s is not None: sentiment[s] = sentiment.get(s, 0) + 1
             if t is not None: topic[t] = topic.get(t, 0) + 1
             if s is not None and t is not None: cross[(s,t)] = cross.get((s,t), 0) + 1
-        return dict(total=len(items), processed=sum(bool(i['prediction']) for i in items), reviewed=sum(self.review_count(i) == 2 for i in items), partial_review=sum(self.review_count(i) == 1 for i in items), unreviewed=sum(self.review_count(i) == 0 for i in items), truncated=sum(bool(i['prediction'] and i['prediction'].get('truncated')) for i in items), errors=sum(bool(i['error']) for i in items), sentiment=[dict(label_id=k,count=v) for k,v in sorted(sentiment.items())], topic=[dict(label_id=k,count=v) for k,v in sorted(topic.items())], cross=[dict(sentiment=k[0],topic=k[1],count=v) for k,v in sorted(cross.items())], denominator=dict(sentiment=sum(sentiment.values()),topic=sum(topic.values()),cross=sum(cross.values())), run_id=filters.get('run_id'), label_source=filters.get('label_source','effective'))
+        attention = aggregate_attention(items, profile, source)
+        review_policy = resolve_policy_metadata(profile['schema_id'])
+        return dict(
+            total=len(items),
+            processed=sum(bool(i['prediction']) for i in items),
+            reviewed=sum(self.review_count(i) == 2 for i in items),
+            partial_review=sum(self.review_count(i) == 1 for i in items),
+            unreviewed=sum(self.review_count(i) == 0 for i in items),
+            truncated=sum(bool(i['prediction'] and i['prediction'].get('truncated')) for i in items),
+            errors=sum(bool(i['error']) for i in items),
+            sentiment=[dict(label_id=k,count=v) for k,v in sorted(sentiment.items())],
+            topic=[dict(label_id=k,count=v) for k,v in sorted(topic.items())],
+            cross=[dict(sentiment=k[0],topic=k[1],count=v) for k,v in sorted(cross.items())],
+            denominator=dict(sentiment=sum(sentiment.values()),topic=sum(topic.values()),cross=sum(cross.values())),
+            run_id=filters.get('run_id') or None,
+            label_source=source,
+            attention=attention,
+            review_policy=review_policy,
+            **snapshot,
+        )
 
     def edit_text(self, item_id, text, expected_revision):
         check_text(text)
         with self.tx() as c:
             item = self.item(item_id, c=c)
+            self._require_not_sensitivity_item(c, item_id)
             if item['revision'] != expected_revision: raise DomainError('REVISION_CONFLICT', 'Nội dung đã được sửa. Tải lại trước khi lưu.', 409)
             revision_id = uid()
             c.execute('INSERT INTO revisions VALUES(?,?,?,?,?,?,?)', (revision_id, item_id, expected_revision + 1, text, hashlib.sha256(text.encode()).hexdigest(), encode(item['metadata']), now()))
@@ -509,6 +762,7 @@ class Store:
         if task not in ('sentiment', 'topic'): raise DomainError('INVALID_TASK', 'Tác vụ không hợp lệ.', 422)
         with self.tx() as c:
             i = self.item(item_id, body.get('run_id'), c=c)
+            self._require_not_sensitivity_item(c, item_id)
             current_input = self.item(item_id, c=c)
             if i['revision_id'] != current_input['revision_id']:
                 raise DomainError('REVISION_CONFLICT', 'Lần chạy đã chọn dùng nội dung cũ. Chọn nội dung hiện tại để duyệt.', 409)
@@ -537,14 +791,15 @@ class Store:
                 if explicit_source is not None:
                     source = c.execute('SELECT p.* FROM predictions p JOIN runs r ON r.id=p.run_id WHERE p.id=? AND p.item_id=? AND p.revision_id=? AND r.schema_id=?',
                                        (explicit_source, item_id, i['revision_id'], dataset['schema_id'])).fetchone()
-                    prediction = json.loads(source['payload']) if source else None
+                    prediction = json.loads(source['payload'], parse_constant=lambda _: None) if source else None
                     source_prediction_id = source['id'] if source else None
-                    if not prediction or prediction.get('schema_id') != dataset['schema_id']:
+                    if not isinstance(prediction, dict) or prediction.get('schema_id') != dataset['schema_id']:
                         raise DomainError('CONFIRM_REQUIRES_PREDICTION', 'Dự đoán nguồn không khớp nội dung/schema hiện tại.', 409)
                 elif status != 'confirmed' and 'source_prediction_id' in body:
                     # Explicit null clears provenance after a deliberate manual edit.
                     source_prediction_id = None
-                if status == 'confirmed' and (not prediction or prediction.get('schema_id') != dataset['schema_id'] or prediction.get(task,{}).get('label_id') != label):
+                task_pred = prediction.get(task) if isinstance(prediction, dict) else None
+                if status == 'confirmed' and (not isinstance(prediction, dict) or prediction.get('schema_id') != dataset['schema_id'] or not isinstance(task_pred, dict) or task_pred.get('label_id') != label):
                     raise DomainError('CONFIRM_REQUIRES_PREDICTION', 'Chỉ xác nhận nhãn khớp dự đoán AI hiện tại.', 409)
             stamp = now()
             c.execute('INSERT INTO reviews VALUES(?,?,?,?,?,?,?,?,?,?,?)', (uid(), item_id, i['revision_id'], dataset['schema_id'], task, revision+1, status, label, note, source_prediction_id, stamp))
@@ -561,6 +816,8 @@ class Store:
 
     def export(self, dataset_id, filters):
         with self.tx() as c:
+            self.require_dataset(c, dataset_id)
+            self._require_not_sensitivity_dataset(c, dataset_id)
             items = self.query_items(dataset_id, filters, c)
             dataset = self.dataset(dataset_id, c)
             selected_run_id = filters.get('run_id') or self.latest_run_id(dataset_id,c)
@@ -568,8 +825,15 @@ class Store:
             stream = io.StringIO(newline='')
             writer = csv.DictWriter(stream, fieldnames=columns); writer.writeheader()
             for i in items:
-                p = i['prediction'] or {}
-                row = dict(item_id=i['id'],source_row=i['source_row'],text=i['text'],metadata=encode(i['metadata']),revision_id=i['revision_id'],revision=i['revision'],schema_id=dataset['schema_id'],selected_run_id=selected_run_id or '',prediction_status='processed' if p else ('failed' if i['error'] else 'unprocessed'),prediction_id=p.get('id',''),run_id=p.get('run_id',''),model_id=p.get('model_id',''),model_version=p.get('model_version',''),ai_sentiment=p.get('sentiment',{}).get('label_id',''),ai_topic=p.get('topic',{}).get('label_id',''),sentiment_scores=encode(p.get('sentiment',{}).get('scores',[])),topic_scores=encode(p.get('topic',{}).get('scores',[])),effective_sentiment=i['effective']['sentiment'],effective_topic=i['effective']['topic'],token_count_before_truncation=p.get('token_count_before_truncation',''),truncated=p.get('truncated',False),warnings=encode(p.get('warnings',[])),error=i['error'])
+                p = i['prediction'] if isinstance(i['prediction'], dict) else {}
+                sp = p.get('sentiment') if isinstance(p.get('sentiment'), dict) else {}
+                tp = p.get('topic') if isinstance(p.get('topic'), dict) else {}
+                warnings_val = p.get('warnings') if isinstance(p.get('warnings'), list) else []
+                ai_sentiment = sp['label_id'] if type(sp.get('label_id')) is int else ''
+                ai_topic = tp['label_id'] if type(tp.get('label_id')) is int else ''
+                s_scores = sp.get('scores') if isinstance(sp.get('scores'), list) else []
+                t_scores = tp.get('scores') if isinstance(tp.get('scores'), list) else []
+                row = dict(item_id=i['id'],source_row=i['source_row'],text=i['text'],metadata=encode(i['metadata']),revision_id=i['revision_id'],revision=i['revision'],schema_id=dataset['schema_id'],selected_run_id=selected_run_id or '',prediction_status='processed' if p else ('failed' if i['error'] else 'unprocessed'),prediction_id=p.get('id',''),run_id=p.get('run_id',''),model_id=p.get('model_id',''),model_version=p.get('model_version',''),ai_sentiment=ai_sentiment,ai_topic=ai_topic,sentiment_scores=encode(s_scores),topic_scores=encode(t_scores),effective_sentiment=i['effective']['sentiment'],effective_topic=i['effective']['topic'],token_count_before_truncation=p.get('token_count_before_truncation',''),truncated=bool(p.get('truncated',False)),warnings=encode(warnings_val),error=i['error'])
                 row['label_source'] = filters.get('label_source','effective')
                 for task in ('sentiment','topic'):
                     row['selected_'+task] = row['ai_'+task] if row['label_source'] == 'ai' else i['effective'][task]
@@ -581,7 +845,8 @@ class Store:
                     if isinstance(v,str) and v.lstrip().startswith(('=','+','-','@')): row[k] = "'" + v
                 writer.writerow(row)
             ident, stamp = uid(), now()
-            c.execute('INSERT INTO exports VALUES(?,?,?,?,?,?,?,?)', (ident,dataset_id,selected_run_id,encode(filters),encode(items),stream.getvalue().encode('utf-8-sig'),len(items),stamp))
+            filters_snapshot = dict(filters, review_policy=resolve_policy_metadata(dataset['schema_id']))
+            c.execute('INSERT INTO exports VALUES(?,?,?,?,?,?,?,?)', (ident,dataset_id,selected_run_id,encode(filters_snapshot),encode(items),stream.getvalue().encode('utf-8-sig'),len(items),stamp))
             return dict(id=ident,row_count=len(items),created_at=stamp,url=f'/api/v1/exports/{ident}')
 
     def export_bytes(self, ident):
@@ -594,3 +859,349 @@ class Store:
         with self.connect() as c:
             row = c.execute('SELECT * FROM worker_status WHERE id=1').fetchone()
             return dict(alive=bool(row and row['expires_at'] > time.time()), **({k:row[k] for k in ('owner','pid','heartbeat_at')} if row else {}))
+
+    def _build_sensitivity_response(self, c, job_id, execution_resolver=None, _cached_identity=None):
+        row = c.execute(
+            """SELECT se.*,
+                      j.run_id AS job_run_id,
+                      j.status, j.completed, j.total, j.failed, j.cancel_requested, j.error AS job_error,
+                      d.expires_at AS temp_expires_at,
+                      si.current_revision_id AS source_current_revision_id,
+                      br.text AS baseline_text,
+                      vr.text AS variant_text
+               FROM sensitivity_experiments se
+               JOIN jobs j ON j.id=se.job_id
+               JOIN datasets d ON d.id=se.temporary_dataset_id
+               JOIN items bi ON bi.id=se.baseline_item_id
+               JOIN revisions br ON br.id=bi.current_revision_id
+               JOIN items vi ON vi.id=se.variant_item_id
+               JOIN revisions vr ON vr.id=vi.current_revision_id
+               LEFT JOIN items si ON si.id=se.source_item_id
+               WHERE se.job_id=?""",
+            (job_id,),
+        ).fetchone()
+        if not row:
+            raise DomainError('NOT_FOUND', 'Không còn kết quả thử nghiệm tạm hoặc phản hồi nguồn.', 404)
+
+        context = json.loads(row['context_json'])
+        source = context['source']
+        sel = context['selection']
+        execution = context['execution']
+        attempt = context.get('attempt') or {}
+
+        source_stale = True
+        if row['source_current_revision_id'] == source['revision_id']:
+            cur_rev = c.execute('SELECT text_hash FROM revisions WHERE id=?', (row['source_current_revision_id'],)).fetchone()
+            if cur_rev and cur_rev['text_hash'] == source['text_sha256']:
+                source_stale = False
+
+        if _cached_identity is not None:
+            active_model_changed = _cached_identity != execution
+        elif execution_resolver is not None:
+            try:
+                current_identity = self._resolve_execution_identity(execution_resolver, execution['profile'])
+            except DomainError as exc:
+                if exc.code == 'MODEL_UNAVAILABLE':
+                    current_identity = None
+                else:
+                    raise
+            active_model_changed = bool(current_identity is not None and current_identity != execution)
+        else:
+            active_model_changed = False
+
+        expires_at = (
+            datetime.fromtimestamp(float(row['temp_expires_at']), timezone.utc).isoformat().replace('+00:00', 'Z')
+            if row['temp_expires_at'] is not None
+            else None
+        )
+
+        status = row['status']
+        attempt_error_code = attempt.get('error_code')
+        if status in ('completed', 'queued', 'loading_model', 'running'):
+            error = None
+        elif status == 'cancelled':
+            error = {'code': 'CANCELLED', 'message': row['job_error']} if row['job_error'] else None
+        elif attempt_error_code:
+            error_messages = {
+                'MODEL_IDENTITY_CHANGED': 'Model active đã thay đổi so với lần thử nghiệm đã tạo.',
+                'INVALID_PAIR_RESULT': 'Kết quả suy luận của cặp văn bản không hợp lệ.',
+                'INFERENCE_FAILED': 'Không thể chạy suy luận trên model hiện tại.',
+                'JOB_INTERRUPTED': 'Tiến trình suy luận bị gián đoạn trước khi hoàn tất.',
+            }
+            error = {
+                'code': attempt_error_code,
+                'message': error_messages.get(attempt_error_code, row['job_error'] or 'Thử nghiệm không thể hoàn tất.'),
+            }
+        elif status == 'interrupted':
+            error = {
+                'code': 'JOB_INTERRUPTED',
+                'message': row['job_error'] or 'Tiến trình suy luận bị gián đoạn trước khi hoàn tất.',
+            }
+        else:
+            error = {
+                'code': 'INFERENCE_FAILED',
+                'message': row['job_error'] or 'Không thể chạy suy luận trên model hiện tại.',
+            }
+
+        result = None
+        if status == 'completed':
+            from services.sensitivity import build_sensitivity_result
+            baseline_item = self.item(row['baseline_item_id'], row['job_run_id'], c=c)
+            variant_item = self.item(row['variant_item_id'], row['job_run_id'], c=c)
+            result = build_sensitivity_result(
+                baseline_item,
+                variant_item,
+                profile_for(execution['profile']),
+                context,
+            )
+
+        baseline_text = row['baseline_text']
+        variant_text = row['variant_text']
+        return {
+            'experiment_id': job_id,
+            'job_id': job_id,
+            'status': status,
+            'completed': row['completed'],
+            'total': row['total'],
+            'failed': row['failed'],
+            'cancel_requested': bool(row['cancel_requested']),
+            'source_stale': source_stale,
+            'active_model_changed': active_model_changed,
+            'source': source,
+            'selection': {
+                'start_utf16': sel['start_utf16'],
+                'end_utf16': sel['end_utf16'],
+                'text': baseline_text[sel['start_cp']:sel['end_cp']],
+            },
+            'baseline_text': baseline_text,
+            'variant_text': variant_text,
+            'execution': {
+                **execution,
+                'baseline_recomputed': True,
+                'source_model_changed': bool(context.get('source_model_changed', False)),
+            },
+            'expires_at': expires_at,
+            'error': error,
+            'result': result,
+        }
+
+    def get_sensitivity_experiment(self, experiment_id, execution_resolver=None):
+        with self.tx() as c:
+            self.cleanup_expired_in_tx(c)
+            return self._build_sensitivity_response(c, experiment_id, execution_resolver=execution_resolver)
+
+    def create_sensitivity_experiment(self, item_id, body, idempotency_key, execution_resolver):
+        if not isinstance(idempotency_key, str) or not idempotency_key.strip():
+            raise DomainError('VALIDATION_ERROR', 'Thiếu khóa Idempotency-Key hợp lệ.', 422)
+
+        from services.sensitivity import validate_and_build_variant
+
+        sel = body['selection']
+        selected_run_id = body.get('run_id') or None
+        idempotency_payload = {
+            'item_id': item_id,
+            'revision_id': body['revision_id'],
+            'expected_revision': body['expected_revision'],
+            'text_sha256': body['text_sha256'],
+            'run_id': selected_run_id,
+            'source_prediction_id': body.get('source_prediction_id'),
+            'selection': {
+                'start_utf16': sel['start_utf16'],
+                'end_utf16': sel['end_utf16'],
+                'text': sel['text'],
+            },
+        }
+
+        with self.tx() as c:
+            # 1. Reclaim expired temp experiments and idempotency/rate entries first.
+            self.cleanup_expired_in_tx(c)
+
+            # 2. Idempotency check BEFORE source currency/model/quota checks.
+            prior = self.remember(c, idempotency_key, 'sensitivity', idempotency_payload)
+            if prior:
+                return self._build_sensitivity_response(c, prior, execution_resolver=execution_resolver)
+
+            # 3. Source item must belong to a durable dataset.
+            row = c.execute(
+                'SELECT i.id, i.dataset_id, i.current_revision_id, d.temporary, d.profile, d.schema_id '
+                'FROM items i JOIN datasets d ON d.id=i.dataset_id WHERE i.id=?',
+                (item_id,),
+            ).fetchone()
+            if not row:
+                raise DomainError('NOT_FOUND', 'Không tìm thấy phản hồi.', 404)
+            if row['temporary']:
+                raise DomainError('INVALID_EXPERIMENT_SOURCE', 'Chỉ tạo thử nghiệm từ phản hồi trong bộ dữ liệu bền.', 422)
+
+            # 4. Validate optional run_id and resolve the viewed item.
+            if selected_run_id:
+                selected_run = self.run(selected_run_id, c)
+                if selected_run['dataset_id'] != row['dataset_id']:
+                    raise DomainError('RUN_DATASET_MISMATCH', 'Lần chạy không thuộc bộ phản hồi.', 422)
+                resolved_run_id = selected_run_id
+            else:
+                resolved_run_id = self.latest_run_id(row['dataset_id'], c)
+            view_item = self.item(item_id, selected_run_id, c)
+
+            # 5. Check source revision currency and raw UTF-8 text hash.
+            actual_text_sha256 = hashlib.sha256(view_item['text'].encode('utf-8')).hexdigest()
+            if (
+                view_item['stale']
+                or view_item['revision_id'] != body['revision_id']
+                or view_item['revision'] != body['expected_revision']
+                or actual_text_sha256 != body['text_sha256']
+            ):
+                raise DomainError('REVISION_CONFLICT', 'Nội dung phản hồi đã thay đổi hoặc đang xem phiên bản cũ.', 409)
+
+            # 6. Check source prediction identity in the viewed scope.
+            view_prediction = view_item['prediction']
+            view_pred_id = view_prediction['id'] if view_prediction else None
+            if body.get('source_prediction_id') != view_pred_id:
+                raise DomainError('SOURCE_CONTEXT_CHANGED', 'Dự đoán nguồn đã thay đổi. Tải lại trước khi thử nghiệm.', 409)
+
+            # 7. Exact UTF-16 -> code point -> grapheme selection validation & variant build.
+            variant_info = validate_and_build_variant(
+                view_item['text'],
+                sel['start_utf16'],
+                sel['end_utf16'],
+                sel['text'],
+            )
+
+            # 8. Enforce per-item, global concurrent (4), and global rate (10/60s) quotas atomically.
+            existing = c.execute(
+                """SELECT se.job_id FROM sensitivity_experiments se
+                   JOIN jobs j ON j.id=se.job_id
+                   WHERE se.source_item_id=?
+                     AND j.status NOT IN ('completed','completed_with_errors','failed','cancelled','interrupted')
+                   LIMIT 1""",
+                (item_id,),
+            ).fetchone()
+            if existing:
+                raise DomainError(
+                    'EXPERIMENT_IN_PROGRESS',
+                    'Phản hồi này đang có một thử nghiệm độ nhạy chưa kết thúc.',
+                    409,
+                    {'existing_job_id': existing['job_id']},
+                )
+
+            active_count = c.execute(
+                """SELECT COUNT(*) FROM sensitivity_experiments se
+                   JOIN jobs j ON j.id=se.job_id
+                   WHERE j.status NOT IN ('completed','completed_with_errors','failed','cancelled','interrupted')"""
+            ).fetchone()[0]
+            if active_count >= 4:
+                raise DomainError(
+                    'EXPERIMENT_LIMIT',
+                    'Đã đạt giới hạn 4 thử nghiệm độ nhạy đang chạy đồng thời.',
+                    429,
+                    {'limit': 4, 'reason': 'CONCURRENT_LIMIT'},
+                )
+
+            now_ts = time.time()
+            rate_rows = c.execute(
+                'SELECT created_ts FROM sensitivity_rate_limits WHERE created_ts>? ORDER BY created_ts ASC',
+                (now_ts - 60.0,),
+            ).fetchall()
+            if len(rate_rows) >= 10:
+                oldest_ts = float(rate_rows[0]['created_ts'])
+                retry_after = max(1, math.ceil(oldest_ts + 60.0 - now_ts))
+                raise DomainError(
+                    'EXPERIMENT_LIMIT',
+                    'Đã đạt giới hạn tối đa 10 lần tạo thử nghiệm trong một phút.',
+                    429,
+                    {'limit': 10, 'retry_after_seconds': retry_after, 'reason': 'RATE_LIMIT'},
+                )
+
+            # 9. Resolve and verify frozen model execution identity (no torch/inference load).
+            identity = self._resolve_execution_identity(execution_resolver, row['profile'])
+            if identity.get('schema_id') != row['schema_id']:
+                raise DomainError('MODEL_UNAVAILABLE', 'Model không khớp schema của bộ phản hồi.', 409)
+
+            # 10. Create temporary 2-item dataset, run, priority=1 job, experiment mapping, rate & idempotency atomically.
+            temp_ds = self._create_dataset_tx(
+                c,
+                {
+                    'name': 'Thử nghiệm độ nhạy',
+                    'profile': row['profile'],
+                    'items': [
+                        {'text': variant_info['baseline_text']},
+                        {'text': variant_info['variant_text']},
+                    ],
+                },
+                temporary=True,
+            )
+            temp_items = c.execute(
+                'SELECT id FROM items WHERE dataset_id=? ORDER BY source_row ASC',
+                (temp_ds['id'],),
+            ).fetchall()
+            baseline_item_id = temp_items[0]['id']
+            variant_item_id = temp_items[1]['id']
+
+            run = self._create_run_tx(
+                c,
+                temp_ds['id'],
+                {
+                    'available': True,
+                    'schema_id': identity['schema_id'],
+                    'model_id': identity['model_id'],
+                    'model_version': identity['model_version'],
+                },
+                allow_sensitivity=True,
+            )
+
+            source_model_changed = False
+            if view_prediction is not None:
+                source_model_changed = (
+                    view_prediction.get('model_id'),
+                    view_prediction.get('model_version'),
+                    view_prediction.get('schema_id'),
+                ) != (
+                    identity['model_id'],
+                    identity['model_version'],
+                    identity['schema_id'],
+                )
+
+            context_obj = {
+                'schema_version': 1,
+                'source': {
+                    'item_id': item_id,
+                    'revision_id': view_item['revision_id'],
+                    'revision': view_item['revision'],
+                    'text_sha256': actual_text_sha256,
+                    'selected_run_id': selected_run_id,
+                    'resolved_run_id': resolved_run_id,
+                    'prediction_id': view_pred_id,
+                },
+                'selection': {
+                    'start_utf16': variant_info['start_utf16'],
+                    'end_utf16': variant_info['end_utf16'],
+                    'start_cp': variant_info['start_cp'],
+                    'end_cp': variant_info['end_cp'],
+                    'text_sha256': hashlib.sha256(sel['text'].encode('utf-8')).hexdigest(),
+                    'variant_sha256': variant_info['variant_sha256'],
+                },
+                'execution': identity,
+                'source_model_changed': source_model_changed,
+                'request_hash': hashlib.sha256(encode(idempotency_payload).encode()).hexdigest(),
+                'attempt': {
+                    'error_code': None,
+                    'model_input_equal': None,
+                },
+            }
+
+            c.execute(
+                'INSERT INTO sensitivity_experiments VALUES(?,?,?,?,?,?,?,?,?)',
+                (
+                    run['job_id'],
+                    temp_ds['id'],
+                    row['dataset_id'],
+                    item_id,
+                    view_item['revision_id'],
+                    baseline_item_id,
+                    variant_item_id,
+                    encode(context_obj),
+                    now(),
+                ),
+            )
+            c.execute('INSERT INTO sensitivity_rate_limits VALUES(?,?)', (uid(), now_ts))
+            self.remember(c, idempotency_key, 'sensitivity', idempotency_payload, run['job_id'])
+            return self._build_sensitivity_response(c, run['job_id'], _cached_identity=identity)

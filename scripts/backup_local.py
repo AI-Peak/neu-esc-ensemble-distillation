@@ -33,6 +33,10 @@ def backup(runtime: Path, output: Path) -> dict:
             target.execute("DELETE FROM worker_status")
             target.execute("DELETE FROM idempotency WHERE result_id NOT IN "
                            "(SELECT id FROM datasets UNION SELECT id FROM runs)")
+            if target.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='sensitivity_rate_limits'"
+            ).fetchone():
+                target.execute("DELETE FROM sensitivity_rate_limits")
             target.commit()
             if target.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 raise ValueError("Database backup integrity check failed")

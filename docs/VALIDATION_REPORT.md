@@ -1,3 +1,151 @@
+# Báo cáo Kiểm chứng & Nghiệm thu Demo Webapp Ba lớp (T00–T11 · M0–M4 — 2026-11-10)
+
+- **Ngày hoàn tất nghiệm thu:** 2026-11-10 (`F:\DPL_NEU-ESC`, Windows 10/11, Python `3.10.11`, nhánh `webapp`, `HEAD` `a0cebad8d625c68ca4df755de27a249e2b8ba134` + thay đổi `T00–T11` chưa commit).
+- **Tài liệu quy chuẩn:** [`docs/WEBAPP_THREE_LAYER_DEMO_IMPLEMENTATION_PLAN_2026-11-10.md`](docs/WEBAPP_THREE_LAYER_DEMO_IMPLEMENTATION_PLAN_2026-11-10.md) (`T00–T11`, `M0–M4`, `C–G`, `H1–H3`, `I1–I7`, `J1–J4`). Các phần lịch sử **F1/F2**, **R1–R4**, **PhoBERT MTL-ED đợt gốc** và **R1–R8** bên dưới được giữ nguyên toàn vẹn.
+- **Trạng thái nghiệm thu:** **ĐẠT (M0 · M1 · M2 · M3 · M4)** — **0 P0 · 0 P1 · 0 P2 mở**. Không tự ý `git commit`, `push`, `deploy`, `train`, tải pretrained weights, hay khởi động/dừng app production trên cổng `8765`.
+- **Điều phối & Kiểm thử Cô lập (`I2–I7`):** Harness hỗ trợ native subagent: **1 Coordinator chính** + **3 subagent độc lập (`Backend`, `Frontend`, `QA_Review`)** làm việc theo ownership không chồng lấn qua các đợt `0–5`. QA review read-only implementation trước mỗi mốc M1–M4. Toàn bộ tác vụ inference nặng (`T05`, `real_model`, `H2`, `G4`) chạy tuần tự (1 lượt mỗi thời điểm, không dùng `pytest-xdist`) trên runtime/model root tạm tại `C:\Users\Admin\AppData\Local\Temp\feedback-three-layer-9df36e015c834a549411cccb3433c43e`.
+
+---
+
+## 1. Tổng hợp Mốc Sản phẩm (M0–M4) & Tài liệu đã cập nhật
+
+| Mốc | Phạm vi | Thay đổi & Đầu ra chính | Trạng thái |
+|---|---|---|---|
+| **M0** | `T00` Baseline & Cô lập | Chụp snapshot SHA-256 (`baseline/t00_baseline.json`), thiết lập audit root cô lập ngoài repo (`runtime/` production không bị chạm). | **Đạt** |
+| **M1** | `T01–T02` Decision Support | Thêm [`services/analytics.py`](services/analytics.py), cập nhật [`services/storage/db.py`](services/storage/db.py), [`services/api/main.py`](services/api/main.py), [`apps/web/src/TopicAttention.tsx`](apps/web/src/TopicAttention.tsx), [`Workspace.tsx`](apps/web/src/Workspace.tsx): xếp hạng **Chủ đề cần chú ý** (`negative_count DESC, eligible_count DESC, topic_id ASC`), mẫu số rõ, `Ít dữ liệu` (`n < 5`), `Toxic` tách riêng (`neu-v1`), chuyển đổi nguồn nhãn `effective`/`ai`, lọc click-through giữ bộ lọc và `run_id`, E2E + review độc lập M1. | **Đạt** |
+| **M2** | `T03–T05` Tín hiệu rà soát & Validation | Thêm [`services/review_policy.json`](services/review_policy.json), [`services/review_signals.py`](services/review_signals.py), [`scripts/evaluate_review_signals.py`](scripts/evaluate_review_signals.py); tách riêng `review_signal` khỏi `needs_review` cũ; cờ theo task + `truncated` độc lập; đồng bộ `pending_signal_review` theo `source_prediction_id` & `revision_id`; modal xuất CSV `filtered`/`all` bất biến; chạy evaluation thật T05 trên `3.305` dòng raw `val_set.csv`. | **Đạt** |
+| **M3** | `T06–T09` Khám phá độ nhạy & Bền vững | Thêm [`services/sensitivity.py`](services/sensitivity.py), [`apps/web/src/SensitivityPanel.tsx`](apps/web/src/SensitivityPanel.tsx); migration SQLite **schema v2** (`jobs.priority`, `sensitivity_experiments`, `sensitivity_rate_limits`); chuẩn hóa & tách occurrence an toàn Unicode/NFD/emoji (UTF-16 indices); worker preemption `priority=1`, `predict_pair` atomic trên cùng identity, cancel/retry/TTL 15 phút, cập nhật [`scripts/backup_local.py`](scripts/backup_local.py) + test DB v1/backup/cascade delete/readonly guards. | **Đạt** |
+| **M4** | `T10–T11` Demo thật & Handover | Tạo [`data/demo/three_layer_feedback_vi.csv`](data/demo/three_layer_feedback_vi.csv) (24 câu minh họa) & [`data/demo/README.md`](data/demo/README.md); chạy [`tests/inference/test_three_layer_real_model.py`](tests/inference/test_three_layer_real_model.py), hồi quy F1/F2 `@pytest.mark.real_model`, full default suite, rehearsal `H2` & benchmark `G4`; hoàn thiện [`docs/THREE_LAYER_DEMO_RUNBOOK.md`](docs/THREE_LAYER_DEMO_RUNBOOK.md), [`docs/LOCAL_APP.md`](docs/LOCAL_APP.md), [`PRODUCT.md`](PRODUCT.md) và báo cáo này. | **Đạt** |
+
+---
+
+## 2. Danh tính Build Frontend, Model, Preprocessing & Policy ở thời điểm chốt
+
+- **Frontend build đóng băng (`apps/web/dist/`):** Không thay đổi source/build trong suốt Wave 5 (mọi bài kiểm thử default + `real_model` M4 chạy trên đúng bản build này):
+  - `apps/web/dist/index.html` (`470` bytes): SHA-256 `3E14C36520E750ABD74E7DF7A99CB8933F43908565D1898BFA86BA89DF02056D`
+  - `apps/web/dist/assets/index-D9NXQDUL.js` (`393.485` bytes): SHA-256 `74546B0BE8DF98920D392DB57578584C2EE5B074DD9C5B0BBB93C39AFA6BC54A`
+  - `apps/web/dist/assets/index-DA8htggh.css` (`34.983` bytes): SHA-256 `54A08E3ECE54C196866F8D6A70D1B7914A0F9326F2460E2DAB79E6C68C7B4718`
+- **Model thật được kiểm chứng (bản copy bất biến của bundle active NEU, `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`):**
+  - `profile=neu`, `schema_id=neu-v1`, `model_id=neu-phobert-mtl-ed-s42`, `model_version=neu-phobert-mtl-ed-s42-e10-617f852a3fff`, `mode=cpu-fp32-eval`.
+  - Backbone: `vinai/phobert-base-v2@86cd7fd4c148980922ac11a2cf5e257f2ba639e1` (`runtime/cache/phobert-base-v2/config.json` SHA-256 `26d21a304fdea8fada88e7c6b7c7fef15c902c690bfb0fa47f60bdb61c68307a`).
+  - Bundle checksums (khớp tuyệt đối giữa production `runtime/models/neu/` và bản copy cô lập):
+    - `current.json`: `887bb18a2860a1d9387d8b21384bcfe76bdd80cdf07639eaedea0d849960220b`
+    - `manifest.json`: `5117b413d141d4e6b80a2805b9b5ff27b353d404d3a42bc95c29055e4f527b1d`
+    - `model.safetensors`: `036b62c7b24fbe10ba30562090908fe8c81d0ebe339a84ad9fb02a569b2e20b1` (nguồn `demo/model.pt` SHA-256 `754892a782dec389b041abc5f923573c091b8e2801dd0f7be57f718ae88700a8`)
+    - `preprocessing.json` spec digest (`preprocessing_sha256`): `27aa95d7e12a35df4c8614f555b7d3b17476189fc5350d240e07376703ed654a` (`underthesea 9.5.0`, `format="text"`, `use_fast=false`, `max_length=128`, `equivalence="approximate"`).
+  - Profile `uit`: giữ `unavailable` (chưa có checkpoint UIT).
+- **Review Signal Policy ([`services/review_policy.json`](services/review_policy.json)):**
+  - `policy_id = "review-signals-v1"`, `policy_hash = "2d1cd5d7af32168af6c6ae30af6b1c43ba9f7c2f1cd6d73cc221067d1a1fc9a6"`, `experimental = true`, `top1_min = 0.60`, `margin_min = 0.15` cho cả Sentiment và Topic (`neu-v1` & `uit-v1`).
+
+---
+
+## 3. Lệnh kiểm thử & Kết quả chốt tích hợp cuối (Wave 5)
+
+Toàn bộ lệnh dưới đây chạy trong `.venv` (`Python 3.10.11`, `torch 2.14.1+cpu`, `transformers 4.44.2`, `safetensors 0.8.0`, `underthesea 9.5.0`) **sau lần chỉnh sửa code/test/build cuối cùng**, với `$env:FEEDBACK_RUNTIME` trỏ tới audit root cô lập:
+
+| Nhóm kiểm thử | Lệnh thực chạy | Kết quả chính xác | Log / Bằng chứng |
+|---|---|---|---|
+| **Full Integrated Default Suite** | `.\.venv\Scripts\python.exe -X utf8 -m pytest -q --basetemp '...\qa-runtime\pytest-m4-final-default-r2'` | **272 passed, 0 failed, 0 skipped, 3 deselected**, 22 warnings trong **264.52s** (`0:04:24`, exit `0`). *(3 ca deselected là nhóm `@pytest.mark.real_model`; đã xác nhận bằng lệnh dưới).* | `...\qa-runtime\m4-final-default-tests.log` |
+| **G3 Real-Model 3-Layer Acceptance (Offline + Frozen Build)** | `.\.venv\Scripts\python.exe -X utf8 -m pytest tests/inference/test_three_layer_real_model.py -m real_model -v --basetemp '...\real-model-tests\three-layer-r3'` (`HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`) | **1 passed in 43.33s** (exit `0`). Xác minh full-stack với 24 câu thật, `TopicAttention` (`Dịch vụ` #1 `4/6`), `5` S-flag / `5` T-flag / `9` `pending_signal_review`, human review giữ AI gốc, sensitivity dòng 2 + >128 token (`161 -> 154` tail equal `true`, `161 -> 153` head equal `false`, parity max diff `0.0`), NFD grapheme guard, UI CSV export `9d5ea991-f1d2-48e4-82f7-9d077e67cb1a` byte-identical qua restart + append. | `...\reports\m4-real-three-layer.log`, `...\reports\real-model-three-layer.json` |
+| **F1/F2 Real-Model Regressions (Offline + Empty HF Cache + Socket Blocked Import)** | `.\.venv\Scripts\python.exe -X utf8 -m pytest tests/inference/test_phobert_import_and_preprocessing.py -m real_model -v --basetemp '...\real-model-tests\f1-f2'` (`HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`) | **2 passed, 10 deselected, 2 warnings in 54.43s** (exit `0`). Chứng minh từ chối config sai 6-head, `verify_only`, offline full-stack import & export snapshot bền qua restart. | `...\reports\m4-real-f1-f2.log` |
+| **T05 Raw Validation Policy (`review-signals-v1`)** | `.\.venv\Scripts\python.exe scripts/evaluate_review_signals.py --model-root ...\validation-runtime\models --profile neu --validation-csv data/cache/neu/val_set.csv --processed-validation-csv data/cache/neu/val_set_processed.csv --policy services/review_policy.json --out ...\reports\review-signals-validation.json --markdown-out ...\reports\review-signals-validation.md --batch-size 64` | Exit `0`, **3.305/3.305 dòng hợp lệ** (`0` failed) trong **291.171s** (CPU FP32 offline). | `...\reports\review-signals-validation.{json,md}` |
+| **H2 Rehearsal & G4 Benchmarks (CPU FP32 Offline)** | `.\.venv\Scripts\python.exe -X utf8 run_h2_g4.py --audit-root ...\feedback-three-layer-9df36e015c834a549411cccb3433c43e` *(script audit tạm)* | Exit `0`: hoàn tất 100% H2 trên `three_layer_feedback_vi.csv` nguyên vẹn và G4 (24/100/500 stack + preemption `0,322s` + API median/p95 + `ModelRegistry` direct). | `...\reports\m4-h2-g4.log`, `...\reports\m4-rehearsal-h2.json`, `...\reports\m4-benchmark-g4.json` |
+| **Vệ sinh Git diff** | `git diff --check` | Exit `0` (sạch trailing whitespace & conflict marker sau toàn bộ chỉnh sửa). | Verified tại Bước 5F |
+
+*(Lưu ý về 22 warnings ở default suite và 2 warnings ở F1/F2: xuất phát từ `StarletteDeprecationWarning`, `SwigPyPacked`/`SwigPyObject`/`swigvarlink` và `Transformers` `clean_up_tokenization_spaces` — đều là cảnh báo dependency có sẵn, không làm fail test.)*
+
+---
+
+## 4. Kết quả Validation Offline `T05` (`review-signals-v1` trên `val_set.csv` thô)
+
+Chạy trên đúng bundle copy bất biến `neu-phobert-mtl-ed-s42-e10-617f852a3fff` (`CPU FP32`, adapter `underthesea 9.5.0`) và `data/cache/neu/val_set.csv` (**`3.305` dòng thô**, SHA-256 `0b2567fe5374cf9b8d22de92ce71d3f9bfa036dffac46fa6f7a5650e85c81169`, `gold_alignment_verified = true`, `policy_tuned = false`, `experimental = true`).
+
+| Tác vụ / Hợp nhất | Số dòng gắn cờ | Tỷ lệ gắn cờ | Tổng số lỗi trên split | Tỷ lệ lỗi chung | Lỗi trong nhóm gắn cờ (`error_rate_flagged`) | Lỗi ngoài nhóm gắn cờ (`error_rate_unflagged`) | Độ phủ lỗi (`error_capture`) | Lift |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **Sentiment** | `227` (`LOW_TOP1` `227`, `SMALL_MARGIN` `142`, cả hai `142`) | `6,87%` | `540` | `16,34%` | `49,78%` (`113/227`) | `13,87%` (`427/3.078`) | `20,93%` (`113/540`) | `3,05` |
+| **Topic** | `399` (`LOW_TOP1` `399`, `SMALL_MARGIN` `204`, cả hai `204`) | `12,07%` | `679` | `20,54%` | `57,14%` (`228/399`) | `15,52%` (`451/2.906`) | `33,58%` (`228/679`) | `2,78` |
+| **Hợp nhất (`union`)** | `593` (`S-only` `194`, `T-only` `366`, cả hai `33`) | `17,94%` | `1.087` | `32,89%` | `62,23%` (`369/593`) | `26,47%` (`718/2.712`) | `33,95%` (`369/1.087`) | `1,89` |
+
+- **Bằng chứng tách riêng cảnh báo cắt ngắn (`> 128` token):** Có **`66/3.305` (`2,00%`)** dòng bị cắt ngắn; tỷ lệ lỗi hợp nhất ở nhóm bị cắt ngắn đạt **`60,61%` (`40/66`)** so với **`32,32%` (`1.047/3.239`)** ở nhóm không cắt ngắn. Đáng chú ý, **`50/66`** dòng bị cắt ngắn vẫn có điểm softmax cao/cách biệt rõ trên cả hai tác vụ (`truncated_and_score_clear_union_count = 50`) — chứng minh việc tách `Đầu vào bị cắt ngắn` khỏi cờ `top1`/`margin` là cần thiết để không bỏ sót cảnh báo cắt đầu vào.
+- **Giới hạn diễn giải:** `val_set.csv` là split validation từng dùng chọn epoch 10 của checkpoint nên số liệu chỉ mang tính mô tả offline (`offline_validation_descriptive`), không phải tỷ lệ dự kiến trên dữ liệu triển khai thực tế và chưa hiệu chuẩn ngưỡng (`policy_tuned = false`).
+
+---
+
+## 5. Tóm tắt Rehearsal H2 (`data/demo/three_layer_feedback_vi.csv`, 24 câu)
+
+Chi tiết từng bước và tham số thực tế đã ghi đầy đủ tại Mục 2 của [`docs/THREE_LAYER_DEMO_RUNBOOK.md`](THREE_LAYER_DEMO_RUNBOOK.md). Điểm chính:
+- **Thời gian & RAM (H2 đơn luồng offline):** Startup tới health `1,195s`; cold batch 24 dòng `7,584s` (worker RSS `1.206,2 MiB`, peak working set `1.642,9 MiB`, API RSS `4,3 MiB`); warm single Quick Analysis `0,559s` wall (`51,55 ms` inference); warm Sensitivity pair (`D06`) `0,574s` wall (`42,89 ms` inference).
+- **Hành vi thật trên 24 câu nguyên vẹn:** Khớp `14/24` Sentiment và `20/24` Topic với tham chiếu đề xuất trong [`data/demo/README.md`](data/demo/README.md) (`D05` mỉa mai vẫn đạt `Tích cực 0,9118`; `D24` gán `Tiêu cực 0,9796` thay vì `Toxic`); `5` cờ Cảm xúc + `5` cờ Chủ đề = **`9/24`** dòng `pending_signal_review`, `0` bị cắt ngắn; `Dịch vụ` đứng đầu **Chủ đề cần chú ý** (`4/6` Tiêu cực = `66,7%`, `0` Toxic, `small_sample=false`); thử nghiệm bỏ `"báo lỗi liên tục"` trên `D06` làm Cảm xúc đổi `Tiêu cực (0,595) -> Trung tính (0,988)` và Chủ đề đổi `Dịch vụ (0,698) -> Học tập (0,732)` kèm `SENSITIVITY_NOT_CAUSAL`; sửa độc lập Cảm xúc trên `D01` (`0 -> 1`) bảo toàn dự đoán AI & giá trị số tín hiệu; CSV export `47baab40-cdf9-4be3-a747-90c8cbaa2d21` (`24` dòng, `19.705` bytes).
+
+---
+
+## 6. Kết quả Benchmark G4 (CPU FP32 trên dữ liệu tổng hợp `24 / 100 / 500`)
+
+- **Cấu hình máy đo:** `Windows-10-10.0.26200-SP0`, AMD Ryzen 7 PRO 5850U (`8` nhân vật lý / `16` luồng), `30,83 GiB` RAM, `torch 2.14.1+cpu` (`num_threads=8`), `mode=cpu-fp32-eval`. *Chỉ là phép đo cô lập trên một máy dùng text tổng hợp, không phải SLA đa máy.*
+
+### 6.1. Full Stack (API + Worker + SQLite WAL)
+
+| Cỡ dataset | Tổng thời gian batch | Thông lượng | Worker RSS cuối | Worker Peak WSet | Ghi chú thực thi |
+|---:|---:|---:|---:|---:|---|
+| **24 dòng** (cold load) | `7,276 s` | `3,30 dòng/s` | `1.202,9 MiB` | `1.641,7 MiB` | Gồm worker lazy-load PhoBERT + `underthesea` (`startup health: 1,163s`, API RSS `4,2 MiB`). |
+| **100 dòng** (warm) | `5,889 s` | `16,98 dòng/s` | `895,9 MiB` | `1.641,7 MiB` | Worker đã nạp ấm model; `0` lỗi. |
+| **500 dòng** (warm + preemption) | `31,625 s` | `15,81 dòng/s` | `887,0 MiB` | `1.641,7 MiB` | Chèn Sensitivity `priority=1` khi bulk ở `8/500`; Sensitivity xong trong **`0,322 s` (`322 ms`)** trước khi bulk đi từ `8 -> 16` và hoàn tất `500/500` (`0` failed). *(Sensitivity lúc queue rỗng, 3 mẫu: median `612,58 ms`, p95 `682,69 ms`).* |
+
+### 6.2. Độ trễ API Endpoints tại `N = 24 / 100 / 500` (10 lượt GET, 5 lượt Export)
+
+| Endpoint / Thao tác | N=24 Median / p95 | N=100 Median / p95 | N=500 Median / p95 | Payload tại N=500 |
+|---|---|---|---|---:|
+| `GET /summary` (`effective`) | `12,56 / 13,16 ms` | `18,63 / 25,24 ms` | **`84,81 / 123,79 ms`** | `2.221 B` |
+| `GET /summary` (`ai`) | `7,52 / 10,19 ms` | `17,38 / 19,41 ms` | **`89,55 / 109,61 ms`** | `2.045 B` |
+| `GET /summary` (`topic=2`) | `7,85 / 10,16 ms` | `15,34 / 19,93 ms` | **`92,89 / 111,30 ms`** | `1.248 B` |
+| `GET /items` (`page_size=25`) | `12,35 / 14,81 ms` | `22,52 / 43,61 ms` | **`98,34 / 126,10 ms`** | `50.914 B` |
+| `GET /items` (`pending_signal_review`) | `8,08 / 21,06 ms` | `20,80 / 25,70 ms` | **`89,23 / 103,37 ms`** | `60.703 B` |
+| `GET /items` (`topic=2&sentiment=2`) | `8,80 / 9,89 ms` | `16,81 / 20,93 ms` | **`72,77 / 95,08 ms`** | `2.234 B` |
+| `POST /exports` (`all`) | `16,14 / 23,95 ms` | `49,85 / 57,25 ms` | **`206,86 / 259,93 ms`** | — |
+| `GET /exports/{id}` (CSV UTF-8 BOM) | `16,32 / 33,92 ms` | `15,82 / 30,04 ms` | **`33,18 / 46,01 ms`** | `433.643 B` |
+
+### 6.3. Đo trực tiếp `ModelRegistry` (`cpu-fp32-eval`)
+
+- `cold_first` (1 dòng đầu, gồm nạp PhoBERT + `underthesea`): **`3,695 s`** (RSS `1.206,9 MiB`).
+- `warm_single` (10 mẫu): median **`55,85 ms`**, p95 **`62,41 ms`**.
+- `warm_predict_pair` (5 mẫu): median **`81,82 ms`**, p95 **`85,25 ms`**.
+- Direct batch `24 / 100 / 500`: `0,556 s` (`43,13 dòng/s`, `0` truncated) / `2,666 s` (`37,51 dòng/s`, `4` truncated) / `13,655 s` (`36,62 dòng/s`, `20` truncated `<= 189` token, peak wset **`1.656,7 MiB`**).
+
+---
+
+## 7. Phân tách rạch ròi Test Double vs Synthetic vs Model thật
+
+| Loại nguồn kiểm chứng | Các thành phần / tests áp dụng | Chứng minh điều gì | Không chứng minh điều gì |
+|---|---|---|---|
+| **Software Test Doubles** | `TestOnlyRegistry` & `ControlledE2ERegistry` (`TEST-DOUBLE-E2E-CONTROLLED`), `without_model` trong API / Worker / Backup T09 / E2E M1–M3 (`tests/api/*`, `tests/integration/*`, `tests/test_backup.py`, `tests/e2e/*`) | UI/UX, lọc/phân trang/sort, optimistic concurrency (`409`), schema v2, worker preemption/cancel/lease/TTL, cascade delete, CSV snapshot & backup/restore DB v1→v2. | **Không** phải suy luận hay độ nhạy của checkpoint PhoBERT / ViSoBERT / UIT thật. |
+| **Synthetic Tiny Random Encoders** | `tests/inference/{test_phobert_config,test_registry,test_sensitivity}.py` (weights PyTorch nhỏ ngẫu nhiên + tokenizer thật trong `tmp_path`) | Guard validation `config.json`, format 1/2 parity cơ chế, NFD grapheme boundaries và `model_input_equal` quanh ngưỡng `128` token. | **Không** phản ánh độ chính xác hoặc xác suất của model đã fine-tune. |
+| **Synthetic Throughput Texts** | Dữ liệu text tiếng Việt tổng hợp `24 / 100 / 500` dòng trong benchmark `G4` | Thông lượng, preemption, độ trễ API và RSS/peak working set trên CPU FP32 với model PhoBERT thật. | Không đại diện phân bố chủ đề/cảm xúc của phản hồi sinh viên thật. |
+| **Model & Dữ liệu thật** | Bản copy bất biến `neu-phobert-mtl-ed-s42-e10-617f852a3fff` (từ `demo/model.pt`) + `val_set.csv` (`3.305` dòng) + `three_layer_feedback_vi.csv` (`24` câu minh họa) | Validation T05, F1/F2 regression thật, G3 E2E ba tầng thật (`test_three_layer_real_model.py`), H2 rehearsal (`24` câu) và tải/chạy PhoBERT offline. | Không hiệu chuẩn softmax; `three_layer_feedback_vi.csv` do nhóm tự soạn minh họa (`illustrative=true`), không phải benchmark thống kê. |
+
+---
+
+## 8. Kiểm tra trực quan ảnh chụp màn hình
+
+Toàn bộ ảnh đã được mở xem trực tiếp bằng `read_file`:
+- **M1 (`test-results/screenshots/m1-*.png`, 6 ảnh `1440x960` / `1024x768` / `390x844` / `320x568`):** Bảng **Chủ đề cần chú ý** tách cột `Toxic`, nhãn `Ít dữ liệu`, chuyển mobile stacked cards và partial/error state sạch sẽ.
+- **M2 (`...\reports\screenshots\m2-*.png` & `test-results/screenshots/m2-*.png`, 4 ảnh):** Cột `Tín hiệu model` tách `Rà soát`, focus bàn phím vào `Vì sao được đánh dấu?`, công bố policy hash & 3 chữ số thập phân rõ nét trên desktop/mobile.
+- **M3 (`...\reports\screenshots\m3-*.png` & `test-results/screenshots/m3-*.png`, 3 ảnh):** Cặp gốc/biến thể đặt cạnh nhau/xếp dọc, đếm token trước cắt, đổi nhãn dẫn đầu và thu gọn bảng Chủ đề đúng thiết kế trên `1440px`, `390px`, `320px`.
+- **M4 Real-Model (`...\reports\screenshots\m4-desktop-real-model.png` & `m4-mobile-390-real-model.png`):** Kiểm trực tiếp với `neu-phobert-mtl-ed-s42` trên 24 câu thật (`Demo Ba Tầng PhoBERT Thật`): bảng same-label ở drawer phải hiển thị chuẩn `0.000` (không lỗi `±0.000`), đếm `15` vs `13` token trước cắt, thông báo hợp lệ `"Nhãn dẫn đầu không đổi vẫn là một kết quả hợp lệ."`; mobile `390x844` không tràn ngang. *(Ghi nhận trung thực: trên `m4-desktop-real-model.png` có toast nền `"Đã tạo bản chụp CSV gồm 24 phản hồi."` ở cạnh dưới từ bước xuất CSV liền trước, không che khuất nội dung hay nút thao tác của drawer phải).*
+
+---
+
+## 9. Bảo toàn Artifact Production & Các giới hạn trung thực (`J1–J3`)
+
+- **Bảo toàn 100% baseline `T00`:** Toàn bộ `10` file gốc/source/config/cache, `14` file thuộc bundle active `runtime/models/neu/versions/neu-phobert-mtl-ed-s42-e10-617f852a3fff` (kể cả `current.json` & `demo/model.pt`), cùng `apps/web/dist/**` được kiểm lại SHA-256 ở Bước 5F cho **0 sai khác**. `runtime/` production và tiến trình ngoài không bị đụng chạm; `Win32_Process` sạch các process worker/API/pytest tạm.
+- **Giới hạn trung thực bắt buộc nêu rõ:**
+  1. Chính sách `review-signals-v1` là **heuristic thử nghiệm chưa hiệu chuẩn** (`experimental=true`, `policy_tuned=false`); điểm softmax không phải xác suất dự đoán đúng.
+  2. Hệ thống **không phát hiện mỉa mai** (`D05` cho `Tích cực 0,9118`) và lớp hiếm **`Toxic`** có hạn chế thực nghiệm như đã báo cáo trong paper (`D24` gán `Tiêu cực 0,9796`).
+  3. **Khám phá độ nhạy (`Sensitivity`)** chỉ đo phản ứng khi bỏ một đoạn trên đầu vào hiện tại — **không** phải bằng chứng nhân quả hay token attribution (LIME/SHAP/heatmap).
+  4. Bộ tách từ `underthesea 9.5.0` cho PhoBERT có mức tương đương **`approximate`** so với tiền xử lý gốc của tác giả NEU và chỉ đọc tối đa **`128` token** (`HEAD`-window).
+  5. Profile `uit` tiếp tục `unavailable` (chưa có checkpoint UIT); các con số `G4` chỉ phản ánh cấu hình phần cứng local đo được, không phải SLA đa máy.
+
+---
+
 # Báo cáo sửa F1/F2 PhoBERT — kiểm chứng mới ngày 2026-11-10
 
 Phạm vi thực thi: `docs/CODEX_PHOBERT_F1_F2_FIX_PROMPT_2026-11-10.md`, nhánh

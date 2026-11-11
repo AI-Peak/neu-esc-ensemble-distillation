@@ -6,9 +6,11 @@ from typing import Any, Literal
 from fastapi import FastAPI, File, Form, Header, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, ValidationError
 
+from services.review_signals import load_policy, resolve_policy_metadata
 from services.storage.db import DomainError, PROFILES, ROOT, Store, profile_for
+import services.sensitivity  # Ensure sensitivity dependency (regex) validates at API startup.
 
 
 class Body(BaseModel):
@@ -90,6 +92,7 @@ class Filters(Body):
     sentiment: int | None = None
     topic: int | None = None
     review_status: Literal['all','unreviewed','partial','reviewed','needs_review'] = 'all'
+    review_signal: Literal['all','model_uncertain','sentiment_uncertain','topic_uncertain','truncated','pending_signal_review'] = 'all'
     sort: Literal['source_row','text','sentiment','topic'] = 'source_row'
     direction: Literal['asc','desc'] = 'asc'
 
@@ -98,7 +101,23 @@ class ExportInput(Filters):
     scope: Literal['all','filtered'] = 'filtered'
 
 
+class SensitivitySelectionInput(Body):
+    start_utf16: StrictInt
+    end_utf16: StrictInt
+    text: StrictStr
+
+
+class SensitivityExperimentInput(Body):
+    revision_id: StrictStr
+    expected_revision: StrictInt = Field(ge=1)
+    text_sha256: StrictStr
+    run_id: StrictStr | None = None
+    source_prediction_id: StrictStr | None
+    selection: SensitivitySelectionInput
+
+
 def create_app(runtime_dir=None, registry=None, start_worker=False):
+    load_policy()
     store = Store(runtime_dir)
     if registry is None:
         from services.inference.registry import ModelRegistry
@@ -146,7 +165,7 @@ def create_app(runtime_dir=None, registry=None, start_worker=False):
 
     @app.get(prefix+'/health')
     def health():
-        return dict(status='ok',worker=store.worker_health(),runtime=str(store.runtime),database_version=1)
+        return dict(status='ok',worker=store.worker_health(),runtime=str(store.runtime),database_version=store.database_version())
 
     @app.get(prefix+'/profiles')
     def profiles():
@@ -155,6 +174,10 @@ def create_app(runtime_dir=None, registry=None, start_worker=False):
     @app.get(prefix+'/models')
     def models():
         return [dict(profile=p['id'],**registry.status(p['id'])) for p in PROFILES]
+
+    @app.get(prefix+'/review-policy')
+    def review_policy(profile:str):
+        return resolve_policy_metadata(profile_for(profile)['schema_id'])
 
     @app.get(prefix+'/datasets')
     def datasets(): return store.datasets()
@@ -218,6 +241,8 @@ def create_app(runtime_dir=None, registry=None, start_worker=False):
     @app.post(prefix+'/jobs/{job_id}/retry')
     def retry(job_id:str):
         j = store.job(job_id); r = store.run(j['run_id']); d = store.dataset(r['dataset_id'])
+        if j.get('kind') == 'sensitivity':
+            return store.retry(job_id, execution_resolver=registry.execution_identity)
         return store.retry(job_id,registry.status(d['profile']))
 
     def query_filters(request):
@@ -230,8 +255,7 @@ def create_app(runtime_dir=None, registry=None, start_worker=False):
     def items(dataset_id:str,request:Request,page:int=1,page_size:int=25):
         if page < 1 or page_size < 1 or page_size > 500: raise DomainError('INVALID_PAGINATION','Trang không hợp lệ.',422)
         filters = query_filters(request)
-        rows = store.query_items(dataset_id,filters)
-        return dict(items=rows[(page-1)*page_size:page*page_size],total=len(rows),page=page,page_size=page_size,run_id=filters.get('run_id'))
+        return store.items_page(dataset_id,filters,page,page_size)
 
     @app.get(prefix+'/datasets/{dataset_id}/summary')
     def summary(dataset_id:str,request:Request): return store.summary(dataset_id,query_filters(request))
@@ -254,9 +278,41 @@ def create_app(runtime_dir=None, registry=None, start_worker=False):
     @app.post(prefix+'/items/{item_id}/reviews/restore')
     def restore(item_id:str,body:RestoreInput): return store.review(item_id,body.model_dump(),restore=True)
 
+    @app.post(prefix+'/items/{item_id}/sensitivity-experiments',status_code=202)
+    def create_sensitivity_experiment(item_id:str,body:SensitivityExperimentInput,idempotency_key:str|None=Header(default=None)):
+        if idempotency_key is None or not idempotency_key.strip():
+            raise RequestValidationError([
+                {
+                    'type': 'missing' if idempotency_key is None else 'string_too_short',
+                    'loc': ('header', 'idempotency-key'),
+                    'msg': 'Idempotency-Key header is required.',
+                    'input': idempotency_key,
+                }
+            ])
+        return store.create_sensitivity_experiment(
+            item_id,
+            body.model_dump(),
+            idempotency_key,
+            execution_resolver=registry.execution_identity,
+        )
+
+    @app.get(prefix+'/sensitivity-experiments/{experiment_id}')
+    def get_sensitivity_experiment(experiment_id:str):
+        return store.get_sensitivity_experiment(
+            experiment_id,
+            execution_resolver=registry.execution_identity,
+        )
+
     @app.post(prefix+'/datasets/{dataset_id}/exports',status_code=201)
-    def export(dataset_id:str,body:ExportInput):
-        filters = body.model_dump(exclude_none=True)
+    def export(dataset_id:str,body:dict[str,Any]):
+        try:
+            parsed = ExportInput.model_validate(body)
+        except ValidationError as exc:
+            errors = exc.errors()
+            if any(e.get('type') == 'extra_forbidden' or (e.get('loc') and e['loc'][0] == 'scope') for e in errors):
+                raise RequestValidationError(errors)
+            raise DomainError('INVALID_FILTER', 'Bộ lọc không hợp lệ.', 422)
+        filters = parsed.model_dump(exclude_none=True)
         scope = filters.pop('scope')
         if scope == 'all': filters = {k:v for k,v in filters.items() if k in ('run_id','label_source')}
         return store.export(dataset_id,filters)

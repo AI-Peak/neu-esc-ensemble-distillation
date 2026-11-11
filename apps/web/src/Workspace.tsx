@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
@@ -23,11 +23,13 @@ import {
   date,
   defaultFilters,
   labelName,
+  normalizeReviewSignalFilter,
   reviewName,
 } from "./types";
 import { Badge, Empty, ErrorNotice, Loading, Modal } from "./ui";
 import type { Notify } from "./App";
 import { ItemDetail } from "./ItemDetail";
+import { TopicAttention } from "./TopicAttention";
 const jobLabel: Record<string, string> = {
   queued: "Đang chờ",
   pending: "Đang chờ",
@@ -56,14 +58,18 @@ export function Workspace({
   const storageKey = `feedback-filters-${dataset.id}`;
   const [filters, setFilters] = useState<Filters>(() => {
     try {
+      const saved = JSON.parse(sessionStorage.getItem(storageKey) || "{}");
       return {
         ...defaultFilters,
-        ...JSON.parse(sessionStorage.getItem(storageKey) || "{}"),
+        ...(saved && typeof saved === "object" ? saved : {}),
+        review_signal: normalizeReviewSignalFilter(saved?.review_signal),
       };
     } catch {
       return defaultFilters;
     }
   });
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
   const [tab, setTab] = useState<"overview" | "items" | "review">("overview");
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -89,6 +95,8 @@ export function Workspace({
     queryFn: () =>
       api<ItemPage>(`/datasets/${dataset.id}/items?${query(filters)}`),
   });
+  const itemsDataRef = useRef(items.data);
+  itemsDataRef.current = items.data;
   useEffect(() => {
     if (!items.data) return;
     const lastPage = Math.max(
@@ -98,10 +106,32 @@ export function Workspace({
     if (filters.page > lastPage)
       setFilters((current) => ({ ...current, page: lastPage }));
   }, [items.data, filters.page, filters.page_size]);
+  const summaryFilters = useMemo(
+    () => ({
+      run_id: filters.run_id,
+      label_source: filters.label_source,
+      q: filters.q,
+      sentiment: filters.sentiment,
+      topic: filters.topic,
+      review_status: filters.review_status,
+      review_signal: filters.review_signal,
+    }),
+    [
+      filters.run_id,
+      filters.label_source,
+      filters.q,
+      filters.sentiment,
+      filters.topic,
+      filters.review_status,
+      filters.review_signal,
+    ],
+  );
   const summary = useQuery({
-    queryKey: ["summary", dataset.id, filters],
+    queryKey: ["summary", dataset.id, summaryFilters],
     queryFn: () =>
-      api<Summary>(`/datasets/${dataset.id}/summary?${query(filters)}`),
+      api<Summary>(
+        `/datasets/${dataset.id}/summary?${query(summaryFilters)}`,
+      ),
   });
   const runs = useQuery({
     queryKey: ["runs", dataset.id],
@@ -121,6 +151,8 @@ export function Workspace({
     if (job.data) {
       void client.invalidateQueries({ queryKey: ["items", dataset.id] });
       void client.invalidateQueries({ queryKey: ["summary", dataset.id] });
+      void client.invalidateQueries({ queryKey: ["item"] });
+      void client.invalidateQueries({ queryKey: ["reviews"] });
       void client.invalidateQueries({ queryKey: ["datasets"] });
       if (!activeJob(job.data.status))
         void client.invalidateQueries({ queryKey: ["runs", dataset.id] });
@@ -246,12 +278,17 @@ export function Workspace({
               profile,
               task,
               filters.label_source === "ai"
-                ? row.original.prediction?.[task].label_id
+                ? row.original.prediction?.[task]?.label_id
                 : row.original.effective[task],
             )}
           </span>
         ),
       })),
+      {
+        id: "signals",
+        header: "Tín hiệu model",
+        cell: (c) => <SignalBadges item={c.row.original} />,
+      },
       {
         id: "review",
         header: "Rà soát",
@@ -282,6 +319,7 @@ export function Workspace({
     filters.sentiment,
     filters.topic,
     filters.review_status === "all" ? "" : filters.review_status,
+    filters.review_signal === "all" ? "" : filters.review_signal,
   ].filter(Boolean).length;
   return (
     <>
@@ -486,14 +524,43 @@ export function Workspace({
             <option value="unreviewed">Chưa rà soát</option>
             <option value="partial">Duyệt một phần</option>
             <option value="reviewed">Đã rà soát</option>
-            <option value="needs_review">Cần rà soát</option>
+            <option value="needs_review">Cần rà soát (quy tắc hiện có)</option>
+          </select>
+        </label>
+        <label>
+          Tín hiệu model
+          <select
+            aria-label="Lọc tín hiệu model"
+            value={filters.review_signal}
+            onChange={(e) =>
+              update({
+                review_signal: normalizeReviewSignalFilter(e.target.value),
+              })
+            }
+          >
+            <option value="all">Tất cả</option>
+            <option value="model_uncertain">Model phân vân (mọi tác vụ)</option>
+            <option value="sentiment_uncertain">
+              Model phân vân: cảm xúc
+            </option>
+            <option value="topic_uncertain">Model phân vân: chủ đề</option>
+            <option value="truncated">Đầu vào bị cắt ngắn</option>
+            <option value="pending_signal_review">
+              Có tín hiệu, chưa đối chiếu
+            </option>
           </select>
         </label>
         {activeFilterCount > 0 && (
           <button
             className="quiet"
             onClick={() => {
-              update({ q: "", sentiment: "", topic: "", review_status: "all" });
+              update({
+                q: "",
+                sentiment: "",
+                topic: "",
+                review_status: "all",
+                review_signal: "all",
+              });
               if (tab === "review") setTab("items");
             }}
           >
@@ -533,11 +600,34 @@ export function Workspace({
         </label>
       </div>
       {tab === "review" && (
-        <p className="notice small">
-          Quy tắc cần rà soát: chưa duyệt đủ hai tác vụ, có lỗi, bị cắt ngắn
-          hoặc điểm cao nhất dưới 0,6. Điểm chưa hiệu chuẩn; đây là hàng chờ hỗ
-          trợ.
-        </p>
+        <div className="notice small review-queue-notice">
+          <p>
+            <strong>Cần rà soát (quy tắc hiện có):</strong> chưa duyệt đủ hai
+            tác vụ, có lỗi, bị cắt ngắn hoặc điểm cao nhất dưới 0,6. Điểm chưa
+            hiệu chuẩn; đây là hàng chờ hỗ trợ. Khi lọc theo{" "}
+            <em>Model phân vân</em>, dòng đã duyệt vẫn có thể xuất hiện để giữ
+            nguyên dấu hiệu của dự đoán AI.
+          </p>
+          <p>
+            <strong>Hàng chờ tín hiệu chưa đối chiếu:</strong> tách riêng theo
+            cảm xúc và chủ đề; dòng rời hàng chờ khi tác vụ được gắn cờ đã xác
+            nhận theo dự đoán đang xem hoặc tự chọn thủ công (đầu vào bị cắt
+            ngắn cần đối chiếu cả hai tác vụ).
+          </p>
+          <div className="inline-actions">
+            <button
+              type="button"
+              onClick={() =>
+                update({
+                  review_status: "all",
+                  review_signal: "pending_signal_review",
+                })
+              }
+            >
+              Có tín hiệu, chưa đối chiếu
+            </button>
+          </div>
+        </div>
       )}
       {filters.run_id && (
         <p className="notice small">
@@ -568,6 +658,23 @@ export function Workspace({
                 </span>
                 {running && <Badge tone="warning">Kết quả tạm thời</Badge>}
               </div>
+              <TopicAttention
+                summary={summary.data}
+                profile={profile}
+                sentimentFilter={filters.sentiment}
+                labelSource={filters.label_source}
+                running={!!running}
+                onSelectTopicNegative={(topicId, negativeLabelId) => {
+                  update({
+                    topic: String(topicId),
+                    sentiment: String(negativeLabelId),
+                    sort: "source_row",
+                    direction: "asc",
+                    page: 1,
+                  });
+                  setTab("items");
+                }}
+              />
               <div className="charts">
                 <Distribution
                   title="Phân bố cảm xúc"
@@ -698,14 +805,16 @@ export function Workspace({
             </p>
             {activeFilterCount > 0 && (
               <button
-                onClick={() =>
+                onClick={() => {
                   update({
                     q: "",
                     sentiment: "",
                     topic: "",
                     review_status: "all",
-                  })
-                }
+                    review_signal: "all",
+                  });
+                  if (tab === "review") setTab("items");
+                }}
               >
                 Bỏ bộ lọc
               </button>
@@ -851,16 +960,38 @@ export function Workspace({
           onClose={() => setSelected(null)}
           notify={notify}
           onNext={() => {
-            const rows = items.data?.items ?? [];
+            const currentFilters = filtersRef.current;
+            const pageData =
+              client.getQueryData<ItemPage>([
+                "items",
+                dataset.id,
+                currentFilters,
+              ]) ?? itemsDataRef.current;
+            const rows = pageData?.items ?? [];
+            const total = pageData?.total ?? 0;
             const index = rows.findIndex((i) => i.id === selected);
-            if (index >= 0 && index < rows.length - 1)
+            if (index >= 0 && index < rows.length - 1) {
               setSelected(rows[index + 1].id);
-            else if (index < 0 && rows.length) setSelected(rows[0].id);
-            else if (
-              items.data &&
-              filters.page * filters.page_size < items.data.total
+            } else if (index < 0 && rows.length > 0) {
+              setSelected(rows[0].id);
+            } else if (total === 0) {
+              setSelected(null);
+              notify("Không còn phản hồi trong bộ lọc hiện tại.");
+            } else if (
+              rows.length === 0 &&
+              total > 0 &&
+              currentFilters.page > 1
             ) {
-              update({ page: filters.page + 1 });
+              update({
+                page: Math.max(1, Math.ceil(total / currentFilters.page_size)),
+              });
+              setSelected(null);
+              notify("Đã chuyển về trang cuối còn phản hồi.");
+            } else if (
+              pageData &&
+              currentFilters.page * currentFilters.page_size < total
+            ) {
+              update({ page: currentFilters.page + 1 });
               setSelected(null);
               notify(
                 "Đã chuyển sang trang tiếp theo. Chọn phản hồi để tiếp tục.",
@@ -876,7 +1007,8 @@ export function Workspace({
         <Modal title="Xuất kết quả CSV" onClose={() => setExporting(false)}>
           <p>
             CSV UTF-8 có BOM. Bản chụp giữ riêng dự đoán AI, tham chiếu, nhãn
-            duyệt, phiên bản model và văn bản.
+            duyệt, phiên bản model và văn bản. CSV giữ các cột hiện có; tín hiệu
+            tự động không có cột riêng.
           </p>
           <label>
             Phạm vi xuất
@@ -893,7 +1025,7 @@ export function Workspace({
           </label>
           <p className="muted small">
             Giữ lựa chọn lần phân tích và nguồn nhãn. “Toàn bộ” bỏ các bộ lọc
-            tìm kiếm, nhãn và trạng thái rà soát.
+            tìm kiếm, nhãn, trạng thái rà soát và tín hiệu model.
           </p>
           {exportResult && (
             <div className="notice success">
@@ -921,6 +1053,37 @@ export function Workspace({
         </Modal>
       )}
     </>
+  );
+}
+function SignalBadges({ item }: { item: Item }) {
+  const sig = item.review_signals;
+  if (!sig) {
+    return (
+      <div className="signal-badges">
+        <Badge tone="neutral">Chưa có tín hiệu điểm</Badge>
+      </div>
+    );
+  }
+  const sFlagged = sig.sentiment.state === "flagged";
+  const tFlagged = sig.topic.state === "flagged";
+  const hasTruncated = sig.truncated === true;
+  const hasUnavailable =
+    sig.sentiment.state === "unavailable" || sig.topic.state === "unavailable";
+  const hasAnySignal = sFlagged || tFlagged || hasTruncated;
+
+  return (
+    <div className="signal-badges">
+      {sFlagged && <Badge tone="warning">Model phân vân: cảm xúc</Badge>}
+      {tFlagged && <Badge tone="warning">Model phân vân: chủ đề</Badge>}
+      {hasTruncated && <Badge tone="warning">Đầu vào bị cắt ngắn</Badge>}
+      {hasUnavailable && <Badge tone="neutral">Chưa có tín hiệu điểm</Badge>}
+      {!hasAnySignal && !hasUnavailable && (
+        <span className="muted small">Không có cờ</span>
+      )}
+      {hasAnySignal && !sig.pending_signal_review && (
+        <span className="muted small">Đã đối chiếu</span>
+      )}
+    </div>
   );
 }
 function Distribution({

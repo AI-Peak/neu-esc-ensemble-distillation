@@ -25,6 +25,10 @@ class ModelUnavailable(RuntimeError):
     """Unavailable model or failed inference call; callers must not invent results."""
 
 
+class ModelIdentityChanged(ModelUnavailable):
+    """Active bundle identity changed between experiment creation and pair inference."""
+
+
 class _ArtifactError(ValueError):
     """A deterministic artifact configuration, tensor or schema defect."""
 
@@ -263,12 +267,13 @@ def load_artifact(directory, manifest):
     return model, tokenizer
 
 
-def run_logits(model, tokenizer, texts, batch_size=8, max_length=128):
+def run_logits(model, tokenizer, texts, batch_size=8, max_length=128, collect_model_inputs=False):
     """Length-sort batches and restore source order; returns FP32 logits and original lengths."""
     import torch
     lengths = [len(row) for row in tokenizer(texts, add_special_tokens=True, truncation=False)["input_ids"]]
     order = sorted(range(len(texts)), key=lambda i: lengths[i])
     outputs = [None] * len(texts)
+    collected_inputs = [None] * len(texts) if collect_model_inputs else None
     with torch.inference_mode():
         for start in range(0, len(order), batch_size):
             indices = order[start:start + batch_size]
@@ -279,6 +284,11 @@ def run_logits(model, tokenizer, texts, batch_size=8, max_length=128):
                 raise ValueError("model produced invalid logits")
             for j, i in enumerate(indices):
                 outputs[i] = tuple(x[j].detach().float().cpu() for x in logits)
+                if collect_model_inputs:
+                    mask = tokens["attention_mask"][j].bool()
+                    collected_inputs[i] = tuple(int(v) for v in tokens["input_ids"][j][mask].tolist())
+    if collect_model_inputs:
+        return outputs, lengths, collected_inputs
     return outputs, lengths
 
 
@@ -320,18 +330,53 @@ class ModelRegistry:
             raise ValueError("current pointer and artifact version disagree")
         return directory, manifest
 
+    def _ready_artifact(self, profile: str) -> tuple[Path, dict]:
+        directory, manifest = self._inspect(profile)
+        if str(directory) in self._failures:
+            raise ModelUnavailable(self._failures[str(directory)])
+        for dependency in ("torch", "transformers", "safetensors", "sentencepiece"):
+            if importlib.util.find_spec(dependency) is None:
+                raise ModelUnavailable(f"Missing model dependency: {dependency}; install requirements-model.txt")
+        check_preprocessing_ready(manifest["preprocessing"])
+        return directory, manifest
+
+    @staticmethod
+    def _build_execution_identity(profile: str, directory: Path, manifest: dict) -> dict:
+        manifest_sha256 = sha256(directory / "manifest.json")
+        preprocessing_sha256 = hashlib.sha256(
+            json.dumps(
+                manifest["preprocessing"],
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode("utf-8")
+        ).hexdigest()
+        return {
+            "profile": profile,
+            "schema_id": manifest["schema_id"],
+            "model_id": manifest["model_id"],
+            "model_version": manifest["model_version"],
+            "manifest_sha256": manifest_sha256,
+            "preprocessing_sha256": preprocessing_sha256,
+            "mode": "cpu-fp32-eval",
+        }
+
+    def execution_identity(self, profile: str) -> dict:
+        try:
+            with self._lock:
+                directory, manifest = self._ready_artifact(profile)
+                return self._build_execution_identity(profile, directory, manifest)
+        except ModelUnavailable:
+            raise
+        except Exception as exc:
+            raise ModelUnavailable(f"Model unavailable: {exc}") from None
+
     def status(self, profile: str) -> dict:
         schema_id = self._profiles.get(profile, {}).get("schema_id", "unknown")
         result = dict(available=False, reason=None, model_id=None, model_version=None, schema_id=schema_id)
         try:
             with self._lock:
-                directory, manifest = self._inspect(profile)
-                if str(directory) in self._failures:
-                    raise ModelUnavailable(self._failures[str(directory)])
-                for dependency in ("torch", "transformers", "safetensors", "sentencepiece"):
-                    if importlib.util.find_spec(dependency) is None:
-                        raise ModelUnavailable(f"Missing model dependency: {dependency}; install requirements-model.txt")
-                check_preprocessing_ready(manifest["preprocessing"])
+                directory, manifest = self._ready_artifact(profile)
                 oof = manifest["provenance"]["oof"]
                 result.update(
                     available=True,
@@ -353,18 +398,28 @@ class ModelRegistry:
             result["reason"] = f"Model unavailable: {exc}"
         return result
 
-    def predict(self, profile: str, items: list[dict]) -> list[dict]:
-        if not items:
-            return []
-        if any(not isinstance(x.get("text"), str) or not x["text"].strip()
-               or "item_id" not in x or "revision_id" not in x for x in items):
-            raise ValueError("Every inference item needs item_id, revision_id and nonblank text")
+    def _run_inference_locked(
+        self,
+        profile: str,
+        items: list[dict],
+        *,
+        expected_identity: dict | None = None,
+        collect_model_inputs: bool = False,
+    ) -> tuple[list[dict], dict | None, list[tuple[int, ...]] | None]:
         started = time.perf_counter()
         directory = None
         phase = "inspection"
         with self._lock:
             try:
-                directory, manifest = self._inspect(profile)
+                if expected_identity is not None:
+                    directory, manifest = self._ready_artifact(profile)
+                    actual_identity = self._build_execution_identity(profile, directory, manifest)
+                    if actual_identity != expected_identity:
+                        raise ModelIdentityChanged("Model execution identity changed before pair inference.")
+                else:
+                    directory, manifest = self._inspect(profile)
+                    actual_identity = None
+
                 key = (str(directory), manifest["model_version"], self._validated[str(directory)][0])
                 if self._loaded is None or self._loaded[0] != key:
                     self._loaded = None  # Keep at most one encoder in memory.
@@ -374,17 +429,41 @@ class ModelRegistry:
                     self._loaded = key, model, tokenizer, preprocessor
                     self._failures.pop(str(directory), None)
                 _, model, tokenizer, preprocessor = self._loaded
+
                 phase = "preprocessing"
                 processed_texts = preprocessor.transform([x["text"] for x in items])
+
                 phase = "inference"
                 max_length = manifest["preprocessing"]["max_length"]
-                logits, lengths = (
-                    run_logits(model, tokenizer, processed_texts)
-                    if max_length == 128
-                    else run_logits(model, tokenizer, processed_texts, 8, max_length)
-                )
+                if collect_model_inputs:
+                    raw_out = run_logits(
+                        model,
+                        tokenizer,
+                        processed_texts,
+                        8,
+                        max_length,
+                        collect_model_inputs=True,
+                    )
+                    if not isinstance(raw_out, tuple) or len(raw_out) != 3:
+                        raise ValueError("model input diagnostics unavailable")
+                    logits, lengths, collected_inputs = raw_out
+                else:
+                    logits, lengths = (
+                        run_logits(model, tokenizer, processed_texts)
+                        if max_length == 128
+                        else run_logits(model, tokenizer, processed_texts, 8, max_length)
+                    )
+                    collected_inputs = None
+
                 if len(logits) != len(items) or len(lengths) != len(items):
                     raise _ArtifactError("model output row count mismatch")
+                if collect_model_inputs and (
+                    not isinstance(collected_inputs, list)
+                    or len(collected_inputs) != len(items)
+                    or any(not isinstance(seq, tuple) or len(seq) == 0 for seq in collected_inputs)
+                ):
+                    raise _ArtifactError("model input diagnostics unavailable")
+
                 duration = (time.perf_counter() - started) * 1000 / len(items)
                 result = []
                 for item, row, count in zip(items, logits, lengths):
@@ -396,13 +475,22 @@ class ModelRegistry:
                             raise _ArtifactError("model output head/schema mismatch")
                         scores = values.softmax(-1).tolist()
                         tasks[task] = dict(label_id=max(range(len(scores)), key=scores.__getitem__), scores=scores)
-                    result.append(dict(item_id=item["item_id"], revision_id=item["revision_id"],
-                                       model_id=manifest["model_id"], model_version=manifest["model_version"],
-                                       schema_id=manifest["schema_id"], **tasks,
-                                       token_count_before_truncation=count, truncated=count > max_length,
-                                       warnings=["INPUT_TRUNCATED"] if count > max_length else [], duration_ms=duration))
+                    result.append(dict(
+                        item_id=item["item_id"],
+                        revision_id=item["revision_id"],
+                        model_id=manifest["model_id"],
+                        model_version=manifest["model_version"],
+                        schema_id=manifest["schema_id"],
+                        **tasks,
+                        token_count_before_truncation=count,
+                        truncated=count > max_length,
+                        warnings=["INPUT_TRUNCATED"] if count > max_length else [],
+                        duration_ms=duration,
+                    ))
                 self._failures.pop(str(directory), None)
-                return result
+                return result, actual_identity, collected_inputs
+            except ModelIdentityChanged:
+                raise
             except Exception as exc:
                 # Inference/tokenizer/runtime exceptions can contain raw feedback. Never expose
                 # or retain their messages. Transient runtime errors must leave status retryable;
@@ -411,3 +499,41 @@ class ModelRegistry:
                 if directory is not None and isinstance(exc, _ArtifactError):
                     self._failures[str(directory)] = reason
                 raise ModelUnavailable(reason) from None
+
+    def predict(self, profile: str, items: list[dict]) -> list[dict]:
+        if not items:
+            return []
+        if any(not isinstance(x.get("text"), str) or not x["text"].strip()
+               or "item_id" not in x or "revision_id" not in x for x in items):
+            raise ValueError("Every inference item needs item_id, revision_id and nonblank text")
+        predictions, _, _ = self._run_inference_locked(profile, items, collect_model_inputs=False)
+        return predictions
+
+    def predict_pair(self, profile: str, items: list[dict], expected_identity: dict) -> dict:
+        if (
+            not isinstance(items, list)
+            or len(items) != 2
+            or any(
+                not isinstance(x, dict)
+                or not isinstance(x.get("text"), str)
+                or not x["text"].strip()
+                or "item_id" not in x
+                or "revision_id" not in x
+                for x in items
+            )
+            or not isinstance(expected_identity, dict)
+        ):
+            raise ValueError("Pair inference requires 2 valid items with item_id, revision_id, nonblank text, and expected_identity")
+        predictions, actual_identity, collected_inputs = self._run_inference_locked(
+            profile,
+            items,
+            expected_identity=expected_identity,
+            collect_model_inputs=True,
+        )
+        model_input_equal = collected_inputs[0] == collected_inputs[1]
+        del collected_inputs
+        return {
+            "predictions": predictions,
+            "execution_identity": actual_identity,
+            "model_input_equal": model_input_equal,
+        }

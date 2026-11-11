@@ -1,0 +1,26 @@
+{
+  "id": "review-signals-v1",
+  "experimental": true,
+  "schemas": {
+    "neu-v1": {
+      "sentiment": {
+        "top1_min": 0.60,
+        "margin_min": 0.15
+      },
+      "topic": {
+        "top1_min": 0.60,
+        "margin_min": 0.15
+      }
+    },
+    "uit-v1": {
+      "sentiment": {
+        "top1_min": 0.60,
+        "margin_min": 0.15
+      },
+      "topic": {
+        "top1_min": 0.60,
+        "margin_min": 0.15
+      }
+    }
+  }
+}
