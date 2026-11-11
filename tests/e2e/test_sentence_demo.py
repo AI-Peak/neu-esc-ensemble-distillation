@@ -960,6 +960,90 @@ def test_u13_sensitivity_error_preserves_source_and_is_actionable(browser, demo_
 
 
 
+def test_r01_successful_job_retry_clears_previous_submit_error(browser, tmp_path):
+    server = TestServer(tmp_path / "retry-error-runtime", mock_explanation=True,
+                        fail_first_quick=True).start()
+    page = browser.new_page()
+    classifier_posts = []
+    explanation_posts = []
+    retry_requests = []
+    held_retry = []
+    marker = "R01_FIRST_RETRY_HTTP_500"
+
+    def record_request(request):
+        if request.method == "POST" and request.url.endswith("/quick-analysis"):
+            classifier_posts.append(request.url)
+        elif request.method == "POST" and request.url.endswith("/explanation"):
+            explanation_posts.append(request)
+
+    def intercept_retry(route):
+        retry_requests.append(route.request)
+        if len(retry_requests) == 1:
+            route.fulfill(status=500, json={"code": "TEST_RETRY_FAILURE", "message": marker})
+        else:
+            held_retry.append(route)
+
+    page.on("request", record_request)
+    page.route("**/api/v1/jobs/*/retry", intercept_retry)
+    try:
+        page.goto(server.url + "/#/demo")
+        page.locator("#sentence").fill("Câu kiểm tra lỗi retry cũ phải được xóa.")
+        with page.expect_response(lambda response: response.request.method == "POST" and
+                                  response.url.endswith("/quick-analysis")) as submitted:
+            page.locator("#analyze").click()
+        identity = submitted.value.json()
+        job_id, run_id = identity["job_id"], identity["run_id"]
+        retry = page.get_by_role("button", name="Chạy lại tác vụ này", exact=True)
+        banner = page.locator(".input-notice[role='alert']")
+        expect(retry).to_be_visible(timeout=15000)
+        before = httpx.get(server.url + f"/api/v1/jobs/{job_id}").json()
+        assert before["status"] == "completed_with_errors"
+        assert before["run_id"] == run_id
+        expect(page.locator("#result-content")).to_have_count(0)
+        assert provider_events(server, "start") == []
+
+        retry.click()
+        expect(banner).to_contain_text(marker)
+        expect(retry).to_be_enabled()
+        page.screenshot(path=str(SCREENSHOT_DIR / "r01-retry-http-500.png"), full_page=True)
+
+        with page.expect_request(lambda request: request.method == "POST" and
+                                 request.url.endswith(f"/jobs/{job_id}/retry")):
+            retry.click()
+        expect(retry).to_be_disabled()
+        # Capture the pending state while the response is explicitly held.
+        error_during_retry = banner.all_text_contents()
+        assert len(held_retry) == 1
+        held_retry[0].continue_()
+        expect(page.locator("#result-content")).to_be_visible(timeout=15000)
+        expect(page.locator("#ai-content")).to_be_visible(timeout=10000)
+        after = httpx.get(server.url + f"/api/v1/jobs/{job_id}").json()
+        prediction = after["result"]["prediction"]
+        assert after["id"] == job_id and after["run_id"] == run_id
+        assert after["status"] == "completed"
+        assert prediction["run_id"] == run_id
+        assert len(classifier_posts) == 1
+        assert len(retry_requests) == 2
+        assert all(request.method == "POST" and request.url.endswith(f"/jobs/{job_id}/retry")
+                   for request in retry_requests)
+        assert len(explanation_posts) == 1
+        assert explanation_posts[0].url.endswith(f"/quick-analysis/{job_id}/explanation")
+        assert explanation_posts[0].post_data_json["source_prediction_id"] == prediction["id"]
+        assert len(provider_events(server, "start")) == 1
+        record_observation("R01_retry_error", {"job_id": job_id, "run_id": run_id,
+                           "prediction_id": prediction["id"], "classifier_posts": len(classifier_posts),
+                           "explanation_posts": len(explanation_posts), "retry_posts": len(retry_requests),
+                           "error_during_retry": error_during_retry,
+                           "error_after_success": banner.all_text_contents(), "real_provider_calls": 0})
+        page.screenshot(path=str(SCREENSHOT_DIR / "r01-retry-completed.png"), full_page=True)
+        expect(banner).to_have_count(0)
+        expect(page.get_by_text(marker, exact=False)).to_have_count(0)
+        assert error_during_retry == [], "A valid retry must clear the old error before its response"
+    finally:
+        page.close()
+        server.stop()
+
+
 @pytest.mark.parametrize("terminal_status", ["completed_with_errors", "failed", "cancelled", "interrupted"])
 def test_u18_terminal_quick_job_retry_completes_one_snapshot_and_explanation(browser, tmp_path, terminal_status):
     server = TestServer(tmp_path / ("terminal-" + terminal_status), mock_explanation=True,

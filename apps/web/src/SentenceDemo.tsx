@@ -357,6 +357,7 @@ export function SentenceDemo({
 
   const handleRetryJob = async () => {
     if (!jobId || busy || busyGenerationRef.current !== null || !profile.model?.available) return;
+    setSubmitError(null);
     const generation = generationRef.current;
     const targetJobId = jobId;
     busyGenerationRef.current = generation;
