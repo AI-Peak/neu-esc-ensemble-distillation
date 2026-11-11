@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Demo một câu · NEU-ESC — Mockup</title>
+  <link rel="stylesheet" href="sentence-demo.css">
+  <script src="sentence-demo.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Đến nội dung chính</a>
+  <div class="preview-note"><strong>Bản thiết kế chờ duyệt</strong><span>Kết quả minh họa · chưa kết nối model</span></div>
+  <header class="site-header">
+    <a class="brand" href="sentence-demo.html" aria-label="NEU-ESC — Demo phân tích câu"><span class="brand-icon">N</span><strong>NEU–ESC</strong><span class="brand-description">Hiểu phản hồi tiếng Việt</span></a>
+    <nav aria-label="Chức năng phụ"><button type="button" data-info="Luồng quản lý bộ dữ liệu sẽ là tính năng phụ trong app thật.">Làm việc với bộ dữ liệu <span aria-hidden="true">↗</span></button><button type="button" data-info="Báo cáo nghiên cứu sẽ mở riêng, giữ màn demo tập trung vào câu đang phân tích.">Nghiên cứu</button></nav>
+  </header>
+  <main id="main">
+    <div class="intro"><div><span class="mode-label"><span class="status-dot"></span>Demo phân tích phản hồi</span><h1>Một câu. Hai góc nhìn.</h1><p>Nhập phản hồi để khám phá <strong>cảm xúc</strong> và <strong>chủ đề</strong> mà model nhận diện.</p></div><div class="profile-pill"><span>Hệ nhãn đang xem</span><strong>NEU · Thảo luận sinh viên</strong></div></div>
+
+    <div class="analysis-grid">
+      <section class="input-panel" aria-labelledby="input-heading">
+        <header class="section-head"><h2 id="input-heading">Câu của bạn</h2><span>Tiếng Việt</span></header>
+        <label class="sr-only" for="sentence">Văn bản cần phân tích</label>
+        <textarea id="sentence" maxlength="5000" spellcheck="false">Cổng đăng ký học phần báo lỗi liên tục, mình chưa đăng ký được môn bắt buộc.</textarea>
+        <div class="editor-footer"><span>Văn bản gốc luôn được giữ nguyên</span><span id="characters"></span></div>
+        <div class="examples"><p>Thử nhanh với một câu mẫu</p><div><button class="example active" data-example="0" aria-pressed="true">Dịch vụ sinh viên</button><button class="example" data-example="1" aria-pressed="false">Trải nghiệm học tập</button><button class="example" data-example="2" aria-pressed="false">Một thông báo</button></div></div>
+        <div class="submit-row"><button type="button" class="primary" id="analyze"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m13 3-8 10h6l-1 8 9-11h-6z"/></svg><span>Phân tích câu</span><span aria-hidden="true">→</span></button><button class="clear-button" id="clear">Xóa nội dung</button></div>
+        <p class="demo-explanation">Bản xem trước chỉ mô phỏng 3 câu mẫu. Nội dung bạn tự nhập sẽ không được gửi đi hoặc tạo dự đoán giả.</p>
+      </section>
+
+      <section class="result-panel" aria-labelledby="result-heading" aria-busy="false">
+        <header class="section-head"><h2 id="result-heading"><span class="layer-tag">Lớp 1 · Prediction</span>Kết quả phân tích</h2><span class="sample-label">Minh họa</span></header>
+        <div id="result-content">
+          <div class="result-line"><div><span class="task-label">Cảm xúc</span><strong class="sentiment-value" id="sentiment">Tiêu cực</strong><p>Cách người viết thể hiện cảm nhận</p></div><div class="score-number"><strong id="sentiment-score">59,5<span>%</span></strong><small>điểm model</small></div></div>
+          <div class="result-line"><div><span class="task-label">Chủ đề</span><strong class="topic-value" id="topic">Dịch vụ</strong><p>Nội dung chính của phản hồi</p></div><div class="score-number"><strong id="topic-score">69,8<span>%</span></strong><small>điểm model</small></div></div>
+          <div class="distribution"><h3>Điểm từng nhãn cảm xúc</h3><div id="scores"></div></div>
+          <div class="distribution"><h3>Điểm từng nhãn chủ đề</h3><div id="topic-scores"></div></div>
+          <p class="score-disclaimer">Phân bố minh họa. Điểm model chưa hiệu chuẩn, không phải xác suất dự đoán đúng.</p>
+        </div>
+        <div id="empty-state" class="empty-state" hidden><span class="empty-symbol" aria-hidden="true">↗</span><h3>Kết quả sẽ xuất hiện ở đây</h3><p>Chọn một câu mẫu và bấm Phân tích để xem luồng minh họa.</p></div>
+        <div id="waiting-state" class="waiting-state" hidden><div class="wait-heading"><span class="pulse-dot" aria-hidden="true"></span><h3>Đang chuẩn bị kết quả</h3></div><ol><li class="done"><span aria-hidden="true">✓</span>Tiếp nhận văn bản</li><li class="current"><span aria-hidden="true">2</span>Nạp model và phân tích</li><li><span aria-hidden="true">3</span>Hiển thị cảm xúc và chủ đề</li></ol><p>Lần phân tích đầu có thể lâu hơn vì model cần được nạp vào bộ nhớ.</p><div class="wait-footer"><small>Đang mô phỏng trạng thái chờ</small><button id="cancel">Hủy phân tích</button></div></div>
+      </section>
+    </div>
+    <div class="under-grid"><span><span class="tiny-lock" aria-hidden="true">◇</span> Thiết kế cho xử lý trên máy của bạn</span><button class="text-button" id="preview-wait">Xem thiết kế trạng thái chờ →</button></div>
+
+    <section class="interpret-panel" aria-labelledby="interpret-heading">
+      <h2 id="interpret-heading"><span class="layer-tag">Lớp 2 · Interpretability</span>Đọc kỹ dự đoán</h2>
+      <p class="section-description">Đối chiếu từng câu và nhận biết trường hợp khó phân loại.</p>
+      <div id="interpret-content">
+        <div class="sentence-reading"><span class="task-label">Câu 01 · Minh họa</span><p id="sentence-reading"></p><strong id="sentence-labels"></strong></div>
+        <div class="signal" id="signal"></div>
+        <article class="ai-explanation" aria-labelledby="ai-heading">
+          <div class="ai-heading"><div><span class="layer-tag">Diễn giải bổ sung · Tùy chọn</span><h3 id="ai-heading">Diễn giải bằng AI</h3></div><span class="sample-label">Bản mẫu · chưa gọi API</span></div>
+          <p>Đọc phần diễn giải ngắn dựa trên câu nhập, nhãn dự đoán và điểm model. Kết quả phân tích phía trên luôn có sẵn trước.</p>
+          <button type="button" class="primary" id="explain-ai" aria-expanded="false" aria-controls="ai-content">Xem diễn giải mẫu <span aria-hidden="true">→</span></button>
+          <div id="ai-content" hidden>
+            <div class="ai-answer"><h4>Cách đọc kết quả này</h4><p id="ai-reading"></p><h4>Điểm cần lưu ý</h4><p id="ai-caution"></p></div>
+            <p class="ai-evidence" id="ai-evidence"></p>
+            <p class="score-disclaimer">Diễn giải hỗ trợ, không xác nhận cơ chế suy luận bên trong model. Nội dung ở đây được viết sẵn để duyệt giao diện.</p>
+          </div>
+          <details class="ai-service-note"><summary>Khi kết nối LLM, phần này hoạt động thế nào?</summary><p>Chỉ khi bạn yêu cầu diễn giải, ứng dụng mới gửi câu và kết quả phân tích qua dịch vụ LLM (dự kiến qua 9router). Nếu dịch vụ không phản hồi, bạn vẫn xem được dự đoán và tín hiệu local. Mockup này không gửi dữ liệu đi.</p></details>
+        </article>
+      </div>
+      <p id="interpret-empty" hidden>Chọn và phân tích một câu mẫu để xem phần đối chiếu.</p>
+    </section>
+    <section class="explore-panel" aria-labelledby="explore-heading">
+      <div class="explore-intro"><span class="explore-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h11m-4-4 4 4-4 4M20 18H9m4-4-4 4 4 4M4 12v6h2m14-6V6h-2"/></svg></span><div><h2 id="explore-heading">Điều gì xảy ra nếu bỏ một cụm từ?</h2><p>So sánh câu gốc và câu biến thể để quan sát độ nhạy của dự đoán.</p></div><button id="toggle-explore" aria-expanded="false" aria-controls="explore-body">Khám phá dự đoán <span aria-hidden="true">↗</span></button></div>
+      <div id="explore-body" hidden>
+        <div class="explore-controls"><label for="phrase">Cụm từ muốn thử bỏ</label><div><input id="phrase" value="báo lỗi liên tục" readonly><button class="primary" id="compare">So sánh kết quả mẫu →</button></div><p>Mockup minh họa thao tác này với câu mẫu “Dịch vụ sinh viên”.</p></div>
+        <div id="comparison" hidden><div class="comparison-grid"><article><span class="task-label">Câu gốc</span><p>Cổng đăng ký học phần <mark>báo lỗi liên tục</mark>, mình chưa đăng ký được môn bắt buộc.</p><div><span>Cảm xúc</span><strong class="negative">Tiêu cực <small>59,5%</small></strong></div><div><span>Chủ đề</span><strong>Dịch vụ <small>69,8%</small></strong></div></article><article><span class="task-label">Câu biến thể</span><p>Cổng đăng ký học phần , mình chưa đăng ký được môn bắt buộc.</p><div><span>Cảm xúc</span><strong>Trung tính <small>98,8%</small></strong></div><div><span>Chủ đề</span><strong>Học tập <small>73,2%</small></strong></div></article></div><p class="comparison-note">Ví dụ minh họa D06 từ kịch bản demo. Bỏ một cụm từ có thể đổi cả ý nghĩa câu; đây không phải bằng chứng nhân quả hoặc lời giải thích chắc chắn về cách model suy luận.</p></div>
+      </div>
+    </section>
+    <section class="decision-panel" aria-labelledby="decision-heading">
+      <div class="decision-heading"><h2 id="decision-heading"><span class="layer-tag">Lớp 3 · Decision Support</span>Nhìn từ một tập phản hồi</h2><span class="sample-label">Tập mẫu riêng · 12 phản hồi</span></div>
+      <p class="section-description">Số liệu dựng để duyệt thiết kế, không lấy từ câu bạn đang nhập hay dữ liệu thật.</p>
+      <div class="decision-grid">
+        <article class="priority-note"><span class="task-label">Vấn đề cần xem trước</span><h3>Dịch vụ sinh viên</h3><p><strong>4 / 6 phản hồi tiêu cực</strong> trong chủ đề này, cao nhất tập mẫu.</p><p>Nên đọc các phản hồi gốc để xác định vấn đề cụ thể trước khi đưa ra hành động.</p></article>
+        <div class="topic-summary"><h3>Phân bố theo chủ đề</h3><p>Chiều dài thanh = tỷ lệ trên tổng 12 phản hồi.</p>
+          <div class="aggregate-row"><span>Dịch vụ</span><div class="score-track"><span class="leading" style="width:50%"></span></div><strong>6 · 50,0%</strong><small>4 tiêu cực / 6</small></div>
+          <div class="aggregate-row"><span>Học tập</span><div class="score-track"><span class="leading" style="width:33.333%"></span></div><strong>4 · 33,3%</strong><small>1 tiêu cực / 4</small></div>
+          <div class="aggregate-row"><span>Tin tức</span><div class="score-track"><span class="leading" style="width:16.667%"></span></div><strong>2 · 16,7%</strong><small>0 tiêu cực / 2</small></div>
+        </div>
+      </div>
+      <p class="score-disclaimer">Đây là thống kê số lượng phản hồi, không phải điểm model. Mẫu nhỏ chỉ dùng để minh họa bố cục.</p>
+    </section>
+    <footer><span>NEU–ESC · Feedback Workspace</span><span>AI hỗ trợ phân tích. Bạn đánh giá ý nghĩa trong ngữ cảnh.</span></footer>
+  </main>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

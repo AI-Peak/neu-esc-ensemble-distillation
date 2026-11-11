@@ -1,0 +1,70 @@
+@import url('./sentence-demo.css');
+
+/* Each stage owns a full row; input height no longer depends on results. */
+:root{--muted:#52665e}
+main{max-width:1140px;padding-top:30px}
+.intro{margin-bottom:24px}
+.intro p{font-size:16px}
+.analysis-grid{display:flex;flex-direction:column;gap:24px}
+.input-panel,.result-panel{width:100%;padding:24px 28px}
+.input-panel{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:24px}
+.input-panel>.section-head,.input-panel>label,.input-panel>textarea,.input-panel>.editor-footer,.input-panel>.demo-explanation{grid-column:1/-1}
+textarea{height:130px;min-height:120px;font-size:18px;line-height:1.8}
+.examples{margin-top:18px;min-width:0}
+.examples>p{font-size:15px}
+.examples>div{gap:8px}
+.submit-row{align-self:end;border:0;margin:18px 0 0;padding:0;flex-direction:column;gap:4px}
+.submit-row .primary{min-height:48px;font-size:16px;width:100%}
+.clear-button{min-height:36px}
+.demo-explanation{max-width:none;margin-top:14px;color:var(--muted)}
+.result-panel{background:white}
+.prediction-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px}
+.prediction-column{min-width:0}
+.result-line{align-items:flex-start;border-bottom:0;padding-bottom:8px}
+.result-line>div:first-child>strong{font-size:28px}
+.result-line p{font-size:15px}
+.distribution{margin-top:16px}
+.distribution h3{font-size:16px}
+.distribution .score-row{margin:14px 0;font-size:15px}
+.distribution .score-track{height:10px}
+.score-row>span:first-child{flex-shrink:0}
+.score-disclaimer{margin-top:18px}
+.under-grid{padding:12px 0 22px}
+.interpret-panel{padding:26px 28px;margin-bottom:16px}
+.section-description{font-size:16px;max-width:70ch}
+.sentence-reading{border:0;padding:0;margin-top:22px}
+.sentence-reading p{font-size:17px;max-width:75ch}
+.interpret-panel .signal{max-width:none;padding:14px 16px}
+.signal p,.signal strong{font-size:15px}
+.ai-explanation{margin-top:22px;padding-top:22px}
+.ai-explanation>p{max-width:75ch}
+.ai-heading .layer-tag{display:none}
+.ai-answer{border:0;border-radius:8px;max-width:none;padding:22px 24px}
+.ai-answer p{max-width:75ch;font-size:17px}
+.ai-evidence{max-width:85ch}
+#explanation-loading{padding:22px 0;color:var(--teal);font-size:16px}
+.loading-track{height:5px;max-width:420px;background:var(--soft);border-radius:5px;overflow:hidden;margin-top:12px}
+.loading-track>span{display:block;width:35%;height:100%;background:var(--teal);animation:explain-progress 1.2s ease-in-out infinite}
+.decision-panel{padding:26px 28px;margin-top:30px}
+.decision-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
+.priority-note p,.topic-summary>p{font-size:15px}
+.version-link{color:var(--teal);text-decoration:underline;text-underline-offset:4px}
+h1{letter-spacing:-.03em}
+@keyframes explain-progress{from{transform:translateX(-100%)}to{transform:translateX(290%)}}
+@media(max-width:900px){
+  .input-panel{display:block}
+  .submit-row{flex-direction:row;justify-content:flex-start;margin-top:18px;gap:16px}
+  .submit-row .primary{width:auto}
+  .prediction-columns{gap:28px}
+  .decision-grid{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  main{padding:24px 16px}
+  .input-panel,.result-panel,.interpret-panel,.decision-panel{padding:20px}
+  .prediction-columns{grid-template-columns:1fr;gap:14px}
+  .prediction-column+.prediction-column{border-top:1px solid var(--line);padding-top:8px}
+  textarea{height:170px}
+  .ai-answer{padding:18px}
+  .intro p{font-size:16px}
+}
+@media(prefers-reduced-motion:reduce){.loading-track>span{animation:none;width:100%;opacity:.6}}
