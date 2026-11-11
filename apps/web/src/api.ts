@@ -1,5 +1,6 @@
 import type {
   CreateSensitivityExperimentBody,
+  ExplanationResponse,
   Filters,
   Job,
   SensitivityExperiment,
@@ -64,8 +65,19 @@ export async function api<T>(
     ? (undefined as T)
     : (response.json() as Promise<T>);
 }
-export const post = <T>(path: string, body: unknown) =>
-  api<T>(path, { method: "POST", body: JSON.stringify(body) });
+export const post = <T>(path: string, body: unknown, options: RequestInit = {}) =>
+  api<T>(path, { method: "POST", body: JSON.stringify(body), ...options });
+export function getExplanation(
+  jobId: string,
+  sourcePredictionId: string,
+  signal?: AbortSignal,
+) {
+  return post<ExplanationResponse>(
+    `/quick-analysis/${jobId}/explanation`,
+    { source_prediction_id: sourcePredictionId },
+    { signal },
+  );
+}
 export function filterBody(filters: Filters, all = false) {
   const f = all
     ? {

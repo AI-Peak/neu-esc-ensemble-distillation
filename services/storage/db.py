@@ -169,8 +169,17 @@ class Store:
     def cleanup_expired_in_tx(self, c):
         self.recover(c)
         now_ts = time.time()
+        # Delete dependent experiments BEFORE their quick source. A source FK cascade
+        # only removes the mapping, otherwise leaving its internal job runnable as quick.
+        expired_sources = c.execute('''SELECT d.id FROM datasets d WHERE d.temporary=1
+            AND d.expires_at IS NOT NULL AND d.expires_at<=?
+            AND NOT EXISTS (SELECT 1 FROM runs r JOIN jobs j ON j.run_id=r.id
+                WHERE r.dataset_id=d.id AND j.status NOT IN
+                ('completed','completed_with_errors','failed','cancelled','interrupted'))''', (now_ts,)).fetchall()
+        for source in expired_sources:
+            self._delete_linked_experiment_datasets(c, source['id'])
         # A stale expiry marker must never revoke queued or live inference.
-        c.execute("""DELETE FROM datasets WHERE temporary=1 AND expires_at IS NOT NULL AND expires_at<?
+        c.execute("""DELETE FROM datasets WHERE temporary=1 AND expires_at IS NOT NULL AND expires_at<=?
                      AND NOT EXISTS (SELECT 1 FROM runs r JOIN jobs j ON j.run_id=r.id
                          WHERE r.dataset_id=datasets.id AND j.status NOT IN
                          ('completed','completed_with_errors','failed','cancelled','interrupted'))""", (now_ts,))
@@ -401,22 +410,80 @@ class Store:
             c.execute('UPDATE datasets SET name=?,updated_at=? WHERE id=?', (name.strip(), now(), dataset_id))
         return self.dataset(dataset_id)
 
+    def _delete_linked_experiment_datasets(self, c, dataset_id):
+        rows = c.execute(
+            'SELECT temporary_dataset_id, job_id FROM sensitivity_experiments WHERE source_dataset_id=?',
+            (dataset_id,),
+        ).fetchall()
+        for exp in rows:
+            temp_id = exp['temporary_dataset_id']
+            c.execute(
+                'DELETE FROM idempotency WHERE result_id=? OR result_id=? OR result_id IN (SELECT id FROM runs WHERE dataset_id=?)',
+                (exp['job_id'], temp_id, temp_id),
+            )
+            # Cascades fence queued/running workers by deleting their job lease.
+            c.execute('DELETE FROM datasets WHERE id=?', (temp_id,))
+
+    def validate_quick_source(self, c, job_id, source_prediction_id=None):
+        """Validate a server-created, current quick snapshot in this short transaction.
+
+        Callers must repeat this check after asynchronous work, without holding c
+        across inference/network awaits. Deleted sources are 404; known expiry 410.
+        """
+        job = c.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
+        if not job:
+            raise DomainError('NOT_FOUND', 'Không tìm thấy công việc.', 404)
+        run = c.execute('SELECT * FROM runs WHERE id=?', (job['run_id'],)).fetchone()
+        dataset = self.require_dataset(c, run['dataset_id'])
+        unsupported = (not dataset['temporary'] or c.execute(
+            'SELECT 1 FROM sensitivity_experiments WHERE temporary_dataset_id=?', (dataset['id'],)
+        ).fetchone())
+        rows = c.execute('SELECT id FROM items WHERE dataset_id=?', (dataset['id'],)).fetchall()
+        run_count = c.execute('SELECT COUNT(*) FROM runs WHERE dataset_id=?', (dataset['id'],)).fetchone()[0]
+        if unsupported or len(rows) != 1 or run_count != 1:
+            raise DomainError('INVALID_EXPERIMENT_SOURCE', 'Nguồn tạm không phải kết quả phân tích một câu được hỗ trợ.', 422)
+        item = self.item(rows[0]['id'], run['id'], c)
+        if item['metadata'].get('_temporary_source') != 'quick-analysis-v1':
+            raise DomainError('INVALID_EXPERIMENT_SOURCE', 'Nguồn tạm không phải kết quả phân tích một câu được hỗ trợ.', 422)
+        if job['status'] != 'completed' or run['status'] != 'completed' or job['completed'] != 1 or job['failed'] != 0:
+            raise DomainError('JOB_NOT_READY', 'Công việc phân tích chưa hoàn thành.', 409)
+        expiry = dataset['expires_at']
+        if type(expiry) not in (int, float) or not math.isfinite(expiry):
+            raise DomainError('SOURCE_CONFLICT', 'Thời hạn kết quả nguồn không hợp lệ.', 409)
+        if expiry <= time.time():
+            raise DomainError('JOB_EXPIRED', 'Kết quả phân tích đã hết hạn. Phân tích lại câu để tiếp tục.', 410)
+        revision = c.execute('SELECT * FROM revisions WHERE id=?', (item['revision_id'],)).fetchone()
+        digest = hashlib.sha256(item['text'].encode('utf-8')).hexdigest()
+        if item['stale'] or revision['text_hash'] != digest:
+            raise DomainError('REVISION_CONFLICT', 'Nội dung phản hồi nguồn đã thay đổi.', 409)
+        prediction = item['prediction']
+        if not prediction or (source_prediction_id is not None and prediction['id'] != source_prediction_id):
+            raise DomainError('SOURCE_CONFLICT', 'Dự đoán nguồn không khớp với kết quả hiện tại. Tải lại để tiếp tục.', 409)
+        from services.sensitivity import _valid_pair_prediction
+        profile = profile_for(dataset['profile'])
+        identity = {k: run[k] for k in ('schema_id', 'model_id', 'model_version')}
+        valid = (dataset['schema_id'] == profile['schema_id'] == run['schema_id']
+                 and prediction.get('item_id') == item['id']
+                 and prediction.get('revision_id') == item['revision_id']
+                 and prediction.get('run_id') == run['id']
+                 and isinstance(prediction.get('warnings'), list)
+                 and type(prediction.get('token_count_before_truncation')) is int
+                 and prediction['token_count_before_truncation'] >= 0
+                 and _valid_pair_prediction(prediction, identity, profile, expected_item=item))
+        if valid:
+            valid = all(prediction[task]['label_id'] == profile[task][max(
+                range(len(prediction[task]['scores'])), key=prediction[task]['scores'].__getitem__
+            )]['id'] for task in ('sentiment', 'topic'))
+        if not valid:
+            raise DomainError('INVALID_PREDICTION', 'Kết quả phân tích nguồn không đủ dữ liệu hợp lệ.', 409)
+        return {'job': dict(job), 'run': dict(run), 'dataset': dict(dataset), 'item': item,
+                'source_expires_at': float(expiry), 'text_sha256': digest}
+
     def delete_dataset(self, dataset_id):
         with self.tx() as c:
             self.require_dataset(c, dataset_id)
             self._require_not_sensitivity_dataset(c, dataset_id)
-            # Remove linked temporary experiment datasets first so source deletion never orphans temp data.
-            exp_rows = c.execute(
-                'SELECT temporary_dataset_id, job_id FROM sensitivity_experiments WHERE source_dataset_id=?',
-                (dataset_id,),
-            ).fetchall()
-            for exp in exp_rows:
-                temp_ds_id = exp['temporary_dataset_id']
-                c.execute(
-                    'DELETE FROM idempotency WHERE result_id=? OR result_id=? OR result_id IN (SELECT id FROM runs WHERE dataset_id=?)',
-                    (exp['job_id'], temp_ds_id, temp_ds_id),
-                )
-                c.execute('DELETE FROM datasets WHERE id=?', (temp_ds_id,))
+            self._delete_linked_experiment_datasets(c, dataset_id)
             # Cascades revoke all job leases and remove every owned snapshot atomically.
             c.execute('DELETE FROM idempotency WHERE result_id=? OR result_id IN (SELECT id FROM runs WHERE dataset_id=?)', (dataset_id, dataset_id))
             c.execute('DELETE FROM datasets WHERE id=?', (dataset_id,))
@@ -505,6 +572,8 @@ class Store:
             exp = c.execute('SELECT * FROM sensitivity_experiments WHERE job_id=?', (job_id,)).fetchone()
             if exp:
                 context = json.loads(exp['context_json'])
+                if context.get('source_kind') == 'quick':
+                    self.validate_quick_source(c, context['source_job_id'], context['source']['prediction_id'])
                 pred_count = c.execute('SELECT COUNT(*) FROM predictions WHERE run_id=?', (run['id'],)).fetchone()[0]
                 if pred_count >= 2:
                     raise DomainError('JOB_NOT_RETRYABLE', 'Thử nghiệm đã có đủ hai kết quả.', 409)
@@ -885,6 +954,9 @@ class Store:
 
         context = json.loads(row['context_json'])
         source = context['source']
+        quick_source = None
+        if context.get('source_kind') == 'quick':
+            quick_source = self.validate_quick_source(c, context['source_job_id'], source['prediction_id'])
         sel = context['selection']
         execution = context['execution']
         attempt = context.get('attempt') or {}
@@ -909,11 +981,18 @@ class Store:
         else:
             active_model_changed = False
 
-        expires_at = (
-            datetime.fromtimestamp(float(row['temp_expires_at']), timezone.utc).isoformat().replace('+00:00', 'Z')
-            if row['temp_expires_at'] is not None
-            else None
-        )
+        expiry = row['temp_expires_at']
+        if quick_source is not None:
+            source_expiry = quick_source['source_expires_at']
+            expiry = min(expiry, source_expiry) if expiry is not None else source_expiry
+        expires_at = None
+        if expiry is not None:
+            # ISO timestamps have microsecond precision. Truncate fractional units
+            # so serialization never rounds the advertised lifetime above source TTL.
+            seconds = math.floor(float(expiry))
+            micros = int((float(expiry) - seconds) * 1_000_000)
+            expires_at = datetime.fromtimestamp(seconds, timezone.utc).replace(
+                microsecond=micros).isoformat().replace('+00:00', 'Z')
 
         status = row['status']
         attempt_error_code = attempt.get('error_code')
@@ -927,6 +1006,7 @@ class Store:
                 'INVALID_PAIR_RESULT': 'Kết quả suy luận của cặp văn bản không hợp lệ.',
                 'INFERENCE_FAILED': 'Không thể chạy suy luận trên model hiện tại.',
                 'JOB_INTERRUPTED': 'Tiến trình suy luận bị gián đoạn trước khi hoàn tất.',
+                'SOURCE_CONTEXT_CHANGED': 'Kết quả phân tích nguồn đã thay đổi. Phân tích lại câu để tiếp tục.',
             }
             error = {
                 'code': attempt_error_code,
@@ -1021,7 +1101,7 @@ class Store:
             if prior:
                 return self._build_sensitivity_response(c, prior, execution_resolver=execution_resolver)
 
-            # 3. Source item must belong to a durable dataset.
+            # 3. Durable items and explicitly marked quick sources are supported.
             row = c.execute(
                 'SELECT i.id, i.dataset_id, i.current_revision_id, d.temporary, d.profile, d.schema_id '
                 'FROM items i JOIN datasets d ON d.id=i.dataset_id WHERE i.id=?',
@@ -1029,8 +1109,10 @@ class Store:
             ).fetchone()
             if not row:
                 raise DomainError('NOT_FOUND', 'Không tìm thấy phản hồi.', 404)
-            if row['temporary']:
-                raise DomainError('INVALID_EXPERIMENT_SOURCE', 'Chỉ tạo thử nghiệm từ phản hồi trong bộ dữ liệu bền.', 422)
+            if row['temporary'] and c.execute(
+                'SELECT 1 FROM sensitivity_experiments WHERE temporary_dataset_id=?', (row['dataset_id'],)
+            ).fetchone():
+                raise DomainError('INVALID_EXPERIMENT_SOURCE', 'Không thể lồng thử nghiệm độ nhạy.', 422)
 
             # 4. Validate optional run_id and resolve the viewed item.
             if selected_run_id:
@@ -1041,6 +1123,14 @@ class Store:
             else:
                 resolved_run_id = self.latest_run_id(row['dataset_id'], c)
             view_item = self.item(item_id, selected_run_id, c)
+            quick_source = None
+            if row['temporary']:
+                source_job = c.execute('SELECT id FROM jobs WHERE run_id=?', (resolved_run_id,)).fetchone()
+                if not source_job:
+                    raise DomainError('INVALID_EXPERIMENT_SOURCE', 'Nguồn tạm chưa có kết quả phân tích một câu.', 422)
+                quick_source = self.validate_quick_source(c, source_job['id'], body.get('source_prediction_id'))
+                if not body.get('source_prediction_id'):
+                    raise DomainError('SOURCE_CONTEXT_CHANGED', 'Thiếu dự đoán nguồn của kết quả phân tích một câu.', 409)
 
             # 5. Check source revision currency and raw UTF-8 text hash.
             actual_text_sha256 = hashlib.sha256(view_item['text'].encode('utf-8')).hexdigest()
@@ -1162,6 +1252,8 @@ class Store:
 
             context_obj = {
                 'schema_version': 1,
+                'source_kind': 'quick' if quick_source else 'dataset',
+                'source_job_id': quick_source['job']['id'] if quick_source else None,
                 'source': {
                     'item_id': item_id,
                     'revision_id': view_item['revision_id'],

@@ -161,6 +161,7 @@ class Worker:
                 error_code = 'INVALID_PAIR_RESULT'
 
         with self.store.tx() as c:
+            self.store.cleanup_expired_in_tx(c)
             live = self.valid_lease(c, job)
             if not live:
                 return True
@@ -171,6 +172,13 @@ class Worker:
                 self.finish(c, job, 'cancelled')
                 return True
             context_now = json.loads(exp_now['context_json'])
+            if context_now.get('source_kind') == 'quick':
+                from services.storage.db import DomainError
+                try:
+                    self.store.validate_quick_source(c, context_now['source_job_id'], context_now['source']['prediction_id'])
+                except DomainError:
+                    self._fail_sensitivity_tx(c, job, run, context_now, 'SOURCE_CONTEXT_CHANGED')
+                    return True
             if error_code is not None:
                 self._fail_sensitivity_tx(c, job, run, context_now, error_code)
                 return True

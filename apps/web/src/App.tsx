@@ -6,12 +6,19 @@ import { date } from "./types";
 import { Badge, Empty, ErrorNotice, Loading, Modal } from "./ui";
 import { ImportDataset } from "./ImportDataset";
 import { Workspace } from "./Workspace";
-import { QuickAnalysis } from "./QuickAnalysis";
+import { SentenceDemo } from "./SentenceDemo";
+
+const resolveRoute = () => {
+  const hash = location.hash;
+  if (!hash || hash === "#") return "/demo";
+  if (hash === "#/datasets") return "/";
+  return hash.slice(1);
+};
+
 export type Notify = (text: string, error?: boolean) => void;
 export default function App() {
   const client = useQueryClient();
-  const [route, setRoute] = useState(location.hash.slice(1) || "/");
-  const [quick, setQuick] = useState(false);
+  const [route, setRoute] = useState(resolveRoute);
   const [message, setMessage] = useState<{
     text: string;
     error: boolean;
@@ -26,7 +33,7 @@ export default function App() {
     queryFn: () => api<Dataset[]>("/datasets"),
   });
   useEffect(() => {
-    const update = () => setRoute(location.hash.slice(1) || "/");
+    const update = () => setRoute(resolveRoute());
     addEventListener("hashchange", update);
     return () => removeEventListener("hashchange", update);
   }, []);
@@ -87,6 +94,28 @@ export default function App() {
       setBusy(false);
     }
   }
+  if (route === "/demo") {
+    return (
+      <>
+        <SentenceDemo
+          profiles={profiles.data}
+          datasets={datasets.data}
+          notify={notify}
+        />
+        {message && (
+          <div
+            id="toast"
+            role="status"
+            aria-live="polite"
+            className={`toast ${message.error ? "error" : ""}`}
+          >
+            {message.text}
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       <a
@@ -122,7 +151,13 @@ export default function App() {
             >
               <span aria-hidden="true">▤</span>Bộ phản hồi
             </a>
-            <button onClick={() => setQuick(true)}>
+            <a
+              className={route === "/demo" ? "selected" : ""}
+              href="#/demo"
+            >
+              <span aria-hidden="true">⚡</span>Phân tích một câu
+            </a>
+            <button onClick={() => navigate("/demo")}>
               <span aria-hidden="true">⌁</span>Thử một câu
             </button>
             <a
@@ -235,9 +270,12 @@ export default function App() {
                       >
                         Tạo bộ phản hồi
                       </button>
-                      <button onClick={() => setQuick(true)}>
+                      <button onClick={() => navigate("/demo")}>
                         Thử một câu
                       </button>
+                      <a className="button" href="#/demo">
+                        Demo phân tích câu
+                      </a>
                     </div>
                     <p className="muted small">
                       Bạn vẫn có thể nhập và rà soát thủ công khi chưa cài
@@ -365,14 +403,6 @@ export default function App() {
           </button>
         </div>
       )}
-      {quick && profiles.data && (
-        <QuickAnalysis
-          profiles={profiles.data}
-          datasets={datasets.data ?? []}
-          onClose={() => setQuick(false)}
-          notify={notify}
-        />
-      )}{" "}
       {manage && (
         <Modal
           title={
@@ -873,6 +903,21 @@ function Help({ profiles }: { profiles: Profile[] }) {
         ))}
       </section>
       <section className="section prose">
+        <h2>Diễn giải kết quả qua dịch vụ ngoài</h2>
+        <p>Phân loại chạy trên máy; câu và kết quả được gửi tới dịch vụ diễn giải.
+          Dịch vụ tùy chọn dùng gateway tương thích OpenAI Chat Completions (ví dụ 9router).
+          Thiếu cấu hình vẫn dùng được classifier và quản lý dữ liệu.</p>
+        <p>Đặt bốn biến environment dưới đây trong PowerShell trước khi khởi động API.
+          Thay các placeholder bằng URL, key và model id được gateway của bạn cung cấp.
+          URL có hoặc không có đuôi /v1 đều được hỗ trợ; ứng dụng nối /chat/completions.
+          Không đặt key trong biến VITE_* hay frontend.</p>
+        <pre>{`$env:FEEDBACK_EXPLANATION_BASE_URL = '<GATEWAY_BASE_URL>'
+$env:FEEDBACK_EXPLANATION_API_KEY = '<API_KEY>'
+$env:FEEDBACK_EXPLANATION_MODEL = '<MODEL_ID_FROM_GATEWAY>'
+$env:FEEDBACK_EXPLANATION_TIMEOUT_SECONDS = '20'`}</pre>
+        <p>Ứng dụng đọc environment lúc tạo API/provider, không tự nạp file .env.
+          Sau khi đổi cấu hình, khởi động lại API từ shell có các biến mới, tải lại trang
+          và bấm “Thử lại diễn giải”. Nút này giữ kết quả phân loại và không chạy classifier lại.</p>
         <h2>Chuẩn bị CSV</h2>
         <p>
           Dùng UTF-8 (có hoặc không có BOM), tối đa 5 MB và 500 phản hồi. Mỗi

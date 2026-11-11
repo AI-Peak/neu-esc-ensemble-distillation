@@ -11,7 +11,7 @@ def test_missing_model_is_honest_and_mobile_import_persists(browser, missing_ser
     page = context.new_page()
     failures = []
     page.on("pageerror", lambda error: failures.append(str(error)))
-    page.goto(missing_server.url)
+    page.goto(missing_server.url + "/#/")
     page.get_by_test_id("create-dataset").click()
     page.get_by_test_id("dataset-name").fill("Kiểm tra tiếng Việt trên điện thoại")
     page.get_by_role("tab", name="Dán văn bản", exact=True).click()
@@ -39,7 +39,7 @@ def test_csv_analyze_filter_review_export_restart(browser, app_server, screensho
     page = context.new_page()
     failures = []
     page.on("pageerror", lambda error: failures.append(str(error)))
-    page.goto(app_server.url)
+    page.goto(app_server.url + "/#/")
     page.get_by_test_id("create-dataset").click()
     page.get_by_test_id("dataset-name").fill("E2E · Phản hồi tháng 11")
     content = 'text;ghi_chu\r\n"Phòng học nóng,\nmáy chiếu bị mờ.";"=1+1"\r\n"Giảng viên giải thích rõ ràng.";"Góp ý thật"\r\n"Cần thêm câu lạc bộ.";"Giữ metadata"\r\n'
@@ -133,18 +133,19 @@ def test_mobile_review_text_revisions_and_quick_analysis_profiles(browser, app_s
     assert page.get_by_role("dialog").evaluate("element => element.scrollWidth <= element.clientWidth + 1")
     page.get_by_role("button", name="Đóng chi tiết", exact=True).click()
     page.get_by_role("button", name="Thử một câu", exact=True).first.click()
-    dialog = page.get_by_role("dialog", name="Thử một câu", exact=True)
-    expect(dialog).to_be_visible()
-    dialog.get_by_role("combobox").first.select_option("uit")
-    dialog.get_by_test_id("quick-input").fill("Phòng học có thiết bị tốt.")
-    dialog.get_by_test_id("quick-analyze").click()
-    expect(dialog.get_by_role("heading", name="Kết quả AI", exact=True)).to_be_visible(timeout=20000)
-    destination = dialog.get_by_role("combobox", name="Lưu câu vào bộ phản hồi cùng hệ nhãn", exact=True)
+    expect(page).to_have_url(re.compile(r"#/demo$"))
+    page.locator("#schema-select").select_option("uit")
+    page.locator("#sentence").fill("Phòng học có thiết bị tốt.")
+    page.locator("#analyze").click()
+    expect(page.locator("#result-content")).to_be_visible(timeout=20000)
+    expect(page.locator("#scores .score-row")).to_have_count(3)
+    expect(page.locator("#topic-scores .score-row")).to_have_count(4)
+    destination = page.get_by_role("combobox", name="Lưu câu vào bộ phản hồi cùng hệ nhãn", exact=True)
     expect(destination).to_contain_text("UIT mobile")
     expect(destination).not_to_contain_text("NEU mobile")
     destination.select_option(uit["id"])
-    dialog.get_by_role("button", name="Thêm câu vào bộ", exact=True).click()
-    expect(dialog.get_by_role("button", name="Đã thêm câu", exact=True)).to_be_visible()
+    page.get_by_role("button", name="Thêm câu vào bộ", exact=True).click()
+    expect(page.get_by_role("button", name="Đã thêm câu", exact=True)).to_be_visible()
     assert len(client.get("/datasets").json()) == 2  # Quick temp dataset never in durable list.
     assert client.get(f"/datasets/{uit['id']}").json()["item_count"] == 2
     assert not failures
@@ -155,7 +156,7 @@ def test_mobile_review_text_revisions_and_quick_analysis_profiles(browser, app_s
 def test_laptop_keyboard_focus_and_text_contrast(browser, missing_server, screenshot_dir):
     context = browser.new_context(viewport={"width": 1280, "height": 800})
     page = context.new_page()
-    page.goto(missing_server.url)
+    page.goto(missing_server.url + "/#/")
     expect(page.get_by_test_id("create-dataset")).to_be_visible()
     page.keyboard.press("Tab")
     expect(page.get_by_role("link", name="Đến nội dung chính", exact=True)).to_be_focused()
@@ -163,9 +164,11 @@ def test_laptop_keyboard_focus_and_text_contrast(browser, missing_server, screen
     expect(page.locator("main")).to_be_focused()
     assert "#main" not in page.url  # Skip link must not change the application's hash route.
     page.get_by_role("button", name="Thử một câu", exact=True).first.click()
-    expect(page.get_by_role("dialog", name="Thử một câu", exact=True)).to_be_visible()
-    page.keyboard.press("Escape")
-    expect(page.get_by_role("dialog")).not_to_be_visible()
+    expect(page).to_have_url(re.compile(r"#/demo$"))
+    expect(page.locator("#sentence")).to_be_visible()
+    page.go_back()
+    expect(page.get_by_test_id("create-dataset")).to_be_visible()
+    page.get_by_role("button", name="Thử một câu", exact=True).first.focus()
     expect(page.get_by_role("button", name="Thử một câu", exact=True).first).to_be_focused()
     ratios = page.evaluate("""() => {
         const root = getComputedStyle(document.documentElement);

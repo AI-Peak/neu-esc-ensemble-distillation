@@ -116,7 +116,11 @@ class SensitivityExperimentInput(Body):
     selection: SensitivitySelectionInput
 
 
-def create_app(runtime_dir=None, registry=None, start_worker=False):
+class ExplanationInput(Body):
+    source_prediction_id: StrictStr
+
+
+def create_app(runtime_dir=None, registry=None, start_worker=False, explanation_service=None, explanation_provider=None):
     load_policy()
     store = Store(runtime_dir)
     if registry is None:
@@ -126,6 +130,10 @@ def create_app(runtime_dir=None, registry=None, start_worker=False):
     if start_worker:
         from services.worker import Worker
         worker = Worker(store.runtime, registry)
+
+    if explanation_service is None:
+        from services.explanation import ExplanationService
+        explanation_service = ExplanationService(provider=explanation_provider)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -141,6 +149,7 @@ def create_app(runtime_dir=None, registry=None, start_worker=False):
 
     app = FastAPI(title='Feedback Workspace',version='1.0.0',lifespan=lifespan)
     app.state.store, app.state.registry = store, registry
+    app.state.explanation_service = explanation_service
 
     @app.exception_handler(DomainError)
     async def domain_error(request, exc):
@@ -225,12 +234,28 @@ def create_app(runtime_dir=None, registry=None, start_worker=False):
         check_text(body.text); profile_for(body.profile)
         status = registry.status(body.profile)
         if not status.get('available'): raise DomainError('MODEL_UNAVAILABLE',status.get('reason') or 'Model chưa sẵn sàng.',409)
-        dataset = store.create_dataset(dict(name='Thử một câu',profile=body.profile,items=[dict(text=body.text)]),temporary=True)
+        dataset = store.create_dataset(dict(name='Thử một câu',profile=body.profile,items=[dict(text=body.text, metadata={'_temporary_source': 'quick-analysis-v1'})]),temporary=True)
         try:
             run = store.create_run(dataset['id'],status)
         except BaseException:
             store.delete_dataset(dataset['id']); raise
         return dict(job_id=run['job_id'],run_id=run['id'])
+
+    @app.post(prefix+'/quick-analysis/{job_id}/explanation')
+    async def quick_explanation(job_id: str, body: ExplanationInput, request: Request):
+        origin = request.headers.get('origin')
+        if origin:
+            host = request.headers.get('host')
+            from urllib.parse import urlparse
+            parsed_origin = urlparse(origin)
+            origin_netloc = (parsed_origin.netloc or '').lower()
+            host_netloc = (host or '').lower()
+            allowed = (origin_netloc == host_netloc) or (
+                origin_netloc.replace('localhost', '127.0.0.1') == host_netloc.replace('localhost', '127.0.0.1')
+            )
+            if not allowed:
+                raise DomainError('FORBIDDEN_ORIGIN', 'Origin không được phép.', 403)
+        return await explanation_service.explain_quick_job(store, job_id, body.source_prediction_id)
 
     @app.get(prefix+'/jobs/{job_id}')
     def job(job_id:str): return store.job(job_id)
@@ -248,6 +273,7 @@ def create_app(runtime_dir=None, registry=None, start_worker=False):
     def query_filters(request):
         values = dict(request.query_params)
         values.pop('page',None); values.pop('page_size',None)
+        values.pop('scope_token', None); values.pop('expected_run_id', None)
         try: return Filters.model_validate(values).model_dump(exclude_none=True)
         except Exception: raise DomainError('INVALID_FILTER','Bộ lọc không hợp lệ.',422)
 
@@ -255,10 +281,15 @@ def create_app(runtime_dir=None, registry=None, start_worker=False):
     def items(dataset_id:str,request:Request,page:int=1,page_size:int=25):
         if page < 1 or page_size < 1 or page_size > 500: raise DomainError('INVALID_PAGINATION','Trang không hợp lệ.',422)
         filters = query_filters(request)
-        return store.items_page(dataset_id,filters,page,page_size)
+        from services.demo_scope import scoped_response
+        return scoped_response(store, dataset_id, filters, page=page, page_size=page_size,
+                               expected_token=request.query_params.get('scope_token'),
+                               expected_run_id=request.query_params.get('expected_run_id'))
 
     @app.get(prefix+'/datasets/{dataset_id}/summary')
-    def summary(dataset_id:str,request:Request): return store.summary(dataset_id,query_filters(request))
+    def summary(dataset_id:str,request:Request):
+        from services.demo_scope import scoped_response
+        return scoped_response(store, dataset_id, query_filters(request))
 
     @app.get(prefix+'/items/{item_id}')
     def item(item_id:str,run_id:str|None=None): return store.item(item_id,run_id)

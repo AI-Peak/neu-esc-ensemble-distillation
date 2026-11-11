@@ -15,10 +15,15 @@ ROOT = Path(__file__).resolve().parents[2]
 class TestServer:
     __test__ = False
 
-    def __init__(self, runtime, without_model=False, varying_predictions=False):
+    def __init__(self, runtime, without_model=False, varying_predictions=False, mock_explanation=False, uit_available=False, fail_first_quick=False):
         self.runtime = runtime
         self.without_model = without_model
         self.varying_predictions = varying_predictions
+        self.mock_explanation = mock_explanation
+        self.uit_available = uit_available
+        self.fail_first_quick = fail_first_quick
+        self.control_dir = runtime.parent / (runtime.name + '-controls')
+        self.control_dir.mkdir(parents=True, exist_ok=True)
         with socket.socket() as probe:
             probe.bind(("127.0.0.1", 0))
             self.port = probe.getsockname()[1]
@@ -33,6 +38,13 @@ class TestServer:
             args.append("--without-model")
         if self.varying_predictions:
             args.append("--varying-predictions")
+        if self.mock_explanation:
+            args.append("--mock-explanation")
+            args.extend(["--provider-control", str(self.control_dir)])
+        if self.uit_available:
+            args.append("--uit-available")
+        if self.fail_first_quick:
+            args.append("--fail-first-quick")
         with self.log_path.open("ab") as log:
             self.process = subprocess.Popen(args, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
         for _ in range(200):
@@ -99,7 +111,14 @@ def varying_server(tmp_path):
 
 
 @pytest.fixture
-def screenshot_dir():
-    path = ROOT / "test-results/screenshots"
+def demo_server(tmp_path):
+    server = TestServer(tmp_path / "demo-runtime", mock_explanation=True).start()
+    yield server
+    server.stop()
+
+
+@pytest.fixture
+def screenshot_dir(tmp_path):
+    path = Path(os.environ.get("SENTENCE_DEMO_SCREENSHOT_DIR", str(tmp_path / "screenshots")))
     path.mkdir(parents=True, exist_ok=True)
     return path

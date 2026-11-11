@@ -267,20 +267,21 @@ def test_source_context_run_scope_nullable_prediction_and_revisions(env):
     assert no_pred_json["execution"]["source_model_changed"] is False
     _drain(worker)
 
-    # Quick-analysis temp item is rejected as INVALID_EXPERIMENT_SOURCE.
+    # Genuine completed quick source is supported and retains its exact run identity.
     quick = client.post("/api/v1/quick-analysis", json={"profile": "neu", "text": "Câu tạm để thử"}).json()
     _drain(worker)
     quick_ds_id = store.run(quick["run_id"])["dataset_id"]
     quick_item_id = _items(client, quick_ds_id)[0]["id"]
     quick_item = client.get(f"/api/v1/items/{quick_item_id}").json()
-    assert (
-        client.post(
-            f"/api/v1/items/{quick_item_id}/sensitivity-experiments",
-            json=_build_payload(quick_item, "tạm"),
-            headers={"Idempotency-Key": "src-quick-temp"},
-        ).json()["code"]
-        == "INVALID_EXPERIMENT_SOURCE"
+    quick_exp = client.post(
+        f"/api/v1/items/{quick_item_id}/sensitivity-experiments",
+        json=_build_payload(quick_item, "tạm", run_id=quick["run_id"]),
+        headers={"Idempotency-Key": "src-quick-temp"},
     )
+    assert quick_exp.status_code == 202, quick_exp.text
+    assert quick_exp.json()["source"]["resolved_run_id"] == quick["run_id"]
+    assert quick_exp.json()["source"]["prediction_id"] == quick_item["prediction"]["id"]
+    _drain(worker)
 
     # Sensitivity temp item (baseline_item_id) is also rejected as INVALID_EXPERIMENT_SOURCE.
     with store.connect() as db:
@@ -379,7 +380,7 @@ def test_source_context_run_scope_nullable_prediction_and_revisions(env):
     assert stale_resp.status_code == 409 and stale_resp.json()["code"] == "REVISION_CONFLICT"
 
     # Failed calls above did not leak extra rate entries beyond the 2 valid creations.
-    assert _table_counts(store)["sensitivity_rate_limits"] == 2
+    assert _table_counts(store)["sensitivity_rate_limits"] == 3  # Includes the supported quick experiment.
 
 
 def test_concurrent_idempotent_post_and_atomic_quotas(tmp_path):

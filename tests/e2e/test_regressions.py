@@ -149,7 +149,7 @@ def test_r2_two_context_drafts_require_deliberate_resolution(browser, app_server
 def test_r7_manual_delimiter_preview_import_and_auto_detect(browser, app_server, delimiter):
     with browser.new_context() as context, httpx.Client(base_url=app_server.url + "/api/v1") as client:
         page = context.new_page()
-        page.goto(app_server.url)
+        page.goto(app_server.url + "/#/")
         page.get_by_test_id("create-dataset").click()
         page.get_by_test_id("dataset-name").fill("Nhập dấu phân cách")
         content = f"text{delimiter}meta\r\nPhòng học có thiết bị tốt.{delimiter}Đào tạo\r\n"

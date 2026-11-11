@@ -42,6 +42,8 @@ export type Dataset = {
   latest_run_id: string | null;
 };
 export type Prediction = {
+  item_id?: string;
+  revision_id?: string;
   id?: string;
   run_id?: string;
   created_at?: string;
@@ -161,6 +163,9 @@ export type Attention = {
   topics: AttentionTopic[];
 };
 export type ItemPage = {
+  scope_token?: string;
+  dataset_id?: string;
+  label_source?: string;
   items: Item[];
   total: number;
   page: number;
@@ -197,6 +202,8 @@ export const defaultFilters: Filters = {
   page_size: 25,
 };
 export type Summary = {
+  scope_token?: string;
+  dataset_id?: string;
   total: number;
   processed: number;
   reviewed: number;
@@ -344,6 +351,24 @@ export const date = (v: string) =>
     hour: "2-digit",
     minute: "2-digit",
   });
+export type ExplanationRequest = {
+  source_prediction_id: string;
+};
+export type ExplanationResponse = {
+  status: "completed";
+  job_id: string;
+  run_id: string;
+  item_id: string;
+  revision_id: string;
+  source_prediction_id: string;
+  profile_id: string;
+  schema_id: string;
+  classifier_model_id: string;
+  classifier_model_version: string;
+  prompt_version: string;
+  reading: string;
+  caution: string;
+};
 export const reviewName = (item: Item) => {
   const n = Object.values(item.reviews).filter(
     (r) => r && r.status !== "unreviewed",
