@@ -48,6 +48,8 @@ Khởi động dùng `.venv\Scripts\python.exe`, bind loopback, chạy một API
 
 ## Luồng sử dụng
 
+Trang `#/demo`: nhập câu và bấm **Phân tích**; mục **Câu vừa phân tích**, mạng từ và dẫn chứng tự dùng đúng câu mới nhất. Câu sau thay câu trước, không cộng dồn. Trang này không có bộ chọn dataset hay “Lưu câu vào bộ phản hồi”. Muốn nhập/duyệt/xuất nhiều câu, dùng workspace `#/` theo các bước dưới đây.
+
 1. Tạo bộ phản hồi, chọn **Thảo luận sinh viên** (NEU) hoặc **Đánh giá đào tạo** (UIT). Profile cố định; sao chép sang bộ mới để đổi loại, chỉ sao chép văn bản và metadata.
 2. Dán từng dòng hoặc nhập CSV UTF-8 có/không BOM. Xem preview, chọn cột văn bản. CSV hỗ trợ dấu phẩy/chấm phẩy/tab và newline đã quote. Dòng trùng được giữ. Dòng lỗi cần sửa hoặc chủ động bỏ qua; tối đa 500 phản hồi, 5 MB/file, 5.000 ký tự/văn bản.
 3. Cột nhãn chỉ thành nhãn tham chiếu sau khi chọn cột, map giá trị theo schema và xác nhận nguồn. Chúng không thay dự đoán AI và không làm đầu vào model.
@@ -59,7 +61,7 @@ Khởi động dùng `.venv\Scripts\python.exe`, bind loopback, chạy một API
 
 ## Lưu trữ và backup
 
-`runtime/` được gitignore; chứa `workspace.sqlite3`, file exports, models và log vận hành. Migrations có version trong `services/storage/` (hiện tại **schema v2**, bổ sung `jobs.priority`, `sensitivity_experiments` và `sensitivity_rate_limits`). Không tự sửa schema SQLite bằng tay. Xóa bộ phản hồi chỉ xóa dữ liệu/file thuộc bộ đó (kể cả dataset tạm của thử nghiệm độ nhạy gắn với bộ nguồn); không xóa weights và reports dùng chung.
+`runtime/` được gitignore; chứa `workspace.sqlite3`, file exports, models và log vận hành. Migrations có version trong `services/storage/` (hiện tại **schema v4**: giữ v1/v2/v3 và thêm provenance/checkpoint/deadline/expiry attribution, vector coalition evidence và snapshot jobs mạng từ). Không tự sửa schema SQLite bằng tay. Xóa bộ phản hồi chỉ xóa dữ liệu/file thuộc bộ đó (kể cả dataset tạm của thử nghiệm độ nhạy gắn với bộ nguồn); không xóa weights và reports dùng chung.
 
 Sao lưu bằng công cụ dưới đây dùng SQLite online backup để giữ tính nhất quán. Bản sao loại dữ liệu thử nhanh có TTL; không chứa weights. Lưu/copy model bundle riêng nếu cần chuyển máy. Không sao chép riêng file `.sqlite3` khi đang chạy WAL.
 
@@ -82,3 +84,22 @@ npm.cmd run dev
 ```
 
 Vite proxy `/api` tới API ở cổng 8765. Bản build do FastAPI phục vụ cùng origin; không cần CORS mở. Test doubles nằm riêng trong tests, chỉ kiểm hành vi phần mềm. Chúng không chứng minh inference của student ED đã fine-tune. Xem `VALIDATION_REPORT.md` để biết chính xác các lệnh và giới hạn đã kiểm trong phiên triển khai.
+
+## Attribution và kiểm thử bản sửa 12/11/2026
+
+Phân tích từ ngữ chạy local bằng ước lượng permutation Shapley K=8, không cần API key hay 9router. Prediction hiển thị riêng; attribution lỗi/unsupported vẫn giữ prediction. Câu vượt128 token hoặc mapping chưa chắc chắn sẽ có thông báo ngắn. Nhãn Neutral/Toxic được giải thích theo điểm nhãn riêng. Kết quả cũ thiếu provenance phải phân tích lại; không tự gán model hiện hành cho prediction cũ. Xem `WEBAPP_ATTRIBUTION_CONTRACT.md` và `CODEX_WEBAPP_FIX_REPORT_2026-11-12.md`.
+
+Donut trong “Câu vừa phân tích” thể hiện tỷ trọng độ lớn contribution dương/âm từ cùng attribution đã xác thực với bảng, tính trên toàn bộ nhóm từ. Không phải số phản hồi, tỷ lệ từ hoặc xác suất cảm xúc; không click để lọc evidence. Bảng vẫn giữ Tổng đóng góp có dấu theo điểm phần trăm. Chi tiết và bằng chứng checkpoint: `CONTRIBUTION_DONUT_FIX_REPORT_2026-11-12.md`.
+
+`python -m services.api.main` **không khởi động server**. Script start-local chạy cả uvicorn và worker, kiểm port/PID identity, không tự dừng process khác đang chiếm port. Để chạy nghiệm thu trong runtime riêng đã copy bundle và kiểm SHA256 (không dùng live database):
+
+```powershell
+npm --prefix apps/web run build
+$env:HF_HUB_OFFLINE = '1'
+$env:TRANSFORMERS_OFFLINE = '1'
+.\scripts\start-local.ps1 -Port 18765 -RuntimeDirectory 'F:\DPL_NEU-ESC\test-results\codex-fix-20261112\preview-runtime'
+Invoke-RestMethod http://127.0.0.1:18765/api/v1/health
+.\scripts\stop-local.ps1 -RuntimeDirectory 'F:\DPL_NEU-ESC\test-results\codex-fix-20261112\preview-runtime'
+```
+
+URL18765 là phiên kiểm chứng Codex, không phải cổng mặc định cho mọi người. Health phải có worker.alive=true; kiểm profile NEU available và UIT unavailable nếu chưa có checkpoint. Không chạy setup/download/import lại model chỉ để test khi bundle local đủ. Tests đặt FEEDBACK_RUNTIME trước import main; real-model tests bắt buộc FEEDBACK_REAL_BUNDLE_TEMPLATE chỉ đọc để copy, chạy offline. API không nạp encoder; worker CPU FP32 eval cap4 threads, một encoder resident, microbatch8 nhường prediction giữa batches.

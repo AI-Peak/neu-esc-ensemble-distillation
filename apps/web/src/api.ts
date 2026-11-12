@@ -1,8 +1,10 @@
 import type {
+  AttributionResponse,
+  AttributionTarget,
   CreateSensitivityExperimentBody,
-  ExplanationResponse,
   Filters,
   Job,
+  NetworkResponse,
   SensitivityExperiment,
 } from "./types";
 export class ApiError extends Error {
@@ -67,17 +69,56 @@ export async function api<T>(
 }
 export const post = <T>(path: string, body: unknown, options: RequestInit = {}) =>
   api<T>(path, { method: "POST", body: JSON.stringify(body), ...options });
-export function getExplanation(
+export function createAttribution(
   jobId: string,
   sourcePredictionId: string,
+  target: AttributionTarget,
+  idempotencyKey?: string,
   signal?: AbortSignal,
 ) {
-  return post<ExplanationResponse>(
-    `/quick-analysis/${jobId}/explanation`,
-    { source_prediction_id: sourcePredictionId },
-    { signal },
+  return post<AttributionResponse>(
+    `/quick-analysis/${jobId}/attribution`,
+    { source_prediction_id: sourcePredictionId, target },
+    {
+      signal,
+      headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {},
+    },
   );
 }
+
+export function getAttribution(attributionId: string, signal?: AbortSignal) {
+  return api<AttributionResponse>(`/attributions/${attributionId}`, { signal });
+}
+
+export function cancelAttribution(attributionId: string) {
+  return post<{ attribution_id: string; status: string }>(
+    `/attributions/${attributionId}/cancel`,
+    {},
+  );
+}
+
+export function getNetwork(
+  datasetId: string,
+  labelSource = "effective",
+  runId?: string | null,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({ label_source: labelSource });
+  if (runId) params.set("run_id", runId);
+  return api<NetworkResponse>(`/datasets/${datasetId}/network?${params.toString()}`, { signal });
+}
+export function getNetworkEvidence(
+  networkId: string,
+  selectionType: 'node' | 'edge' | 'community',
+  selectionId: string,
+  page = 1,
+  pageSize = 10,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({ selection_type: selectionType, selection_id: selectionId, page: String(page), page_size: String(pageSize) });
+  return api<{items: import('./types').Item[]; total: number; page: number; page_size: number; scope_token: string}>(`/networks/${encodeURIComponent(networkId)}/evidence?${params}`, {signal});
+}
+
 export function filterBody(filters: Filters, all = false) {
   const f = all
     ? {

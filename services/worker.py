@@ -9,6 +9,7 @@ import time
 from contextlib import contextmanager
 
 from services.storage.db import Store, TERMINAL, encode, now, profile_for, uid
+from services.attribution_contract import COMPUTE_SECONDS
 
 
 class Worker:
@@ -48,7 +49,10 @@ class Worker:
         with self.store.tx() as c:
             c.execute('INSERT INTO worker_status VALUES(1,?,?,?,?) ON CONFLICT(id) DO UPDATE SET owner=excluded.owner,pid=excluded.pid,heartbeat_at=excluded.heartbeat_at,expires_at=excluded.expires_at', (self.owner, os.getpid(), now(), time.time()+max(15,self.lease_seconds)))
             if job:
-                c.execute("UPDATE jobs SET heartbeat_at=?,lease_expires_at=? WHERE id=? AND attempt_id=? AND lease_owner=? AND status IN ('running','loading_model') AND lease_expires_at>?", (now(), time.time()+self.lease_seconds, job['id'], job['attempt_id'], self.owner, time.time()))
+                if 'source_job_id' in job:
+                    c.execute("UPDATE attribution_jobs SET heartbeat_at=?,lease_expires_at=? WHERE id=? AND attempt_id=? AND lease_owner=? AND status='running' AND lease_expires_at>?", (now(), time.time()+self.lease_seconds, job['id'], job['attempt_id'], self.owner, time.time()))
+                else:
+                    c.execute("UPDATE jobs SET heartbeat_at=?,lease_expires_at=? WHERE id=? AND attempt_id=? AND lease_owner=? AND status IN ('running','loading_model') AND lease_expires_at>?", (now(), time.time()+self.lease_seconds, job['id'], job['attempt_id'], self.owner, time.time()))
 
     @contextmanager
     def keepalive(self, job):
@@ -73,13 +77,31 @@ class Worker:
             c.execute("UPDATE runs SET status='loading_model' WHERE id=?", (row['run_id'],))
             return dict(c.execute('SELECT * FROM jobs WHERE id=?', (row['id'],)).fetchone())
 
+    def claim_attribution(self):
+        with self.store.tx() as c:
+            self.store.recover(c)
+            row = c.execute("SELECT * FROM attribution_jobs WHERE status='queued' OR (status='running' AND lease_owner=? AND lease_expires_at>?) ORDER BY created_at LIMIT 1", (self.owner, time.time())).fetchone()
+            if not row:
+                return None
+            if c.execute("SELECT 1 FROM attribution_jobs WHERE status='running' AND lease_owner!=? AND lease_expires_at>?", (self.owner,time.time())).fetchone():
+                return None
+            attempt = row['attempt_id'] + (1 if row['status'] == 'queued' else 0)
+            c.execute("UPDATE attribution_jobs SET status='running',attempt_id=?,lease_owner=?,lease_expires_at=?,heartbeat_at=?,updated_at=?,compute_started_at=COALESCE(compute_started_at,?),compute_deadline=COALESCE(compute_deadline,MIN(?,expires_at)) WHERE id=?", (attempt, self.owner, time.time()+self.lease_seconds, now(), now(), time.time(),time.time()+COMPUTE_SECONDS,row['id']))
+            return dict(c.execute('SELECT * FROM attribution_jobs WHERE id=?', (row['id'],)).fetchone())
+
     def valid_lease(self, c, job):
         return c.execute("SELECT * FROM jobs WHERE id=? AND attempt_id=? AND lease_owner=? AND lease_expires_at>? AND status IN ('loading_model','running')", (job['id'],job['attempt_id'],self.owner,time.time())).fetchone()
+
+    def valid_attribution_lease(self, c, attr_job):
+        return c.execute("SELECT * FROM attribution_jobs WHERE id=? AND attempt_id=? AND lease_owner=? AND lease_expires_at>? AND status='running'", (attr_job['id'], attr_job['attempt_id'], self.owner, time.time())).fetchone()
 
     def finish(self, c, job, status, error=None):
         c.execute('UPDATE jobs SET status=?,error=?,lease_owner=NULL,lease_expires_at=NULL,updated_at=? WHERE id=?', (status,error,now(),job['id']))
         c.execute('UPDATE runs SET status=? WHERE id=?', (status,job['run_id']))
         self.store.expire_quick(c,job['run_id'])
+
+    def finish_attribution(self, c, attr_job, status, error_code=None, error_message=None):
+        c.execute('UPDATE attribution_jobs SET status=?,error_code=?,error_message=?,lease_owner=NULL,lease_expires_at=NULL,updated_at=? WHERE id=?', (status, error_code, error_message, now(), attr_job['id']))
 
     @staticmethod
     def validate_prediction(prediction, request, run, profile):
@@ -196,13 +218,154 @@ class Worker:
             self.finish(c, job, 'completed')
         return True
 
+    def _run_attribution_once(self, attr_job):
+        from services.attribution_contract import METHOD, signature, check_vectors, check_parity
+        from services.attribution import (align_and_group, generate_permutations,
+            evaluate_coalition_outputs, target_value, compute_shapley_from_coalition_map)
+        from services.storage.db import DomainError
+
+        def finish(status, code, message):
+            with self.store.tx() as c:
+                if self.valid_attribution_lease(c, attr_job):
+                    self.finish_attribution(c, attr_job, status, code, message)
+            return True
+
+        try:
+            with self.store.tx() as c:
+                live = self.valid_attribution_lease(c, attr_job)
+                if not live:
+                    return True
+                if live['cancel_requested']:
+                    self.finish_attribution(c, attr_job, 'cancelled')
+                    return True
+                if live['compute_deadline'] <= time.time():
+                    self.finish_attribution(c, attr_job, 'failed', 'COMPUTE_TIMEOUT', 'Phân tích từ ngữ quá thời gian. Thử lại.')
+                    return True
+                source_info, source = self.store._attribution_source(c, attr_job['source_job_id'], attr_job['source_prediction_id'])
+                if not live['source_json'] or json.loads(live['source_json']) != source:
+                    raise ValueError('Frozen source changed')
+            profile_id = source['profile_id']
+            profile = profile_for(profile_id)
+            model, tokenizer, preprocessor, actual, manifest = self.registry.get_loaded_bundle(profile_id)
+            if actual != source['execution_identity']:
+                return finish('failed', 'MODEL_IDENTITY_CHANGED', 'Model đã đổi. Phân tích lại câu.')
+            if preprocessor is not None and preprocessor.spec.get('kind') != 'underthesea_word_tokenize':
+                return finish('unsupported', 'PROFILE_UNSUPPORTED', 'Profile chưa hỗ trợ ánh xạ từ ngữ.')
+            try:
+                alignment = align_and_group(source_info['item']['text'], tokenizer, preprocessor=preprocessor,
+                    max_length=manifest.get('preprocessing', {}).get('max_length', 128))
+            except ValueError:
+                return finish('unsupported', 'MAPPING_FAILED', 'Chưa ánh xạ chắc chắn các cụm từ trong câu này.')
+            if alignment['truncated']:
+                return finish('unsupported', 'INPUT_TRUNCATED', 'Văn bản vượt quá giới hạn token; phân tích câu ngắn hơn để xem từ ngữ.')
+            groups, full_input_ids = alignment['groups'], alignment['full_input_ids']
+            if not groups or len(groups) > 24:
+                return finish('unsupported', 'GROUP_LIMIT', 'Câu cần từ 1 đến 24 nhóm từ để phân tích tương tác.')
+            target = json.loads(attr_job['target_json'])
+            permutations, coalitions = generate_permutations(len(groups), permutations_count=METHOD['requested_permutations'], seed=METHOD['seed'])
+            checkpoint = dict(signature=signature(dict(source=source, ids=full_input_ids, groups=groups, method=METHOD, target=target)))
+            with self.store.tx() as c:
+                live = self.valid_attribution_lease(c, attr_job)
+                if not live:
+                    return True
+                if live['checkpoint_json'] and json.loads(live['checkpoint_json']) != checkpoint:
+                    raise ValueError('Checkpoint identity changed')
+                c.execute('UPDATE attribution_jobs SET checkpoint_json=? WHERE id=?', (encode(checkpoint), attr_job['id']))
+                rows = c.execute('SELECT * FROM attribution_coalitions WHERE job_id=?', (attr_job['id'],)).fetchall()
+            values = {r['coalition_mask']: float(r['val']) for r in rows}
+            outputs = {r['coalition_mask']: json.loads(r['outputs_json']) for r in rows if r['outputs_json']}
+            def mask(coalition):
+                return ','.join(map(str, sorted(coalition)))
+            if set(values) != set(outputs):
+                raise ValueError('Legacy checkpoint lacks vector evidence')
+            for key, output in outputs.items():
+                check_vectors(output, profile)
+                if not math.isfinite(values[key]) or abs(values[key]-target_value(output['sentiment'],target,profile)) > 1e-9:
+                    raise ValueError('Checkpoint target differs from its vector evidence')
+            pending = [x for x in coalitions if mask(x) not in values]
+            batch = pending[:self.batch_size]
+            if batch:
+                batch_outputs = evaluate_coalition_outputs(model, full_input_ids, groups, batch, tokenizer=tokenizer)
+                if len(batch_outputs) != len(batch):
+                    raise ValueError('Coalition count mismatch')
+                for coalition, output in zip(batch, batch_outputs):
+                    check_vectors(output, profile)
+                    val = target_value(output['sentiment'], target, profile)
+                    if not math.isfinite(val):
+                        raise ValueError('Nonfinite target')
+                    outputs[mask(coalition)] = output
+                    values[mask(coalition)] = val
+            # Check the actual active bundle after forward, never synthesize it from run metadata.
+            if self.registry.execution_identity(profile_id) != source['execution_identity']:
+                return finish('failed', 'MODEL_IDENTITY_CHANGED', 'Model đã đổi. Phân tích lại câu.')
+            full_mask = mask(frozenset(range(len(groups))))
+            if full_mask in outputs:
+                try:
+                    check_parity(outputs[full_mask], source_info['item']['prediction'], profile)
+                except ValueError:
+                    return finish('failed', 'PREDICTION_MISMATCH', 'Điểm từ ngữ không khớp dự đoán nguồn. Phân tích lại câu.')
+            with self.store.tx() as c:
+                live = self.valid_attribution_lease(c, attr_job)
+                if not live:
+                    return True
+                if live['compute_deadline'] <= time.time():
+                    self.finish_attribution(c, attr_job, 'failed', 'COMPUTE_TIMEOUT', 'Phân tích từ ngữ quá thời gian. Thử lại.')
+                    return True
+                _, current = self.store._attribution_source(c, attr_job['source_job_id'], attr_job['source_prediction_id'])
+                if current != source:
+                    raise ValueError('Source changed before batch publication')
+                for coalition in batch:
+                    key = mask(coalition)
+                    c.execute('INSERT OR IGNORE INTO attribution_coalitions(job_id,coalition_mask,val,outputs_json) VALUES(?,?,?,?)',
+                              (attr_job['id'],key,values[key],encode(outputs[key])))
+                completed = c.execute('SELECT COUNT(*) FROM attribution_coalitions WHERE job_id=?', (attr_job['id'],)).fetchone()[0]
+                if completed < len(coalitions):
+                    c.execute("UPDATE attribution_jobs SET progress_completed=?,progress_total=?,status='queued',lease_owner=NULL,lease_expires_at=NULL,updated_at=? WHERE id=?",
+                              (completed,len(coalitions),now(),attr_job['id']))
+                    return True
+            result = compute_shapley_from_coalition_map(groups, permutations, {x:values[mask(x)] for x in coalitions})
+            if (not all(math.isfinite(result[k]) for k in ('baseline_value','total_contribution','target_output','additivity_residual'))
+                    or result['additivity_residual'] > 1e-6):
+                raise ValueError('Invalid additivity')
+            method = dict(METHOD, target=target, completed_permutations=len(permutations), evaluated_coalitions=len(coalitions))
+            coverage = dict(truncated=False, input_token_count=len(full_input_ids), mapping_status='exact',
+                analyzed_spans=len(groups), fixed_token_policy='special_tokens_only',
+                explained_token_indices=[i for g in groups for i in g['token_indices']])
+            aggregate = {k:result[k] for k in ('baseline_value','total_contribution','target_output','additivity_residual')}
+            if self.registry.execution_identity(profile_id) != source['execution_identity']:
+                return finish('failed', 'MODEL_IDENTITY_CHANGED', 'Model đã đổi. Phân tích lại câu.')
+            with self.store.tx() as c:
+                live = self.valid_attribution_lease(c, attr_job)
+                if not live:
+                    return True
+                _, current = self.store._attribution_source(c, attr_job['source_job_id'], attr_job['source_prediction_id'])
+                if current != source:
+                    raise ValueError('Source changed before completion')
+                if live['compute_deadline'] <= time.time():
+                    self.finish_attribution(c, attr_job, 'failed', 'COMPUTE_TIMEOUT', 'Phân tích từ ngữ quá thời gian. Thử lại.')
+                    return True
+                c.execute("""UPDATE attribution_jobs SET status='completed',groups_json=?,aggregate_json=?,method_json=?,coverage_json=?,
+                    progress_completed=?,progress_total=?,lease_owner=NULL,lease_expires_at=NULL,updated_at=? WHERE id=?""",
+                    (encode(result['groups']),encode(aggregate),encode(method),encode(coverage),len(coalitions),len(coalitions),now(),attr_job['id']))
+                self.store._bound_attribution_cache(c)
+        except DomainError:
+            return finish('failed', 'SOURCE_CONTEXT_CHANGED', 'Nguồn đã thay đổi hoặc hết hạn. Phân tích lại câu.')
+        except Exception:
+            return finish('failed', 'INVALID_ATTRIBUTION', 'Không thể xác minh kết quả từ ngữ. Thử lại hoặc phân tích lại câu.')
+        return True
+
     def run_once(self):
         """Process at most one microbatch, allowing quick jobs to preempt between batches."""
         self.heartbeat()
         self.cleanup_if_due()
         job = self.claim()
         if not job:
-            return False
+            attr_job = self.claim_attribution()
+            if attr_job:
+                with self.keepalive(attr_job):
+                    return self._run_attribution_once(attr_job)
+            from services.network_jobs import run_once as run_network_once
+            return run_network_once(self.store)
         with self.keepalive(job):
             is_sensitivity = False
             sens_inputs = None

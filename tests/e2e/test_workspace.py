@@ -132,6 +132,11 @@ def test_mobile_review_text_revisions_and_quick_analysis_profiles(browser, app_s
     page.screenshot(path=str(screenshot_dir / "mobile-review.png"), full_page=True)
     assert page.get_by_role("dialog").evaluate("element => element.scrollWidth <= element.clientWidth + 1")
     page.get_by_role("button", name="Đóng chi tiết", exact=True).click()
+    durable_before = client.get("/datasets").json()
+    durable_items_before = {
+        dataset["id"]: client.get(f"/datasets/{dataset['id']}/items").json()
+        for dataset in (neu, uit)
+    }
     page.get_by_role("button", name="Thử một câu", exact=True).first.click()
     expect(page).to_have_url(re.compile(r"#/demo$"))
     page.locator("#schema-select").select_option("uit")
@@ -140,14 +145,18 @@ def test_mobile_review_text_revisions_and_quick_analysis_profiles(browser, app_s
     expect(page.locator("#result-content")).to_be_visible(timeout=20000)
     expect(page.locator("#scores .score-row")).to_have_count(3)
     expect(page.locator("#topic-scores .score-row")).to_have_count(4)
-    destination = page.get_by_role("combobox", name="Lưu câu vào bộ phản hồi cùng hệ nhãn", exact=True)
-    expect(destination).to_contain_text("UIT mobile")
-    expect(destination).not_to_contain_text("NEU mobile")
-    destination.select_option(uit["id"])
-    page.get_by_role("button", name="Thêm câu vào bộ", exact=True).click()
-    expect(page.get_by_role("button", name="Đã thêm câu", exact=True)).to_be_visible()
+    expect(page.get_by_role("combobox", name="Lưu câu vào bộ phản hồi cùng hệ nhãn", exact=True)).to_have_count(0)
+    expect(page.get_by_role("button", name="Thêm câu vào bộ", exact=True)).to_have_count(0)
+    expect(page.locator(".quick-add-box")).to_have_count(0)
+    expect(page.locator("#dataset-select")).to_have_count(0)
+    expect(page.locator("#distribution-heading")).to_have_text("Tỷ trọng đóng góp của cụm từ")
+    expect(page.locator('.distribution-pane')).not_to_contain_text('1 / 1 có nhãn')
+    expect(page.locator("#evidence-list .evidence-text p")).to_have_text("Phòng học có thiết bị tốt.")
     assert len(client.get("/datasets").json()) == 2  # Quick temp dataset never in durable list.
-    assert client.get(f"/datasets/{uit['id']}").json()["item_count"] == 2
+    assert client.get("/datasets").json() == durable_before
+    assert all(client.get(f"/datasets/{dataset_id}/items").json() == before
+               for dataset_id, before in durable_items_before.items())
+    assert client.get(f"/datasets/{uit['id']}").json()["item_count"] == 1
     assert not failures
     client.close()
     context.close()

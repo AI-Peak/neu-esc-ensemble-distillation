@@ -6,7 +6,7 @@ from typing import Any, Literal
 from fastapi import FastAPI, File, Form, Header, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, ValidationError, model_validator
 
 from services.review_signals import load_policy, resolve_policy_metadata
 from services.storage.db import DomainError, PROFILES, ROOT, Store, profile_for
@@ -89,6 +89,7 @@ class Filters(Body):
     run_id: str | None = None
     label_source: Literal['effective','ai'] = 'effective'
     q: str | None = None
+    item_ids: str | None = None
     sentiment: int | None = None
     topic: int | None = None
     review_status: Literal['all','unreviewed','partial','reviewed','needs_review'] = 'all'
@@ -120,6 +121,45 @@ class ExplanationInput(Body):
     source_prediction_id: StrictStr
 
 
+class AttributionTargetInput(Body):
+    kind: Literal['polarity_margin', 'label_score']
+    label_id: StrictInt | None = None
+
+    @model_validator(mode='after')
+    def validate_target(self):
+        if self.kind == 'label_score' and self.label_id is None:
+            raise ValueError('label_id is required when kind is label_score')
+        if self.kind == 'polarity_margin' and self.label_id is not None:
+            raise ValueError('label_id must be None when kind is polarity_margin')
+        return self
+
+
+class AttributionRequestInput(Body):
+    source_prediction_id: StrictStr
+    target: AttributionTargetInput
+
+
+def check_origin(request: Request):
+    origin = request.headers.get('origin')
+    if origin:
+        host = request.headers.get('host')
+        from urllib.parse import urlparse
+        parsed_origin = urlparse(origin)
+        parsed_host = urlparse('//'+(host or ''))
+        aliases = {'localhost': '127.0.0.1', '127.0.0.1': '127.0.0.1'}
+        try:
+            allowed = (parsed_origin.scheme in ('http', 'https')
+                and not parsed_origin.username and not parsed_origin.password
+                and parsed_origin.path in ('', '/') and not parsed_origin.query and not parsed_origin.fragment
+                and aliases.get(parsed_origin.hostname, parsed_origin.hostname) == aliases.get(parsed_host.hostname, parsed_host.hostname)
+                and (parsed_origin.port or (443 if parsed_origin.scheme == 'https' else 80)) == (parsed_host.port or (443 if request.url.scheme == 'https' else 80))
+                and parsed_origin.scheme == request.url.scheme)
+        except ValueError:
+            allowed = False
+        if not allowed:
+            raise DomainError('FORBIDDEN_ORIGIN', 'Origin không được phép.', 403)
+
+
 def create_app(runtime_dir=None, registry=None, start_worker=False, explanation_service=None, explanation_provider=None):
     load_policy()
     store = Store(runtime_dir)
@@ -130,10 +170,6 @@ def create_app(runtime_dir=None, registry=None, start_worker=False, explanation_
     if start_worker:
         from services.worker import Worker
         worker = Worker(store.runtime, registry)
-
-    if explanation_service is None:
-        from services.explanation import ExplanationService
-        explanation_service = ExplanationService(provider=explanation_provider)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -149,7 +185,6 @@ def create_app(runtime_dir=None, registry=None, start_worker=False, explanation_
 
     app = FastAPI(title='Feedback Workspace',version='1.0.0',lifespan=lifespan)
     app.state.store, app.state.registry = store, registry
-    app.state.explanation_service = explanation_service
 
     @app.exception_handler(DomainError)
     async def domain_error(request, exc):
@@ -243,19 +278,33 @@ def create_app(runtime_dir=None, registry=None, start_worker=False, explanation_
 
     @app.post(prefix+'/quick-analysis/{job_id}/explanation')
     async def quick_explanation(job_id: str, body: ExplanationInput, request: Request):
-        origin = request.headers.get('origin')
-        if origin:
-            host = request.headers.get('host')
-            from urllib.parse import urlparse
-            parsed_origin = urlparse(origin)
-            origin_netloc = (parsed_origin.netloc or '').lower()
-            host_netloc = (host or '').lower()
-            allowed = (origin_netloc == host_netloc) or (
-                origin_netloc.replace('localhost', '127.0.0.1') == host_netloc.replace('localhost', '127.0.0.1')
-            )
-            if not allowed:
-                raise DomainError('FORBIDDEN_ORIGIN', 'Origin không được phép.', 403)
-        return await explanation_service.explain_quick_job(store, job_id, body.source_prediction_id)
+        check_origin(request)
+        raise DomainError('EXPLANATION_DISABLED', 'Dịch vụ diễn giải LLM đã được loại bỏ.', 410)
+
+    @app.post(prefix+'/quick-analysis/{job_id}/attribution')
+    def create_attribution(job_id: str, body: AttributionRequestInput, request: Request, response: Response, idempotency_key: str | None = Header(default=None)):
+        check_origin(request)
+        res = store.create_attribution_job(
+            job_id,
+            body.source_prediction_id,
+            body.target.model_dump(exclude_none=True),
+            idempotency_key=idempotency_key,
+            execution_resolver=registry.execution_identity,
+        )
+        if res.get('status') == 'completed':
+            response.status_code = 200
+        else:
+            response.status_code = 202
+        return res
+
+    @app.get(prefix+'/attributions/{attribution_id}')
+    def get_attribution(attribution_id: str):
+        return store.get_attribution(attribution_id, execution_resolver=registry.execution_identity)
+
+    @app.post(prefix+'/attributions/{attribution_id}/cancel')
+    def cancel_attribution(attribution_id: str, request: Request):
+        check_origin(request)
+        return store.cancel_attribution(attribution_id)
 
     @app.get(prefix+'/jobs/{job_id}')
     def job(job_id:str): return store.job(job_id)
@@ -290,6 +339,18 @@ def create_app(runtime_dir=None, registry=None, start_worker=False, explanation_
     def summary(dataset_id:str,request:Request):
         from services.demo_scope import scoped_response
         return scoped_response(store, dataset_id, query_filters(request))
+
+    @app.get(prefix+'/datasets/{dataset_id}/network')
+    def dataset_network(dataset_id: str, request: Request):
+        from services.network_jobs import request_network
+        return request_network(store, dataset_id, query_filters(request))
+
+    @app.get(prefix+'/networks/{network_id}/evidence')
+    def network_evidence(network_id: str, selection_type: str, selection_id: str, page: int=1, page_size: int=10):
+        if page < 1 or page_size < 1 or page_size > 500:
+            raise DomainError('INVALID_PAGINATION','Trang không hợp lệ.',422)
+        from services.network_jobs import evidence
+        return evidence(store,network_id,selection_type,selection_id,page,page_size)
 
     @app.get(prefix+'/items/{item_id}')
     def item(item_id:str,run_id:str|None=None): return store.item(item_id,run_id)

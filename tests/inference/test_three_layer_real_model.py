@@ -428,7 +428,7 @@ def test_real_model_three_layer_end_to_end(tmp_path: Path, monkeypatch: pytest.M
         )
 
         health1 = httpx.get(f"{base_url}/api/v1/health", timeout=5.0).json()
-        assert health1["database_version"] == 2
+        assert health1["database_version"] == 4
         assert health1["worker"]["alive"] is True
         worker1_pid = health1["worker"]["pid"]
 

@@ -1,4 +1,5 @@
 """Demo scope/ranking/routing acceptance through isolated test-only workers."""
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
@@ -46,6 +47,31 @@ def observe(name, value):
         Path(directory, name + '.json').write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
 
 
+@contextmanager
+def route_safe_page(context):
+    page = context.new_page()
+    try:
+        yield page
+    finally:
+        # Suppress late route.fetch callbacks before the browser context closes,
+        # including when an assertion ends a test with requests still in flight.
+        page.unroute_all(behavior='ignoreErrors')
+
+
+def summary(client, dataset, source='effective'):
+    response = client.get(f"/datasets/{dataset['id']}/summary", params={'label_source': source})
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def scoped_items(client, dataset, snapshot, *, page=1, filtered=True):
+    params = dict(label_source=snapshot['label_source'], scope_token=snapshot['scope_token'],
+                  expected_run_id=snapshot['resolved_run_id'] or '', page=page, page_size=10)
+    if filtered:
+        params.update(sentiment=2, topic=2)
+    return client.get(f"/datasets/{dataset['id']}/items", params=params)
+
+
 def test_no_hash_demo_workspace_entry_reload_back_forward_help(browser, app_server):
     with browser.new_context() as context:
         page = context.new_page()
@@ -67,9 +93,10 @@ def test_no_hash_demo_workspace_entry_reload_back_forward_help(browser, app_serv
         expect(page.locator('#sentence')).to_be_visible()
         page.goto(app_server.url + '/#/help')
         expect(page.get_by_role('heading', name='Trạng thái & hướng dẫn')).to_be_visible()
-        for variable in ['BASE_URL', 'API_KEY', 'MODEL', 'TIMEOUT_SECONDS']:
-            expect(page.locator('pre')).to_contain_text('FEEDBACK_EXPLANATION_' + variable)
-        expect(page.locator('.prose')).to_contain_text('không tự nạp file .env')
+        expect(page.get_by_role('heading', name='Đối chiếu từ ngữ với dự đoán')).to_be_visible()
+        expect(page.locator('.prose')).to_contain_text('classifier local')
+        expect(page.locator('.prose')).not_to_contain_text('FEEDBACK_EXPLANATION_')
+        expect(page.locator('.prose')).not_to_contain_text('9router')
         page.goto(app_server.url + '/#/research')
         expect(page.get_by_role('heading', name='Báo cáo nghiên cứu', exact=True)).to_be_visible()
         page.goto(app_server.url + '/#/new')
@@ -77,164 +104,203 @@ def test_no_hash_demo_workspace_entry_reload_back_forward_help(browser, app_serv
         assert calls == []
 
 
-def test_demo_scope_review_run_pagination_source_and_dataset(browser, app_server, screenshot_dir):
-    with httpx.Client(base_url=app_server.url + '/api/v1') as client, browser.new_context() as context:
-        texts = [text_for(2, 2, n) for n in range(7)]
-        dataset = create(client, 'Scope seven rows', texts)
+def test_workspace_scope_review_run_pagination_and_label_source_api(app_server):
+    """Workspace multirow guards remain API contracts after demo drops selection."""
+    with httpx.Client(base_url=app_server.url + '/api/v1') as client:
+        dataset = create(client, 'Scope seventeen rows', [text_for(2, 2, n) for n in range(17)])
         other = create(client, 'Scope other dataset', [text_for(2, 4, 20)])
         run_a = analyze(client, dataset)
-        page = context.new_page()
-        page.goto(app_server.url + '/#/demo')
-        expect(page.locator('#dataset-select option')).to_have_count(3)
-        page.locator('#dataset-select').select_option(dataset['id'])
-        evidence = page.locator('.attention-evidence-btn').first
-        expect(evidence).to_have_text('Xem 7 phản hồi tiêu cực')
-        params = []
-        page.on('request', lambda r: params.append(r.url) if '/items?' in r.url else None)
-        with page.expect_response(lambda r: '/items?' in r.url and 'scope_token=' in r.url) as response:
-            evidence.click()
-        first = response.value.json()
+        original = summary(client, dataset)
+        assert original['total'] == original['attention']['eligible_count'] == 17
+        assert original['attention']['topics'][0]['negative_count'] == 17
+        first_response = scoped_items(client, dataset, original)
+        second_response = scoped_items(client, dataset, original, page=2)
+        assert first_response.status_code == second_response.status_code == 200
+        first, second = first_response.json(), second_response.json()
         assert first['resolved_run_id'] == run_a['id'] and first['revision_scope'] == 'current'
         assert first['label_source'] == 'effective' and first['dataset_id'] == dataset['id']
-        assert first['total'] == 7 and len(first['items']) == 5
-        assert 'run_id=' not in params[-1].replace('expected_run_id=', 'expected=')
-        with page.expect_response(lambda r: '/items?' in r.url and 'page=2' in r.url) as response:
-            page.get_by_role('button', name='Trang sau →', exact=True).last.click()
-        second = response.value.json()
-        assert len(second['items']) == 2
-        expected_ids = [i['id'] for i in client.get(f"/datasets/{dataset['id']}/items").json()['items']]
-        assert [i['id'] for i in first['items'] + second['items']] == expected_ids
+        assert first['scope_token'] == second['scope_token'] == original['scope_token']
+        assert first['total'] == second['total'] == 17
+        assert len(first['items']) == 10 and len(second['items']) == 7
+        expected_ids = [item['id'] for item in client.get(f"/datasets/{dataset['id']}/items").json()['items']]
+        assert [item['id'] for item in first['items'] + second['items']] == expected_ids
         item = first['items'][0]
         review = client.put(f"/items/{item['id']}/review", json={
             'task': 'sentiment', 'status': 'corrected', 'label_id': 1,
             'expected_revision': 1, 'expected_review_revision': 0,
             'run_id': run_a['id'], 'source_prediction_id': item['prediction']['id']})
         assert review.status_code == 200, review.text
-        # Old effective count and items are invalidated, despite the same run id.
-        with page.expect_response(lambda r: '/items?' in r.url) as response:
-            page.get_by_role('button', name='← Trang trước', exact=True).last.click()
-        assert response.value.status == 409
-        expect(evidence).to_have_text('Xem 6 phản hồi tiêu cực')
-        with page.expect_response(lambda r: '/items?' in r.url and 'label_source=effective' in r.url) as response:
-            evidence.click()
-        assert response.value.json()['total'] == 6
-        page.get_by_role('button', name='Chỉ dự đoán AI gốc', exact=True).click()
-        expect(evidence).to_have_text('Xem 7 phản hồi tiêu cực')
-        with page.expect_response(lambda r: '/items?' in r.url and 'label_source=ai' in r.url) as response:
-            evidence.click()
-        assert response.value.json()['total'] == 7
+        stale_review = scoped_items(client, dataset, original)
+        assert stale_review.status_code == 409, stale_review.text
+        effective = summary(client, dataset)
+        assert effective['scope_token'] != original['scope_token']
+        assert effective['resolved_run_id'] == run_a['id']
+        assert effective['attention']['topics'][0]['negative_count'] == 16
+        assert scoped_items(client, dataset, effective).json()['total'] == 16
+        ai = summary(client, dataset, 'ai')
+        assert ai['scope_token'] != effective['scope_token']
+        assert ai['attention']['topics'][0]['negative_count'] == 17
+        ai_page = scoped_items(client, dataset, ai).json()
+        assert ai_page['total'] == 17
+        reviewed = next(row for row in ai_page['items'] if row['id'] == item['id'])
+        assert reviewed['prediction']['sentiment']['label_id'] == 2
+        assert reviewed['effective']['sentiment'] == 1
         for row in client.get(f"/datasets/{dataset['id']}/items").json()['items']:
-            assert client.patch(f"/items/{row['id']}/text", json={
-                'text': text_for(1, 3, row['source_row'] + 100), 'expected_revision': 1}).status_code == 200
+            edited = client.patch(f"/items/{row['id']}/text", json={
+                'text': text_for(1, 3, row['source_row'] + 100), 'expected_revision': 1})
+            assert edited.status_code == 200, edited.text
         run_b = analyze(client, dataset)
-        with page.expect_response(lambda r: '/items?' in r.url) as response:
-            page.get_by_role('button', name='Trang sau →', exact=True).last.click()
-        assert response.value.status == 409
-        expect(page.locator('.attention-section')).to_contain_text('Chưa có phản hồi gán nhãn Tiêu cực')
-        expect(page.locator('.attention-evidence-btn').first).to_be_disabled()
-        page.locator('#dataset-select').select_option(other['id'])
-        expect(page.locator('.decision-panel')).to_contain_text('Chưa đủ nhãn')
-        page.locator('#schema-select').select_option('uit')
-        expect(page.locator('#dataset-select')).to_have_value('')
-        observe('browser-scope', {'run_a': run_a['id'], 'run_b': run_b['id'],
-                                  'item_ids': expected_ids, 'page1': first, 'page2': second,
-                                  'requests': params, 'stale_review_status': 409, 'stale_run_status': 409})
-        page.screenshot(path=str(screenshot_dir / 'demo-scope-reset.png'), full_page=True)
+        stale_run = scoped_items(client, dataset, ai, page=2)
+        assert stale_run.status_code == 409, stale_run.text
+        current = summary(client, dataset, 'ai')
+        assert current['resolved_run_id'] == run_b['id'] != run_a['id']
+        assert current['attention']['topics'][0]['negative_count'] == 0
+        assert scoped_items(client, dataset, current).json()['total'] == 0
+        unrelated = summary(client, other, 'ai')
+        assert unrelated['attention']['eligible_count'] == 0 and unrelated['processed'] == 0
+        assert unrelated['scope_token'] != current['scope_token']
+        observe('workspace-scope-api', {'run_a': run_a['id'], 'run_b': run_b['id'],
+            'item_ids': expected_ids, 'page1': first, 'page2': second,
+            'stale_review_status': stale_review.status_code, 'stale_run_status': stale_run.status_code})
 
 
-def test_demo_ranking_toxic_missing_empty_and_partial(browser, app_server, screenshot_dir):
-    with httpx.Client(base_url=app_server.url + '/api/v1') as client, browser.new_context() as context:
+def test_workspace_ranking_toxic_missing_empty_and_partial_api(app_server):
+    with httpx.Client(base_url=app_server.url + '/api/v1') as client:
         texts = ([text_for(2, 2, n) for n in range(6)] + [text_for(0, 2, 20+n) for n in range(4)]
                  + [text_for(2, 4, 40+n) for n in range(2)] + [text_for(3, 3, 60+n) for n in range(2)])
         dataset = create(client, 'Ranking Toxic known counts', texts)
         analyze(client, dataset)
         empty = create(client, 'Unprocessed known counts', ['Một câu chưa phân tích'])
-        page = context.new_page()
-        page.goto(app_server.url + '/#/demo')
-        page.locator('#dataset-select').select_option(dataset['id'])
-        rows = page.locator('.attention-table tbody tr')
-        expect(rows).to_have_count(3)
-        expect(rows.nth(0)).to_contain_text('6/10 · 60,0%')
-        expect(rows.nth(1)).to_contain_text('2/2 · 100,0%')
-        expect(rows.nth(2).locator('[data-label="Toxic"]')).to_have_text('2')
-        expect(rows.nth(2).locator('[data-label="Tiêu cực"]')).to_have_text('0')
-        expect(rows.nth(1)).to_contain_text('Ít dữ liệu')
-        expect(page.locator('.priority-note')).to_contain_text('nhiều phản hồi tiêu cực nhất')
-        expect(page.locator('.decision-panel')).not_to_contain_text('cao nhất trong tập')
-        page.screenshot(path=str(screenshot_dir / 'demo-layer3-ranking-toxic.png'), full_page=True)
-        page.set_viewport_size({'width': 320, 'height': 844})
-        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
-        assert rows.nth(0).locator('.attention-topic-name').evaluate('el => parseFloat(getComputedStyle(el).fontSize)') >= 14
-        assert rows.nth(0).locator('[data-label="Tiêu cực"]').evaluate('el => parseFloat(getComputedStyle(el,"::before").fontSize)') >= 14
-        page.screenshot(path=str(screenshot_dir / 'demo-layer3-ranking-toxic-320.png'), full_page=True)
-        page.set_viewport_size({'width': 1280, 'height': 900})
-        # Add an unprocessed row; it must count as missing rather than as 0%.
-        client.post(f"/datasets/{dataset['id']}/items", json={'items': [{'text': 'Chưa có nhãn mới'}]})
-        page.reload()
-        page.locator('#dataset-select').select_option(dataset['id'])
-        expect(page.locator('.attention-denominator')).to_contain_text('14/15')
-        expect(page.locator('.attention-denominator')).to_contain_text('1 dòng thiếu chủ đề')
-        expect(page.locator('.attention-section')).to_contain_text('1 dòng chưa xử lý')
-        page.screenshot(path=str(screenshot_dir / 'demo-layer3-partial-missing.png'), full_page=True)
-        page.locator('#dataset-select').select_option(empty['id'])
-        expect(page.locator('.attention-section')).to_contain_text('Chưa đủ nhãn')
-        expect(page.locator('.decision-panel')).not_to_contain_text('Chưa có vấn đề nổi cộm')
-        page.screenshot(path=str(screenshot_dir / 'demo-layer3-unprocessed.png'), full_page=True)
+        ranked = summary(client, dataset)
+        topics = ranked['attention']['topics']
+        assert [row['topic_id'] for row in topics] == [2, 4, 3]
+        assert [(row['negative_count'], row['eligible_count']) for row in topics] == [(6, 10), (2, 2), (0, 2)]
+        assert topics[0]['negative_rate'] == .6 and topics[1]['negative_rate'] == 1
+        assert topics[2]['toxic_count'] == 2 and topics[1]['small_sample']
+        added = client.post(f"/datasets/{dataset['id']}/items", json={'items': [{'text': 'Chưa có nhãn mới'}]})
+        assert added.status_code == 201, added.text
+        partial = summary(client, dataset)
+        assert partial['total'] == 15 and partial['processed'] == 14
+        assert partial['attention']['eligible_count'] == 14
+        assert partial['attention']['missing_topic_count'] == 1
+        unprocessed = summary(client, empty)
+        assert unprocessed['total'] == 1 and unprocessed['processed'] == 0
+        assert unprocessed['denominator'] == {'sentiment': 0, 'topic': 0, 'cross': 0}
+        assert unprocessed['attention']['topics'] == []
         with sqlite3.connect(app_server.runtime / 'workspace.sqlite3') as database:
             database.execute('DELETE FROM items WHERE dataset_id=?', (empty['id'],))
-        page.reload()
-        page.locator('#dataset-select').select_option(empty['id'])
-        expect(page.locator('.attention-section')).to_contain_text('Chưa đủ nhãn')
-        expect(page.locator('.attention-section tbody tr')).to_have_count(0)
-        expect(page.locator('.decision-panel')).not_to_contain_text('NaN')
-        expect(page.locator('.decision-panel')).not_to_contain_text('0,0%')
-        page.screenshot(path=str(screenshot_dir / 'demo-layer3-empty-dataset.png'), full_page=True)
+        no_rows = summary(client, empty)
+        assert no_rows['total'] == no_rows['attention']['eligible_count'] == 0
+        assert no_rows['attention']['topics'] == []
+        assert no_rows['denominator'] == {'sentiment': 0, 'topic': 0, 'cross': 0}
 
 
 @pytest.mark.parametrize('status', ['running', 'partial', 'failed', 'cancelled', 'interrupted'])
-def test_demo_incomplete_run_and_missing_label_denominators(browser, app_server, screenshot_dir, status):
-    with httpx.Client(base_url=app_server.url + '/api/v1') as client, browser.new_context() as context:
+def test_workspace_incomplete_run_and_missing_label_denominators_api(app_server, status):
+    with httpx.Client(base_url=app_server.url + '/api/v1') as client:
         dataset = create(client, 'Incomplete ' + status, [text_for(2, 2, n) for n in range(3)])
         run = analyze(client, dataset)
         items = client.get(f"/datasets/{dataset['id']}/items").json()['items']
-        # Mutate only this test's runtime into explicit missing/error states; the
-        # API still computes the counts rather than the browser inventing them.
+        # Only this isolated runtime is mutated into controlled missing/error states.
         with sqlite3.connect(app_server.runtime / 'workspace.sqlite3') as database:
             database.execute('DELETE FROM predictions WHERE run_id=?', (run['id'],))
             database.execute('UPDATE runs SET status=? WHERE id=?', (status, run['id']))
             database.execute('UPDATE jobs SET status=?,lease_owner=NULL,lease_expires_at=NULL WHERE id=?', (status, run['job_id']))
             database.execute('UPDATE run_items SET error=? WHERE run_id=? AND item_id=?', ('Controlled test error', run['id'], items[2]['id']))
-        # Topic 2: one Toxic and one missing sentiment. Topic 4: denominator zero.
         for row, labels in zip(items, [{'sentiment': 3, 'topic': 2}, {'topic': 2}, {'topic': 4}]):
             for task, label in labels.items():
                 result = client.put(f"/items/{row['id']}/review", json={
                     'task': task, 'status': 'corrected', 'label_id': label,
                     'expected_revision': 1, 'expected_review_revision': 0})
                 assert result.status_code == 200, result.text
-        summary = client.get(f"/datasets/{dataset['id']}/summary").json()
-        assert summary['attention']['eligible_count'] == 1
-        assert summary['attention']['missing_sentiment_with_topic_count'] == 2
-        assert summary['errors'] == 1 and summary['processed'] == 0
-        page = context.new_page()
+        effective = summary(client, dataset)
+        assert effective['run_status'] == status and effective['total'] == 3
+        assert effective['attention']['eligible_count'] == 1
+        assert effective['attention']['missing_sentiment_with_topic_count'] == 2
+        assert effective['errors'] == 1 and effective['processed'] == 0
+        assert effective['total'] - effective['processed'] - effective['errors'] == 2
+        assert effective['denominator'] == {'sentiment': 1, 'topic': 3, 'cross': 1}
+        topics = effective['attention']['topics']
+        assert topics[0]['topic_id'] == 2 and topics[0]['toxic_count'] == 1
+        assert topics[0]['negative_count'] == 0 and topics[0]['eligible_count'] == 1
+        assert topics[1]['topic_id'] == 4 and topics[1]['negative_rate'] is None
+        ai = summary(client, dataset, 'ai')
+        assert ai['attention']['eligible_count'] == 0
+        assert ai['attention']['missing_topic_count'] == 3
+        assert ai['attention']['topics'] == []
+        assert ai['denominator'] == {'sentiment': 0, 'topic': 0, 'cross': 0}
+
+
+def test_demo_latest_quick_scope_ignores_durable_dataset_and_late_summary(browser, app_server, screenshot_dir):
+    with (httpx.Client(base_url=app_server.url + '/api/v1') as client,
+          browser.new_context() as context, route_safe_page(context) as page):
+        durable = create(client, 'Bộ lưu sẵn không thuộc demo', [text_for(2, 2, n) for n in range(3)])
+        analyze(client, durable)
+        held, calls = [], []
+        hold_first = {'value': True}
+
+        def hold_summary(route):
+            if hold_first['value']:
+                hold_first['value'] = False
+                actual = route.fetch()
+                held.append((route, actual, actual.json()))
+            else:
+                route.continue_()
+
+        page.route('**/api/v1/datasets/*/summary?**', hold_summary)
+        page.on('request', lambda request: calls.append(request.url)
+                if '/summary?' in request.url or '/network?' in request.url or '/items?' in request.url else None)
         page.goto(app_server.url + '/#/demo')
-        page.locator('#dataset-select').select_option(dataset['id'])
-        section = page.locator('.attention-section')
-        expect(section).to_contain_text('1/3 dòng có đủ hai nhãn')
-        expect(section).to_contain_text('1 dòng lỗi')
-        expect(section).to_contain_text('2 dòng chưa xử lý')
-        expect(section).to_contain_text('2 dòng có chủ đề nhưng thiếu cảm xúc')
-        rows = section.locator('tbody tr')
-        expect(rows.nth(0).locator('[data-label="Toxic"]')).to_have_text('1')
-        expect(rows.nth(1).locator('[data-label="Tỷ lệ tiêu cực"]')).to_have_text('—')
-        expect(rows.nth(0).locator('[data-label="Tiêu cực"]')).to_have_text('0')
-        if status == 'running':
-            expect(section).to_contain_text('Kết quả tạm thời')
-        else:
-            expect(section).to_contain_text({'partial': 'Hoàn tất một phần', 'failed': 'Có lỗi',
-                                           'cancelled': 'Đã hủy', 'interrupted': 'Bị gián đoạn'}[status])
-        page.screenshot(path=str(screenshot_dir / f'demo-layer3-{status}-toxic-only.png'), full_page=True)
-        page.get_by_role('button', name='Chỉ dự đoán AI gốc', exact=True).click()
-        expect(section).to_contain_text('0/3 dòng có đủ hai nhãn')
-        expect(section).to_contain_text('3 dòng thiếu chủ đề')
-        expect(section.locator('tbody tr')).to_have_count(0)
-        expect(section).to_contain_text('Chưa đủ nhãn')
+        expect(page.locator('#dataset-select')).to_have_count(0)
+        expect(page.locator('.quick-add-box')).to_have_count(0)
+        expect(page.locator('.distribution-pane')).to_have_count(0)
+        assert calls == [], 'A durable dataset must not be selected or queried on entry'
+        page.locator('#sentence').fill(text_for(2, 2, 101))
+        with page.expect_response(lambda response: response.request.method == 'POST'
+                                  and response.url.endswith('/quick-analysis')) as created:
+            page.locator('#analyze').click()
+        quick_a = created.value.json()
+        expect(page.locator('#result-content')).to_be_visible()
+        deadline = time.monotonic() + 10
+        while not held and time.monotonic() < deadline:
+            page.wait_for_timeout(10)
+        assert len(held) == 1
+        old_summary = held[0][2]
+        assert old_summary['label_source'] == 'ai' and old_summary['total'] == 1
+        assert old_summary['resolved_run_id'] == quick_a['run_id']
+        assert old_summary['dataset_id'] != durable['id']
+        page.locator('#sentence').fill(text_for(1, 3, 202))
+        expect(page.locator('#contribution-donut')).to_have_count(0)
+        with page.expect_response(lambda response: response.request.method == 'POST'
+                                  and response.url.endswith('/quick-analysis')) as created:
+            page.locator('#analyze').click()
+        quick_b = created.value.json()
+        # The first attribution can still be loading NLP resources while B waits
+        # for the worker, followed by the UI's one-second polling interval. This
+        # regression verifies scope ownership, rather than a five-second SLA.
+        expect(page.locator('#result-content')).to_be_visible(timeout=20000)
+        expect(page.locator('.distribution-pane')).to_be_visible()
+        expect(page.locator('#distribution-heading')).to_have_text('Tỷ trọng đóng góp của cụm từ')
+        expect(page.locator('#evidence-list .evidence-row')).to_have_count(1)
+        expect(page.locator('#evidence-list .sentiment-badge')).to_have_text('Tích cực')
+        expect(page.locator('#topic-attention .attention-row').first).to_contain_text('0 / 1')
+        # The accepted old summary must not replace B, even after transport completes.
+        held[0][0].fulfill(response=held[0][1])
+        page.evaluate('() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))')
+        expect(page.locator('#evidence-list .sentiment-badge')).to_have_text('Tích cực')
+        expect(page.locator('#evidence-list .evidence-row p')).to_have_text(text_for(1, 3, 202))
+        expect(page.locator('#topic-attention .attention-row').first).to_contain_text('0 / 1')
+        assert all(f"/datasets/{durable['id']}/" not in url for url in calls)
+        b_job = client.get('/jobs/' + quick_b['job_id']).json()
+        b_dataset = b_job['result']['dataset_id']
+        assert b_dataset != old_summary['dataset_id']
+        assert any(f"/datasets/{b_dataset}/summary?label_source=ai" in url for url in calls)
+        page.locator('#clear').click()
+        expect(page.locator('.distribution-pane')).to_have_count(0)
+        expect(page.locator('#evidence-list')).to_have_count(0)
+        expect(page.locator('#dataset-select')).to_have_count(0)
+        page.locator('#schema-select').select_option('uit')
+        expect(page.locator('.distribution-pane')).to_have_count(0)
+        observe('latest-quick-scope', {'quick_a': quick_a, 'quick_b': quick_b,
+                                      'durable_dataset': durable['id'], 'requests': calls})
+        page.screenshot(path=str(screenshot_dir / 'latest-quick-scope-reset.png'), full_page=True)

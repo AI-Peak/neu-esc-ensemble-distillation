@@ -212,7 +212,7 @@ def test_backup_restore_v1_migrated_runtime_strips_sensitivity_and_preserves_old
     src_app = create_app(src_runtime, registry)
     with TestClient(src_app) as client:
         worker = Worker(src_runtime, registry, batch_size=1)
-        assert client.get("/api/v1/health").json()["database_version"] == 2
+        assert client.get("/api/v1/health").json()["database_version"] == 4
         assert client.get(f"/api/v1/exports/{export_id}").content == v1_csv_bytes
 
         # Seed durable items for 10+ sensitivity experiments (kept separate from secret temp strings).
@@ -342,7 +342,7 @@ def test_backup_restore_v1_migrated_runtime_strips_sensitivity_and_preserves_old
     dst_app = create_app(dst_runtime, dst_registry)
     with TestClient(dst_app) as dst_client:
         dst_worker = Worker(dst_runtime, dst_registry, batch_size=1)
-        assert dst_client.get("/api/v1/health").json()["database_version"] == 2
+        assert dst_client.get("/api/v1/health").json()["database_version"] == 4
         assert len(dst_client.get("/api/v1/datasets").json()) == 2
         assert dst_client.get(f"/api/v1/exports/{export_id}").content == v1_csv_bytes
 
@@ -419,8 +419,8 @@ def test_backup_works_cleanly_on_unmigrated_v1_database(tmp_path: Path):
     finally:
         restored_conn.close()
 
-    # Opening Store on restored unmigrated v1 DB upgrades cleanly to v2 preserving durable records.
+    # Opening Store on restored unmigrated v1 DB upgrades cleanly to v3 preserving durable records.
     upgraded = Store(restored_v1)
-    assert upgraded.database_version() == 2
+    assert upgraded.database_version() == 4
     assert len(upgraded.datasets()) == 1
     assert upgraded.export_bytes(v1_info["export_id"]) == v1_info["v1_csv_bytes"]

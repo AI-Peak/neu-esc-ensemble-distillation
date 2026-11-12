@@ -77,7 +77,7 @@ try {
     $state | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $statePath -Encoding utf8
     Write-Host "Da chay: http://127.0.0.1:$Port"
     Write-Host "Du lieu local: $runtimePath"
-    Write-Host 'Dung: .\scripts\stop-local.ps1'
+    Write-Host ('Dung: .\scripts\stop-local.ps1 -RuntimeDirectory "' + $runtimePath + '"')
 } catch {
     foreach ($launchedProcess in @($apiProcess, $workerProcess)) {
         if ($launchedProcess -and -not $launchedProcess.HasExited) {

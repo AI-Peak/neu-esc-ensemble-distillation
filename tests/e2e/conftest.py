@@ -15,11 +15,11 @@ ROOT = Path(__file__).resolve().parents[2]
 class TestServer:
     __test__ = False
 
-    def __init__(self, runtime, without_model=False, varying_predictions=False, mock_explanation=False, uit_available=False, fail_first_quick=False):
+    def __init__(self, runtime, without_model=False, varying_predictions=False, demo_profile=False, uit_available=False, fail_first_quick=False):
         self.runtime = runtime
         self.without_model = without_model
         self.varying_predictions = varying_predictions
-        self.mock_explanation = mock_explanation
+        self.demo_profile = demo_profile
         self.uit_available = uit_available
         self.fail_first_quick = fail_first_quick
         self.control_dir = runtime.parent / (runtime.name + '-controls')
@@ -38,9 +38,9 @@ class TestServer:
             args.append("--without-model")
         if self.varying_predictions:
             args.append("--varying-predictions")
-        if self.mock_explanation:
-            args.append("--mock-explanation")
-            args.extend(["--provider-control", str(self.control_dir)])
+        if self.demo_profile:
+            args.append("--demo-profile")
+            args.extend(["--quick-control", str(self.control_dir)])
         if self.uit_available:
             args.append("--uit-available")
         if self.fail_first_quick:
@@ -112,7 +112,7 @@ def varying_server(tmp_path):
 
 @pytest.fixture
 def demo_server(tmp_path):
-    server = TestServer(tmp_path / "demo-runtime", mock_explanation=True).start()
+    server = TestServer(tmp_path / "demo-runtime", demo_profile=True).start()
     yield server
     server.stop()
 

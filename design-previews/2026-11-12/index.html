@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>NEU-ESC · Phân tích phản hồi — Mockup</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+  <script src="mockup.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Đến nội dung chính</a>
+  <div class="preview-strip"><span><strong>Bản minh họa tương tác</strong><span class="strip-divider">/</span>Dữ liệu dựng sẵn, chưa kết nối model</span><span class="preview-version">Đề xuất giao diện · 12.11.2026</span></div>
+  <header class="app-header">
+    <div class="header-inner">
+      <a class="brand" href="#analysis" aria-label="NEU-ESC, phân tích phản hồi"><span class="brand-mark" aria-hidden="true">N</span><strong>NEU<span>–</span>ESC</strong></a>
+      <nav aria-label="Nội dung trang"><a href="#analysis" class="nav-current">Phân tích câu</a><a href="#overview">Bộ phản hồi</a><a href="#network">Mạng từ</a></nav>
+      <span class="profile"><span class="status-dot" aria-hidden="true"></span>Tiếng Việt · NEU</span>
+    </div>
+  </header>
+  <main id="main">
+    <section id="analysis" class="analysis-section" aria-labelledby="page-title">
+      <div class="page-heading"><h1 id="page-title">Phân tích phản hồi</h1><span class="quiet-label">Cảm xúc &amp; chủ đề</span></div>
+      <div class="analysis-surface">
+        <form id="analysis-form" class="input-pane">
+          <label for="feedback" class="pane-heading">Nội dung phản hồi</label>
+          <textarea id="feedback" spellcheck="false" maxlength="5000" placeholder="Nhập phản hồi tiếng Việt…">Nhân viên hỗ trợ thân thiện, nhưng cổng đăng ký học phần rất chậm và báo lỗi liên tục.</textarea>
+          <div class="input-actions"><button type="submit" id="analyze-button" class="button-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 3-8 10h6l-1 8 9-11h-6z"/></svg><span>Phân tích</span><span aria-hidden="true">→</span></button><button type="button" id="clear-button" class="button-plain">Xóa</button><span id="character-count" class="character-count"></span></div>
+          <p id="input-status" class="input-status" role="status" hidden></p>
+          <button type="button" class="restore-button" id="restore-button" hidden>Khôi phục nội dung minh họa <span aria-hidden="true">↗</span></button>
+        </form>
+        <section class="prediction-pane" aria-labelledby="prediction-heading">
+          <div class="pane-heading-row"><h2 id="prediction-heading" class="pane-heading">Kết quả phân tích</h2><span class="sample-label">Minh họa</span></div>
+          <div id="prediction-content">
+            <div class="prediction-headlines"><div><span class="field-label">Cảm xúc</span><div class="prediction-line"><strong class="negative-text">Tiêu cực</strong><span class="prediction-percent">83,4<small>%</small></span></div></div><div><span class="field-label">Chủ đề</span><div class="prediction-line"><strong>Dịch vụ</strong><span class="prediction-percent">78,2<small>%</small></span></div></div></div>
+            <div class="score-stack" aria-label="Phân bố điểm cảm xúc minh họa"><span class="segment-negative" style="width:83.4%"></span><span class="segment-positive" style="width:10.6%"></span><span class="segment-neutral" style="width:5%"></span><span class="segment-toxic" style="width:1%"></span></div>
+            <div class="prediction-legend"><span><i class="dot negative-dot"></i>Tiêu cực <b>83,4%</b></span><span><i class="dot positive-dot"></i>Tích cực <b>10,6%</b></span><span><i class="dot neutral-dot"></i>Trung tính <b>5,0%</b></span><span><i class="dot toxic-dot"></i>Toxic <b>1,0%</b></span></div>
+            <details class="topic-details"><summary>Xem điểm 10 chủ đề <span aria-hidden="true">⌄</span></summary><div id="topic-scores" class="topic-scores"></div></details>
+          </div>
+          <div id="prediction-empty" class="prediction-empty" hidden><span class="empty-symbol" aria-hidden="true">↗</span><p>Kết quả xuất hiện sau khi phân tích.</p></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="word-analysis" class="word-section" aria-labelledby="words-heading">
+      <div class="section-heading"><div><h2 id="words-heading">Từ ngữ &amp; đóng góp</h2><p>Đối chiếu từng cụm từ với điểm cảm xúc.</p></div><div class="direction-legend"><span><i class="dot positive-dot"></i>Nghiêng tích cực</span><span><i class="dot negative-dot"></i>Nghiêng tiêu cực</span></div></div>
+      <div id="attribution-content" class="attribution-surface">
+        <table class="attribution-table"><caption class="sr-only">Đóng góp minh họa của các cụm từ vào chênh lệch điểm tích cực và tiêu cực</caption><colgroup><col class="col-feedback"><col class="col-phrase"><col class="col-weight"><col class="col-total"></colgroup><thead><tr><th scope="col">Phản hồi<span class="reference-label">Consumer comment</span></th><th scope="col">Từ quan trọng<span class="reference-label">Meaningful words</span></th><th scope="col">Trọng số cảm xúc<span class="reference-label">Sentiment weight</span></th><th scope="col">Tổng đóng góp<span class="reference-label">Tổng các trọng số</span></th></tr></thead><tbody>
+          <tr class="attribution-row" data-row="friendly"><td class="original-cell" rowspan="4"><div class="quote-text">Nhân viên hỗ trợ <button type="button" class="word-mark positive-mark" data-term="friendly" aria-pressed="false">thân thiện</button>, nhưng cổng đăng ký học phần <button type="button" class="word-mark negative-mark" data-term="slow" aria-pressed="false">rất chậm</button> và <button type="button" class="word-mark negative-mark strong-mark" data-term="error" aria-pressed="false">báo lỗi liên tục</button>.</div><div class="selection-detail" id="selection-detail" role="status"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 13 5-5m-7 7-1 1a4 4 0 0 1-6-6l3-3a4 4 0 0 1 6 0m0 0 1-1a4 4 0 0 1 6 6l-3 3a4 4 0 0 1-6 0" transform="translate(5 1)"/></svg><span>Chọn cụm từ để đối chiếu với bảng.</span></div></td><td class="phrase-cell"><button type="button" class="phrase-button" data-term="friendly" aria-pressed="false"><i class="direction-icon positive-text" aria-hidden="true">+</i>thân thiện</button></td><td class="weight-cell positive-text"><span>+12,4</span><span class="weight-meter"><i style="width:25.4%"></i></span></td><td class="total-cell" rowspan="4"><span class="total-sign negative-text">−73,6</span><span class="total-unit">điểm phần trăm</span><div class="total-direction"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 8v10h10"/></svg>Nghiêng tiêu cực</div></td></tr>
+          <tr class="attribution-row" data-row="slow"><td class="phrase-cell"><button type="button" class="phrase-button" data-term="slow" aria-pressed="false"><i class="direction-icon negative-text" aria-hidden="true">−</i>rất chậm</button></td><td class="weight-cell negative-text"><span>−28,6</span><span class="weight-meter"><i style="width:58.6%"></i></span></td></tr>
+          <tr class="attribution-row" data-row="error"><td class="phrase-cell"><button type="button" class="phrase-button" data-term="error" aria-pressed="false"><i class="direction-icon negative-text" aria-hidden="true">−</i>báo lỗi liên tục</button></td><td class="weight-cell negative-text"><span>−48,8</span><span class="weight-meter"><i style="width:100%"></i></span></td></tr>
+          <tr class="attribution-row remaining-row"><td class="phrase-cell"><span class="remaining-label">Các từ còn lại</span></td><td class="weight-cell muted-text"><span>−8,6</span><span class="weight-meter"><i style="width:17.6%"></i></span></td></tr>
+        </tbody></table>
+        <div class="calculation-footer"><span class="weight-unit-note">Đơn vị trọng số: điểm phần trăm · Số liệu minh họa</span><details class="method-details"><summary>Cách tính tổng <span aria-hidden="true">+</span></summary><div><strong>+12,4 − 28,6 − 48,8 − 8,6 = −73,6</strong><p>Tổng đóng góp là tổng các trọng số trong bảng. Cộng điểm nền +0,8 được −72,8, bằng điểm Tích cực 10,6 trừ điểm Tiêu cực 83,4.</p><p>Các số được dựng để minh họa bố cục, chưa phải kết quả attribution thật từ model.</p></div></details></div>
+      </div>
+      <div id="attribution-empty" class="attribution-empty" hidden>Phân tích một phản hồi để xem các cụm từ và đóng góp.</div>
+    </section>
+
+    <section id="overview" class="overview-section" aria-labelledby="overview-heading">
+      <div class="section-heading"><div><h2 id="overview-heading">Nhìn từ một bộ phản hồi</h2><p>Bộ phản hồi sinh viên · <span id="dataset-count">24</span> phản hồi minh họa</p></div><span class="dataset-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 10v10"/></svg>NEU · Đủ nhãn cảm xúc</span></div>
+      <div class="overview-surface">
+        <section class="distribution-pane" aria-labelledby="distribution-heading"><div class="subheading-row"><h3 id="distribution-heading">Phân bố cảm xúc</h3><span>24 phản hồi</span></div><div class="donut-layout"><div class="donut-container"><svg id="sentiment-donut" viewBox="0 0 224 224" role="img" aria-label="Phân bố cảm xúc của 24 phản hồi minh họa"></svg><div class="donut-center"><strong id="net-sentiment">−33,3</strong><span>Chênh lệch +/−</span></div></div><div id="distribution-legend" class="distribution-legend" aria-label="Chọn cảm xúc để xem phản hồi"></div></div><p class="chart-note">Bấm một nhóm cảm xúc để xem phản hồi.</p></section>
+        <section class="attention-pane" aria-labelledby="attention-heading"><div class="subheading-row"><h3 id="attention-heading">Chủ đề cần chú ý</h3><span>Tiêu cực / tổng</span></div><div id="topic-attention" class="topic-attention"></div><p class="chart-note">Xếp theo số phản hồi tiêu cực. Toxic được tính riêng.</p></section>
+      </div>
+    </section>
+
+    <section id="network" class="network-section" aria-labelledby="network-heading">
+      <div class="section-heading"><div><h2 id="network-heading">Các từ đang kết nối với nhau</h2><p>Khám phá những cụm từ cùng xuất hiện trong phản hồi.</p></div><span class="network-caption" id="network-count"></span></div>
+      <div class="network-surface"><div class="network-canvas"><div class="graph-key"><span>Kích thước: số phản hồi</span><span>Liên kết: cùng phản hồi</span></div><label class="mobile-term-picker" for="mobile-term"><span>Chọn cụm từ</span><select id="mobile-term"><option value="">Tất cả cụm từ</option></select></label><svg id="term-network" viewBox="0 0 760 430" aria-label="Mạng đồng xuất hiện từ ngữ minh họa"></svg><div class="graph-controls"><button type="button" id="network-reset" aria-label="Bỏ chọn cụm từ trong mạng"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 7M4 4v6h6"/></svg>Bỏ chọn</button></div></div><aside class="network-sidebar"><h3>Các nhóm từ</h3><div id="community-list" class="community-list"></div><div class="network-insight"><span class="field-label">Cụm từ được chọn</span><strong id="selected-node-label">đăng ký học phần</strong><p id="selected-node-description"></p><button type="button" id="show-node-evidence" class="text-action">Xem phản hồi liên quan <span aria-hidden="true">↗</span></button></div><p class="network-note">Màu thể hiện nhóm từ, khác với màu cảm xúc.</p></aside></div>
+    </section>
+
+    <section id="evidence" class="evidence-section" aria-labelledby="evidence-heading"><div class="section-heading"><div><h2 id="evidence-heading">Phản hồi để đối chiếu</h2><p id="evidence-description"></p></div><button type="button" id="clear-filters" class="button-secondary" hidden>Bỏ bộ lọc <span aria-hidden="true">×</span></button></div><div id="active-filters" class="active-filters"></div><div id="evidence-list" class="evidence-list"></div><button type="button" id="load-more" class="load-more">Xem thêm phản hồi <span aria-hidden="true">↓</span></button></section>
+    <footer class="page-footer"><span>NEU–ESC <span class="footer-divider">/</span> Bản đề xuất giao diện</span><span>Dữ liệu minh họa · Không gọi API hoặc LLM</span><a href="#analysis">Về đầu trang ↑</a></footer>
+  </main>
+  <div class="sr-only" id="announcement" role="status" aria-live="polite"></div>
+</body>
+</html>

@@ -278,10 +278,10 @@ def test_delete_cascades_exports_runs_and_revisions(env):
 def test_concurrent_database_initialization(tmp_path):
     with ThreadPoolExecutor(max_workers=4) as pool:
         stores=list(pool.map(lambda _:Store(tmp_path),range(4)))
-    assert stores[0].database_version()==2
+    assert stores[0].database_version()==4
     with stores[0].connect() as db:
         versions=[row[0] for row in db.execute('SELECT version FROM schema_migrations ORDER BY version').fetchall()]
-        assert versions==[1,2]
+        assert versions==[1,2,3,4]
         tables={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
         assert {'sensitivity_experiments','sensitivity_rate_limits'}.issubset(tables)
 

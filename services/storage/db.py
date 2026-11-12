@@ -110,6 +110,66 @@ CREATE TABLE sensitivity_rate_limits (
 CREATE INDEX sensitivity_rate_created ON sensitivity_rate_limits(created_ts);
 '''
 
+MIGRATION_3 = '''
+CREATE TABLE attribution_jobs (
+  id TEXT PRIMARY KEY,
+  source_job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+  source_prediction_id TEXT NOT NULL REFERENCES predictions(id) ON DELETE CASCADE,
+  status TEXT NOT NULL,
+  target_json TEXT NOT NULL,
+  method_json TEXT,
+  coverage_json TEXT,
+  groups_json TEXT,
+  aggregate_json TEXT,
+  error_code TEXT,
+  error_message TEXT,
+  cancel_requested INTEGER NOT NULL DEFAULT 0,
+  attempt_id INTEGER NOT NULL DEFAULT 0,
+  lease_owner TEXT,
+  lease_expires_at REAL,
+  heartbeat_at TEXT,
+  idempotency_key TEXT,
+  progress_completed INTEGER NOT NULL DEFAULT 0,
+  progress_total INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX attribution_jobs_source ON attribution_jobs(source_job_id, source_prediction_id);
+CREATE INDEX attribution_jobs_queue ON attribution_jobs(status, created_at);
+CREATE INDEX attribution_idempotency ON attribution_jobs(idempotency_key);
+CREATE TABLE attribution_coalitions (
+  job_id TEXT NOT NULL REFERENCES attribution_jobs(id) ON DELETE CASCADE,
+  coalition_mask TEXT NOT NULL,
+  val REAL NOT NULL,
+  PRIMARY KEY(job_id, coalition_mask)
+);
+'''
+
+MIGRATION_4 = '''
+ALTER TABLE attribution_jobs ADD COLUMN source_json TEXT;
+ALTER TABLE attribution_jobs ADD COLUMN cache_key TEXT;
+ALTER TABLE attribution_jobs ADD COLUMN checkpoint_json TEXT;
+ALTER TABLE attribution_jobs ADD COLUMN compute_started_at REAL;
+ALTER TABLE attribution_jobs ADD COLUMN compute_deadline REAL;
+ALTER TABLE attribution_jobs ADD COLUMN expires_at REAL;
+CREATE INDEX attribution_cache ON attribution_jobs(cache_key,status,expires_at);
+ALTER TABLE attribution_coalitions ADD COLUMN outputs_json TEXT;
+CREATE TABLE network_jobs (
+ id TEXT PRIMARY KEY,
+ dataset_id TEXT NOT NULL REFERENCES datasets(id) ON DELETE CASCADE,
+ scope_token TEXT NOT NULL,
+ filter_signature TEXT NOT NULL,
+ filters_json TEXT NOT NULL,
+ snapshot_json TEXT NOT NULL,
+ result_json TEXT,
+ status TEXT NOT NULL,
+ error_code TEXT,
+ created_at TEXT NOT NULL,
+ expires_at REAL NOT NULL
+);
+CREATE INDEX network_cache ON network_jobs(dataset_id,scope_token,filter_signature,expires_at);
+'''
+
 
 class Store:
     def __init__(self, runtime_dir=None):
@@ -127,7 +187,7 @@ class Store:
                 except sqlite3.OperationalError as exc:
                     if 'locked' not in str(exc).lower() or time.monotonic() >= deadline: raise
                     time.sleep(.025)
-            for version, sql in ((1, MIGRATION_1), (2, MIGRATION_2)):
+            for version, sql in ((1, MIGRATION_1), (2, MIGRATION_2), (3, MIGRATION_3), (4, MIGRATION_4)):
                 conn.execute('BEGIN IMMEDIATE')
                 try:
                     conn.execute('CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)')
@@ -184,7 +244,11 @@ class Store:
                          WHERE r.dataset_id=datasets.id AND j.status NOT IN
                          ('completed','completed_with_errors','failed','cancelled','interrupted'))""", (now_ts,))
         c.execute("DELETE FROM idempotency WHERE operation='sensitivity' AND result_id NOT IN (SELECT job_id FROM sensitivity_experiments)")
+        c.execute("DELETE FROM idempotency WHERE operation='attribution' AND result_id NOT IN (SELECT id FROM attribution_jobs)")
         c.execute('DELETE FROM sensitivity_rate_limits WHERE created_ts<=?', (now_ts - 60.0,))
+        c.execute("DELETE FROM attribution_jobs WHERE expires_at IS NOT NULL AND expires_at<=?", (now_ts,))
+        c.execute("DELETE FROM idempotency WHERE operation='attribution' AND result_id NOT IN (SELECT id FROM attribution_jobs)")
+        c.execute('DELETE FROM network_jobs WHERE expires_at<=?', (now_ts,))
 
     def cleanup(self):
         with self.tx() as c:
@@ -197,6 +261,10 @@ class Store:
             c.execute("UPDATE jobs SET status='interrupted',lease_owner=NULL,lease_expires_at=NULL,error='Worker lease expired',updated_at=? WHERE id=?", (now(), j['id']))
             c.execute("UPDATE runs SET status='interrupted' WHERE id=?", (j['run_id'],))
             self.expire_quick(c, j['run_id'])
+        expired_attrs = c.execute("SELECT id FROM attribution_jobs WHERE status='running' AND lease_expires_at<?", (time.time(),)).fetchall()
+        for a in expired_attrs:
+            c.execute("UPDATE attribution_jobs SET status='queued',lease_owner=NULL,lease_expires_at=NULL,updated_at=? WHERE id=?", (now(), a['id']))
+        c.execute("UPDATE attribution_jobs SET status='failed',error_code='COMPUTE_TIMEOUT',error_message='Phân tích từ ngữ quá thời gian. Thử lại.',lease_owner=NULL,lease_expires_at=NULL WHERE status IN ('queued','running') AND compute_deadline<=?", (time.time(),))
 
     def expire_quick(self, c, run_id):
         c.execute('UPDATE datasets SET expires_at=? WHERE temporary=1 AND id=(SELECT dataset_id FROM runs WHERE id=?)', (time.time() + 900, run_id))
@@ -735,6 +803,9 @@ class Store:
                 return sig['truncated'] is True
             return sig['pending_signal_review'] is True
         def keep(i):
+            if filters.get('item_ids'):
+                allowed_ids = set(filters['item_ids'].split(',')) if isinstance(filters['item_ids'], str) else set(filters['item_ids'])
+                if i['id'] not in allowed_ids: return False
             if filters.get('q') and str(filters['q']).casefold() not in i['text'].casefold(): return False
             for task in ('sentiment', 'topic'):
                 if filters.get(task) is not None and labels(i)[task] != int(filters[task]): return False
@@ -1297,3 +1368,118 @@ class Store:
             c.execute('INSERT INTO sensitivity_rate_limits VALUES(?,?)', (uid(), now_ts))
             self.remember(c, idempotency_key, 'sensitivity', idempotency_payload, run['job_id'])
             return self._build_sensitivity_response(c, run['job_id'], _cached_identity=identity)
+
+    def _attribution_source(self, c, job_id, prediction_id):
+        from services.attribution_contract import source_snapshot, valid_identity
+        info = self.validate_quick_source(c, job_id, prediction_id)
+        pred = info['item']['prediction']
+        if not valid_identity(pred.get('execution_identity'), info['dataset']['profile'], pred):
+            raise DomainError('PROVENANCE_REQUIRED', 'Phân tích lại câu để xác minh model nguồn.', 409)
+        return info, source_snapshot(info)
+
+    def create_attribution_job(self, source_job_id, source_prediction_id, target, idempotency_key=None,
+                               execution_resolver=None):
+        from services.attribution_contract import METHOD, QUEUE_LIMIT, TTL_SECONDS, signature
+        try:
+            if not isinstance(idempotency_key, str) or str(uuid.UUID(idempotency_key)) != idempotency_key.lower():
+                raise ValueError()
+        except (ValueError, AttributeError):
+            raise DomainError('INVALID_IDEMPOTENCY_KEY', 'Idempotency-Key phải là UUID.', 422)
+        # Inspect the registry without a SQLite write lock or encoder load.
+        with self.connect() as c:
+            info, frozen = self._attribution_source(c, source_job_id, source_prediction_id)
+        if execution_resolver is not None:
+            actual = self._resolve_execution_identity(execution_resolver, frozen['profile_id'])
+            if actual != frozen['execution_identity']:
+                raise DomainError('MODEL_IDENTITY_CHANGED', 'Model đã đổi. Phân tích lại câu.', 409)
+        profile = profile_for(frozen['profile_id'])
+        if (not isinstance(target, dict) or target.get('kind') not in ('polarity_margin', 'label_score')
+                or (target['kind'] == 'label_score' and (set(target) != {'kind', 'label_id'}
+                    or type(target['label_id']) is not int or target['label_id'] not in {x['id'] for x in profile['sentiment']}))
+                or (target['kind'] == 'polarity_margin' and set(target) != {'kind'})):
+            raise DomainError('INVALID_TARGET', 'Nhãn cần giải thích không thuộc profile.', 422)
+        target_str = encode(target)
+        payload = dict(source_job_id=source_job_id, source_prediction_id=source_prediction_id, target=target)
+        cache_key = signature(dict(source=frozen, target=target, method=METHOD))
+        with self.tx() as c:
+            info, current = self._attribution_source(c, source_job_id, source_prediction_id)
+            if current != frozen:
+                raise DomainError('SOURCE_CONFLICT', 'Dự đoán nguồn đã thay đổi.', 409)
+            previous = self.remember(c, idempotency_key, 'attribution', payload)
+            if previous:
+                row = c.execute('SELECT * FROM attribution_jobs WHERE id=?', (previous,)).fetchone()
+                if row is not None:
+                    return self._build_attribution_response(c, row, info)
+            cached = c.execute("SELECT * FROM attribution_jobs WHERE cache_key=? AND status='completed' AND expires_at>? ORDER BY created_at DESC LIMIT 1", (cache_key, time.time())).fetchone()
+            if not cached and c.execute("SELECT COUNT(*) FROM attribution_jobs WHERE status IN ('queued','running')").fetchone()[0] >= QUEUE_LIMIT:
+                raise DomainError('ATTRIBUTION_BUSY', 'Hàng đợi từ ngữ đang đầy. Thử lại sau.', 429)
+            attr_id, stamp = uid(), now()
+            expiry = min(time.time()+TTL_SECONDS, info['source_expires_at'])
+            c.execute("""INSERT INTO attribution_jobs
+                (id,source_job_id,source_prediction_id,status,target_json,idempotency_key,created_at,updated_at,
+                 source_json,cache_key,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                (attr_id,source_job_id,source_prediction_id,'completed' if cached else 'queued',target_str,
+                 idempotency_key,stamp,stamp,encode(frozen),cache_key,expiry))
+            if cached:
+                c.execute("""UPDATE attribution_jobs SET method_json=?,coverage_json=?,groups_json=?,aggregate_json=?,
+                    progress_completed=?,progress_total=? WHERE id=?""",
+                    tuple(cached[k] for k in ('method_json','coverage_json','groups_json','aggregate_json','progress_completed','progress_total'))+(attr_id,))
+            self.remember(c, idempotency_key, 'attribution', payload, attr_id)
+            self._bound_attribution_cache(c)
+            row = c.execute('SELECT * FROM attribution_jobs WHERE id=?', (attr_id,)).fetchone()
+            return self._build_attribution_response(c, row, info)
+
+    def _bound_attribution_cache(self, c):
+        from services.attribution_contract import CACHE_LIMIT
+        # Preserve independent handles/idempotency, evict only reusable payloads.
+        c.execute("""UPDATE attribution_jobs SET cache_key=NULL WHERE id IN
+            (SELECT id FROM attribution_jobs WHERE status='completed' AND cache_key IS NOT NULL
+             ORDER BY created_at DESC, rowid DESC LIMIT -1 OFFSET ?)""", (CACHE_LIMIT,))
+
+    def _build_attribution_response(self, c, row, source_info=None):
+        if source_info is None:
+            source_info, frozen = self._attribution_source(c, row['source_job_id'], row['source_prediction_id'])
+        else:
+            from services.attribution_contract import source_snapshot
+            frozen = source_snapshot(source_info)
+        if not row['source_json'] or json.loads(row['source_json']) != frozen:
+            raise DomainError('SOURCE_CONFLICT', 'Nguồn từ ngữ đã thay đổi. Phân tích lại câu.', 409)
+        if row['expires_at'] is not None and row['expires_at'] <= time.time():
+            raise DomainError('JOB_EXPIRED', 'Kết quả đã hết hạn. Phân tích lại câu.', 410)
+        return dict(attribution_id=row['id'], status=row['status'], source=frozen,
+                    method=json.loads(row['method_json']) if row['method_json'] else None,
+                    coverage=json.loads(row['coverage_json']) if row['coverage_json'] else None,
+                    groups=json.loads(row['groups_json']) if row['groups_json'] else [],
+                    aggregate=json.loads(row['aggregate_json']) if row['aggregate_json'] else None,
+                    progress=dict(completed_batches=row['progress_completed'], total_batches=row['progress_total']),
+                    error=dict(code=row['error_code'], message=row['error_message']) if row['error_code'] else None)
+
+    def get_attribution(self, attribution_id, execution_resolver=None):
+        with self.tx() as c:
+            self.recover(c)
+            row = c.execute('SELECT * FROM attribution_jobs WHERE id=?', (attribution_id,)).fetchone()
+            if not row:
+                raise DomainError('NOT_FOUND', 'Không tìm thấy kết quả phân tích từ ngữ.', 404)
+            result = self._build_attribution_response(c, row)
+        if execution_resolver is not None:
+            source = result['source']
+            actual = self._resolve_execution_identity(execution_resolver, source['profile_id'])
+            if actual != source['execution_identity']:
+                raise DomainError('MODEL_IDENTITY_CHANGED', 'Model đã đổi. Phân tích lại câu.', 409)
+        with self.tx() as c:
+            row = c.execute('SELECT * FROM attribution_jobs WHERE id=?', (attribution_id,)).fetchone()
+            if row is None:
+                raise DomainError('NOT_FOUND', 'Kết quả không còn tồn tại.', 404)
+            return self._build_attribution_response(c, row)
+
+    def cancel_attribution(self, attribution_id):
+        with self.tx() as c:
+            row = c.execute('SELECT * FROM attribution_jobs WHERE id=?', (attribution_id,)).fetchone()
+            if not row:
+                raise DomainError('NOT_FOUND', 'Không tìm thấy tác vụ phân tích từ ngữ.', 404)
+            status = row['status']
+            if status in ('queued', 'running'):
+                # Revoking the lease atomically prevents any late batch from publishing.
+                status = 'cancelled'
+                c.execute("UPDATE attribution_jobs SET cancel_requested=1,status='cancelled',lease_owner=NULL,lease_expires_at=NULL,updated_at=? WHERE id=?", (now(), attribution_id))
+            return dict(attribution_id=attribution_id, status=status)

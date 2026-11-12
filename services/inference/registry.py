@@ -221,6 +221,10 @@ def validate_artifact(directory, profile):
 
 def load_artifact(directory, manifest):
     import torch
+    # A single interactive CPU worker shares the laptop with API/browser work.
+    # Large default BLAS thread pools oversubscribe these short microbatches.
+    # Respect a smaller caller setting, and cap only the inference loader.
+    torch.set_num_threads(min(4, torch.get_num_threads()))
     from safetensors import SafetensorError
     from safetensors.torch import load_file
     from transformers import AutoConfig, AutoTokenizer
@@ -371,6 +375,31 @@ class ModelRegistry:
         except Exception as exc:
             raise ModelUnavailable(f"Model unavailable: {exc}") from None
 
+    def get_loaded_bundle(self, profile: str):
+        """Return the one resident bundle and its identity captured before load.
+
+        External bundle replacement during load is rejected. The caller must
+        recheck this frozen identity around any forward outside this lock.
+        """
+        with self._lock:
+            directory, manifest = self._ready_artifact(profile)
+            identity = self._build_execution_identity(profile, directory, manifest)
+            key = (str(directory), manifest["model_version"], self._validated[str(directory)][0])
+            if self._loaded is None or self._loaded[0] != key:
+                self._loaded = None
+                model, tokenizer = load_artifact(directory, manifest)
+                preprocessor = TextPreprocessor(manifest["preprocessing"])
+                self._loaded = key, model, tokenizer, preprocessor, identity
+                self._failures.pop(str(directory), None)
+            current_directory, current_manifest = self._ready_artifact(profile)
+            current_identity = self._build_execution_identity(profile, current_directory, current_manifest)
+            if (current_identity != identity or self._loaded[4] != identity
+                    or self._validated[str(current_directory)][0] != key[2]):
+                self._loaded = None
+                raise ModelIdentityChanged('Model execution identity changed during artifact load.')
+            _, model, tokenizer, preprocessor, loaded_identity = self._loaded
+            return model, tokenizer, preprocessor, dict(loaded_identity), manifest
+
     def status(self, profile: str) -> dict:
         schema_id = self._profiles.get(profile, {}).get("schema_id", "unknown")
         result = dict(available=False, reason=None, model_id=None, model_version=None, schema_id=schema_id)
@@ -418,7 +447,7 @@ class ModelRegistry:
                         raise ModelIdentityChanged("Model execution identity changed before pair inference.")
                 else:
                     directory, manifest = self._inspect(profile)
-                    actual_identity = None
+                    actual_identity = self._build_execution_identity(profile, directory, manifest)
 
                 key = (str(directory), manifest["model_version"], self._validated[str(directory)][0])
                 if self._loaded is None or self._loaded[0] != key:
@@ -426,9 +455,11 @@ class ModelRegistry:
                     phase = "artifact load"
                     model, tokenizer = load_artifact(directory, manifest)
                     preprocessor = TextPreprocessor(manifest["preprocessing"])
-                    self._loaded = key, model, tokenizer, preprocessor
+                    self._loaded = key, model, tokenizer, preprocessor, actual_identity
                     self._failures.pop(str(directory), None)
-                _, model, tokenizer, preprocessor = self._loaded
+                _, model, tokenizer, preprocessor, loaded_identity = self._loaded
+                if actual_identity != loaded_identity:
+                    raise ModelIdentityChanged('Loaded model execution identity differs from bundle identity.')
 
                 phase = "preprocessing"
                 processed_texts = preprocessor.transform([x["text"] for x in items])
@@ -464,6 +495,16 @@ class ModelRegistry:
                 ):
                     raise _ArtifactError("model input diagnostics unavailable")
 
+                # The identity belongs to the loaded model that just forwarded.
+                # Never attach a fresh identity read after a bundle replacement
+                # to logits produced by an older in-memory model.
+                current_directory, current_manifest = self._inspect(profile)
+                if (self._build_execution_identity(profile, current_directory, current_manifest) != actual_identity
+                        or str(current_directory) != key[0]
+                        or self._validated[str(current_directory)][0] != key[2]):
+                    self._loaded = None
+                    raise ModelIdentityChanged('Model execution identity changed during inference.')
+
                 duration = (time.perf_counter() - started) * 1000 / len(items)
                 result = []
                 for item, row, count in zip(items, logits, lengths):
@@ -481,6 +522,7 @@ class ModelRegistry:
                         model_id=manifest["model_id"],
                         model_version=manifest["model_version"],
                         schema_id=manifest["schema_id"],
+                        execution_identity=dict(actual_identity),
                         **tasks,
                         token_count_before_truncation=count,
                         truncated=count > max_length,

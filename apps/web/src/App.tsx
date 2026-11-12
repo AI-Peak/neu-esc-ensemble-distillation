@@ -99,7 +99,6 @@ export default function App() {
       <>
         <SentenceDemo
           profiles={profiles.data}
-          datasets={datasets.data}
           notify={notify}
         />
         {message && (
@@ -903,21 +902,12 @@ function Help({ profiles }: { profiles: Profile[] }) {
         ))}
       </section>
       <section className="section prose">
-        <h2>Diễn giải kết quả qua dịch vụ ngoài</h2>
-        <p>Phân loại chạy trên máy; câu và kết quả được gửi tới dịch vụ diễn giải.
-          Dịch vụ tùy chọn dùng gateway tương thích OpenAI Chat Completions (ví dụ 9router).
-          Thiếu cấu hình vẫn dùng được classifier và quản lý dữ liệu.</p>
-        <p>Đặt bốn biến environment dưới đây trong PowerShell trước khi khởi động API.
-          Thay các placeholder bằng URL, key và model id được gateway của bạn cung cấp.
-          URL có hoặc không có đuôi /v1 đều được hỗ trợ; ứng dụng nối /chat/completions.
-          Không đặt key trong biến VITE_* hay frontend.</p>
-        <pre>{`$env:FEEDBACK_EXPLANATION_BASE_URL = '<GATEWAY_BASE_URL>'
-$env:FEEDBACK_EXPLANATION_API_KEY = '<API_KEY>'
-$env:FEEDBACK_EXPLANATION_MODEL = '<MODEL_ID_FROM_GATEWAY>'
-$env:FEEDBACK_EXPLANATION_TIMEOUT_SECONDS = '20'`}</pre>
-        <p>Ứng dụng đọc environment lúc tạo API/provider, không tự nạp file .env.
-          Sau khi đổi cấu hình, khởi động lại API từ shell có các biến mới, tải lại trang
-          và bấm “Thử lại diễn giải”. Nút này giữ kết quả phân loại và không chạy classifier lại.</p>
+        <h2>Đối chiếu từ ngữ với dự đoán</h2>
+        <p>Bảng từ ngữ dùng chính classifier local để ước lượng đóng góp của từng cụm.
+          Chọn một cụm trong phản hồi hoặc một dòng để đối chiếu; mở “Cách tính tổng”
+          để xem baseline, phép cộng và giới hạn của phương pháp.</p>
+        <p>Khi phần từ ngữ không hỗ trợ đầu vào hoặc gặp lỗi, kết quả dự đoán vẫn được giữ.
+          Thử lại phần từ ngữ khi có lỗi kết nối; phân tích lại câu nếu nguồn đã hết hạn.</p>
         <h2>Chuẩn bị CSV</h2>
         <p>
           Dùng UTF-8 (có hoặc không có BOM), tối đa 5 MB và 500 phản hồi. Mỗi

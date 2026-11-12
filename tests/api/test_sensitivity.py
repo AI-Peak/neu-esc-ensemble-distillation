@@ -631,10 +631,10 @@ def test_health_version_and_v1_to_v2_migration_preserves_durable_data_and_export
         worker = Worker(tmp_path, registry, batch_size=1)
 
         health = client.get("/api/v1/health").json()
-        assert health["database_version"] == 2
+        assert health["database_version"] == 4
 
         with store.connect() as db:
-            assert [r[0] for r in db.execute("SELECT version FROM schema_migrations ORDER BY version")] == [1, 2]
+            assert [r[0] for r in db.execute("SELECT version FROM schema_migrations ORDER BY version")] == [1, 2, 3, 4]
             assert db.execute("PRAGMA foreign_key_check").fetchall() == []
             assert [r[0] for r in db.execute("PRAGMA integrity_check").fetchall()] == ["ok"]
 

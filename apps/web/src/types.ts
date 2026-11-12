@@ -42,6 +42,7 @@ export type Dataset = {
   latest_run_id: string | null;
 };
 export type Prediction = {
+  execution_identity?: Record<string, unknown>;
   item_id?: string;
   revision_id?: string;
   id?: string;
@@ -351,23 +352,123 @@ export const date = (v: string) =>
     hour: "2-digit",
     minute: "2-digit",
   });
-export type ExplanationRequest = {
-  source_prediction_id: string;
+export type AttributionTarget =
+  | { kind: "polarity_margin" }
+  | { kind: "label_score"; label_id: number };
+
+export type AttributionGroup = {
+  id: string;
+  text: string;
+  start_utf16: number;
+  end_utf16: number;
+  token_indices: number[];
+  contribution: number;
 };
-export type ExplanationResponse = {
-  status: "completed";
-  job_id: string;
-  run_id: string;
-  item_id: string;
-  revision_id: string;
-  source_prediction_id: string;
-  profile_id: string;
-  schema_id: string;
-  classifier_model_id: string;
-  classifier_model_version: string;
-  prompt_version: string;
-  reading: string;
-  caution: string;
+
+export type AttributionAggregate = {
+  baseline_value: number;
+  total_contribution: number;
+  target_output: number;
+  additivity_residual: number;
+  hidden_groups_contribution?: number;
+};
+
+export type AttributionMethod = {
+  id: string;
+  version: string;
+  grouping_version: string;
+  baseline_policy: string;
+  target: AttributionTarget;
+  unit: string;
+  seed: number;
+  requested_permutations: number;
+  completed_permutations: number;
+  evaluated_coalitions: number;
+};
+
+export type AttributionCoverage = {
+  truncated: boolean;
+  input_token_count: number;
+  mapping_status: string;
+  analyzed_spans: number;
+  fixed_token_policy: string;
+  explained_token_indices: number[];
+};
+
+export type AttributionResponse = {
+  attribution_id: string;
+  status: "queued" | "running" | "completed" | "cancelled" | "failed" | "unsupported";
+  source?: {
+    source_job_id: string;
+    source_prediction_id: string;
+    item_id: string;
+    revision_id: string;
+    run_id: string;
+    text_hash: string;
+    profile_id: string;
+    schema_id: string;
+    model_id: string;
+    model_version: string;
+    execution_identity?: Record<string, unknown>;
+  };
+  method?: AttributionMethod | null;
+  coverage?: AttributionCoverage | null;
+  groups: AttributionGroup[];
+  aggregate?: AttributionAggregate | null;
+  progress: {
+    completed_batches: number;
+    total_batches: number;
+  };
+  error?: {
+    code: string;
+    message: string;
+  } | null;
+};
+
+export type NetworkNode = {
+  id: string;
+  label: string;
+  count: number;
+  community: number;
+  x: number;
+  y: number;
+  item_ids: string[];
+};
+
+export type NetworkEdge = {
+  id: string;
+  source: string;
+  target: string;
+  weight: number;
+  item_ids: string[];
+};
+
+export type NetworkCommunity = {
+  id: number;
+  label: string;
+  color: string;
+  count: number;
+  members: string[];
+  item_ids: string[];
+};
+
+export type NetworkResponse = {
+  network_id: string;
+  status: 'queued' | 'running' | 'completed' | 'failed';
+  filter_signature: string;
+  network_version: string;
+  params: Record<string, unknown>;
+  scope_item_count: number;
+  error?: {code: string; message: string} | null;
+  dataset_id: string;
+  scope_token: string;
+  label_source: string;
+  nodes: NetworkNode[];
+  edges: NetworkEdge[];
+  communities: NetworkCommunity[];
+  total_nodes: number;
+  total_edges: number;
+  source_item_count: number;
 };
 export const reviewName = (item: Item) => {
   const n = Object.values(item.reviews).filter(

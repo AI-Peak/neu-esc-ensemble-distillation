@@ -24,6 +24,7 @@ type Props = {
   runId: string;
   editingSourceText: boolean;
   onReloadItem: () => void;
+  embedded?: boolean;
 };
 
 type SpanSelection = {
@@ -501,6 +502,7 @@ export function SensitivityPanel({
   runId,
   editingSourceText,
   onReloadItem,
+  embedded = false,
 }: Props) {
   const queryClient = useQueryClient();
   const inputId = useId();
@@ -510,7 +512,9 @@ export function SensitivityPanel({
   const rawTextRef = useRef<HTMLParagraphElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const firstRadioRef = useRef<HTMLInputElement>(null);
-  const wasOpenRef = useRef(false);
+  const wasOpenRef = useRef(embedded);
+  const [detailsOpen, setDetailsOpen] = useState(embedded);
+  const panelOpen = embedded || detailsOpen;
 
   const generationRef = useRef(0);
   const activeJobIdRef = useRef<string | null>(null);
@@ -638,7 +642,7 @@ export function SensitivityPanel({
       retrySeq,
     ],
     queryFn: () => getSensitivityExperiment(experimentId!),
-    enabled: experimentId != null,
+    enabled: panelOpen && experimentId != null,
     gcTime: 30_000,
     staleTime: 0,
     retry: (failureCount, err) =>
@@ -754,7 +758,9 @@ export function SensitivityPanel({
   }, [experimentId, retrySeq, exp, isQueryNotFound, knownJobId]);
 
   const handleToggleDetails = (open: boolean) => {
-    if (open) {
+    const effectiveOpen = embedded || open;
+    setDetailsOpen(effectiveOpen);
+    if (effectiveOpen) {
       wasOpenRef.current = true;
       return;
     }
@@ -1140,9 +1146,10 @@ export function SensitivityPanel({
   return (
     <details
       className="sensitivity-panel"
+      open={panelOpen}
       onToggle={(e) => handleToggleDetails(e.currentTarget.open)}
     >
-      <summary>Khám phá dự đoán</summary>
+      <summary hidden={embedded}>Khám phá dự đoán</summary>
       <div className="sensitivity-body">
         <p className="muted small">
           Thử bỏ một cụm từ trong bản gốc để quan sát thay đổi điểm số trên cùng

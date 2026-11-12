@@ -31,6 +31,8 @@ class TestOnlyRegistry:
         self.pair_input_equal_fn = None
         self.pair_returned_identity = None
         self.pair_result_override = None
+        self._attribution_sources = {}
+        self._attribution_bundle = None
 
     def status(self, profile):
         schema_id = PROFILES.get(profile, {}).get("schema_id", "unknown")
@@ -71,6 +73,41 @@ class TestOnlyRegistry:
             "mode": "cpu-fp32-eval",
         }
 
+    @staticmethod
+    def _software_scores(profile, key):
+        tasks = {}
+        for task in ('sentiment', 'topic'):
+            count = len(PROFILES[profile][task])
+            scores = [0.1 / (count - 1)] * count
+            scores[key % count] = 0.9
+            tasks[task] = scores
+        return tasks
+
+    def get_loaded_bundle(self, profile):
+        if not self.available:
+            raise ModelUnavailable('Model unavailable')
+        # Explicit software game: source and coalition forward share the same
+        # score function. A full token sequence is bound to its raw-text key;
+        # masked sequences use a deterministic key and are never model evidence.
+        registry = self
+        class DummyTokenizer:
+            mask_token_id, bos_token_id, eos_token_id, pad_token_id = 64000, 0, 2, 1
+            def encode(self, text, add_special_tokens=True):
+                ids = [int(hashlib.sha256(w.encode()).hexdigest()[:8],16) % 50000 + 10 for w in text.split()]
+                return [0] + ids + [2] if add_special_tokens else ids
+        tokenizer = DummyTokenizer()
+        from underthesea import word_tokenize
+        full_keys = {tuple(tokenizer.encode(word_tokenize(text,format='text'))): key
+                     for text,key in self._attribution_sources.items()}
+        class DummyModel:
+            def __call__(self, input_ids, attention_mask):
+                import torch
+                all_scores = [registry._software_scores(profile,full_keys.get(tuple(row),sum(row)))
+                              for row in input_ids.tolist()]
+                return tuple(torch.tensor([s[task] for s in all_scores],dtype=torch.float32).log()
+                             for task in ('sentiment','topic'))
+        return DummyModel(), tokenizer, None, self.execution_identity(profile), {'labels': PROFILES[profile]}
+
     def predict(self, profile, items):
         if self.hook:
             self.hook()
@@ -82,11 +119,11 @@ class TestOnlyRegistry:
         outputs = []
         for item in items:
             prediction = {k: st[k] for k in ("model_id", "model_version", "schema_id")}
+            prediction["execution_identity"] = self.execution_identity(profile)
+            self._attribution_sources[item["text"]] = sum(map(ord,item["text"]))
             for task in ("sentiment", "topic"):
-                count = len(PROFILES[profile][task])
-                winner = sum(map(ord, item["text"])) % count
-                scores = [0.1 / (count - 1)] * count
-                scores[winner] = 0.9
+                scores = self._software_scores(profile, sum(map(ord, item['text'])))[task]
+                winner = max(range(len(scores)),key=scores.__getitem__)
                 prediction[task] = {"label_id": winner, "scores": scores}
             token_count = len(item["text"].split()) + 2
             prediction.update(
