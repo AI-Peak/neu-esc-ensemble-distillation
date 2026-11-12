@@ -23,6 +23,7 @@ import { SensitivityPanel } from "./SensitivityPanel";
 import { validDemoTask } from "./demoPrediction";
 import { useAttribution } from "./useAttribution";
 import { defaultAttributionTarget } from "./attributionValidation";
+import { DEMO_EXTENDED_SECTIONS_ENABLED } from "./demoConfig";
 import "./SentenceDemo.css";
 
 export type SentenceDemoProps = {
@@ -49,17 +50,23 @@ export function SentenceDemo({
 
   const profiles = initialProfiles ?? profilesQuery.data ?? [];
 
-  // Profile state (defaults to "neu" if available, else first profile)
-  const [profileId, setProfileId] = useState<string>("neu");
-  const profile =
-    profiles.find((p) => p.id === profileId) ?? profiles[0] ?? ({} as Profile);
-
-  // Sync profileId once profiles load if "neu" isn't present
-  useEffect(() => {
-    if (profiles.length > 0 && !profiles.some((p) => p.id === profileId)) {
-      setProfileId(profiles[0].id);
-    }
-  }, [profiles, profileId]);
+  // This route has one fixed contract. Other workspace routes still support UIT.
+  const profileId = "neu";
+  const neuProfile = profiles.find(p => p.id === profileId);
+  const profile: Profile = neuProfile ?? {
+    id: "neu", schema_id: "neu-v1", name: "NEU–ESC", description: "",
+    sentiment: [], topic: [], model: { available: false, reason: null,
+      model_id: null, model_version: null, schema_id: "neu-v1" },
+  };
+  const profilesLoading = !initialProfiles && profilesQuery.isPending;
+  const profileError = profilesLoading ? null : !neuProfile
+    ? "Không tìm thấy profile NEU. Hãy cài profile và model NEU để phân tích."
+    : profile.schema_id !== "neu-v1" || profile.model?.schema_id !== "neu-v1" ||
+      profile.sentiment?.length !== 4 || profile.topic?.length !== 10
+      ? "Schema hoặc tập nhãn NEU không hợp lệ. Cần đúng 4 cảm xúc và 10 chủ đề NEU."
+      : !profile.model?.available || !profile.model.model_id || !profile.model.model_version
+        ? `Model NEU chưa sẵn sàng. ${profile.model?.reason || "Cần cài bộ model NEU hợp lệ để phân tích."}` : null;
+  const canAnalyze = !!neuProfile && !profilesLoading && !profileError;
 
   // Input states
   const [text, setText] = useState<string>("");
@@ -166,8 +173,8 @@ export function SentenceDemo({
       item.review_signals.prediction_id === prediction.id)
   );
   const sentimentValid =
-    sourceValid && validDemoTask(prediction, profile, "sentiment");
-  const topicValid = sourceValid && validDemoTask(prediction, profile, "topic");
+    sourceValid && canAnalyze && validDemoTask(prediction, profile, "sentiment");
+  const topicValid = sourceValid && canAnalyze && validDemoTask(prediction, profile, "topic");
   const validPrediction = sentimentValid && topicValid;
   const sourceDatasetId = validPrediction ? item!.dataset_id : "";
   const attribution = useAttribution(
@@ -214,17 +221,6 @@ export function SentenceDemo({
     };
   }, [queryClient]);
 
-  // Handle switching profile
-  const handleProfileChange = (newProfileId: string) => {
-    if (newProfileId === profileId) return;
-    setProfileId(newProfileId);
-    setEvidenceSentimentId(null);
-    setEvidenceTopicId(null);
-    setNetworkSelection(null);
-    setEvidenceFilterLabel(null);
-    resetAnalysis();
-  };
-
   // Handle analyze click
   const handleAnalyze = async () => {
     if (
@@ -232,7 +228,7 @@ export function SentenceDemo({
       running ||
       busy ||
       busyGenerationRef.current !== null ||
-      !profile.model?.available
+      !canAnalyze
     )
       return;
     const submitted = text.trim();
@@ -284,7 +280,7 @@ export function SentenceDemo({
   };
 
   const handleRetryJob = async () => {
-    if (!jobId || busyGenerationRef.current !== null) return;
+    if (!jobId || !canAnalyze || busyGenerationRef.current !== null) return;
     const generation = generationRef.current;
     const targetJobId = jobId;
     busyGenerationRef.current = generation;
@@ -321,7 +317,7 @@ export function SentenceDemo({
       }
       return result;
     },
-    enabled: !!sourceDatasetId,
+    enabled: DEMO_EXTENDED_SECTIONS_ENABLED && !!sourceDatasetId,
     refetchOnWindowFocus: true,
   });
   const summary = summaryQuery.isError ? undefined : summaryQuery.data;
@@ -336,6 +332,7 @@ export function SentenceDemo({
   }, [attention?.topics]);
 
   useEffect(() => {
+    if (!DEMO_EXTENDED_SECTIONS_ENABLED) return;
     const element = document.getElementById("network");
     if (!element) return;
     const observer = new IntersectionObserver((entries) => {
@@ -350,7 +347,7 @@ export function SentenceDemo({
     queryKey: ["demo-dataset-network", sourceDatasetId, currentRunId, labelSource, summary?.scope_token],
     queryFn: ({ signal }) =>
       getNetwork(sourceDatasetId, labelSource, currentRunId, signal),
-    enabled: !!sourceDatasetId && !!summary && networkVisible,
+    enabled: DEMO_EXTENDED_SECTIONS_ENABLED && !!sourceDatasetId && !!summary && networkVisible,
     staleTime: 60000,
     retry: (failureCount, error) => failureCount < 2 && ![404, 409, 410, 422].includes((error as ApiError).status ?? 0),
     refetchInterval: (query) => query.state.error ? false : ["queued", "running"].includes(query.state.data?.status ?? "") ? 500 : false,
@@ -403,7 +400,7 @@ export function SentenceDemo({
         signal,
       });
     },
-    enabled: !!sourceDatasetId && !!summary,
+    enabled: DEMO_EXTENDED_SECTIONS_ENABLED && !!sourceDatasetId && !!summary,
     staleTime: 5000,
     retry: (failureCount, error) => failureCount < 2 && ![404, 409, 410, 422].includes((error as ApiError).status ?? 0),
   });
@@ -477,6 +474,17 @@ export function SentenceDemo({
     });
   };
 
+  const attrProgress = attributionLoading ? attribution.progress : null;
+  const progressPercent = attrProgress ? attrProgress.completed_batches / attrProgress.total_batches * 100 : null;
+  const progressLabel = busy ? "Đang gửi yêu cầu…" : running
+    ? job.data?.status === "loading_model" ? "Đang nạp model…"
+      : job.data?.status === "running" ? "Đang phân tích cảm xúc và chủ đề…" : "Đang chờ xử lý…"
+    : attributionLoading ? attribution.status === "validating" || progressPercent === 100 ? "Đang hoàn tất kết quả…"
+      : attribution.status === "submitting" ? "Đang gửi yêu cầu tính đóng góp…"
+      : attribution.status === "checking" ? "Đang đọc trạng thái tính đóng góp…"
+      : attribution.status === "queued" && !attrProgress ? "Đang chờ tính đóng góp…"
+        : `Đang tính đóng góp của các cụm từ…${progressPercent === null ? "" : ` ${Math.floor(progressPercent)}%`}` : null;
+
   return (
     <div className="sentence-demo-root">
       <a
@@ -510,32 +518,11 @@ export function SentenceDemo({
             <a href="#analysis" className="nav-current" onClick={(event) => { event.preventDefault(); scrollSection("analysis"); }}>
               Phân tích câu
             </a>
-            <a href="#overview" onClick={(event) => { event.preventDefault(); scrollSection("overview"); }}>Câu vừa phân tích</a>
-            <a href="#network" onClick={(event) => { event.preventDefault(); setNetworkVisible(true); scrollSection("network"); }}>Mạng từ</a>
+            {DEMO_EXTENDED_SECTIONS_ENABLED && <>
+              <a href="#overview" onClick={(event) => { event.preventDefault(); scrollSection("overview"); }}>Câu vừa phân tích</a>
+              <a href="#network" onClick={(event) => { event.preventDefault(); setNetworkVisible(true); scrollSection("network"); }}>Mạng từ</a>
+            </>}
           </nav>
-          <div className="profile-pill" style={{ marginLeft: "auto" }}>
-            <label htmlFor="schema-select" className="sr-only">
-              Hệ nhãn
-            </label>
-            <select
-              id="schema-select"
-              value={profileId}
-              onChange={(e) => handleProfileChange(e.target.value)}
-              style={{
-                fontSize: "14px",
-                padding: "4px 8px",
-                border: "1px solid var(--line)",
-                borderRadius: "6px",
-                background: "white",
-              }}
-            >
-              {profiles.map((p) => (
-                <option key={p.id} value={p.id}>
-                  Tiếng Việt · {p.id.toUpperCase()} ({p.name})
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
       </header>
 
@@ -583,7 +570,7 @@ export function SentenceDemo({
                   id="analyze"
                   className="button-primary"
                   disabled={
-                    !text.trim() || running || busy || !profile.model?.available
+                    !text.trim() || running || busy || !canAnalyze
                   }
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -617,6 +604,30 @@ export function SentenceDemo({
                 </span>
               </div>
 
+              <div className="analysis-progress-status" role="status" aria-live="polite" aria-atomic="true">
+                {progressLabel && <span>{progressLabel}</span>}
+              </div>
+              {progressLabel && (
+                <div id="analysis-progress" className="analysis-progress">
+                  <div className={`analysis-progress-track ${progressPercent === null ? "indeterminate" : ""}`}
+                    role="progressbar" aria-label={attributionLoading ? "Tiến độ tính đóng góp" : "Tiến trình phân tích"}
+                    aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent ?? undefined}
+                    aria-valuetext={progressLabel}>
+                    <span style={progressPercent === null ? undefined : { width: `${progressPercent}%` }} />
+                  </div>
+                  {attributionLoading && <p className="progress-note">Tiến độ riêng bước tính đóng góp, không phải tổng thời gian hay độ chính xác model.</p>}
+                  {(running || busy || attributionLoading) && (
+                    <button type="button" id={attributionLoading ? "cancel-attribution" : "cancel"} className="button-plain"
+                      disabled={!attributionLoading && job.data?.cancel_requested}
+                      onClick={() => {
+                        if (attributionLoading) void attribution.cancel();
+                        else if (busy) resetAnalysis();
+                        else void handleCancel();
+                      }}>{attributionLoading ? "Hủy tính toán" : "Hủy phân tích"}</button>
+                  )}
+                </div>
+              )}
+
               {submitError && (
                 <div
                   className="input-status notice error"
@@ -628,19 +639,8 @@ export function SentenceDemo({
                 </div>
               )}
 
-              {profile.model && !profile.model.available && (
-                <div
-                  className="notice warning input-notice"
-                  role="alert"
-                  style={{ marginTop: 12 }}
-                >
-                  <strong>Model chưa sẵn sàng: </strong>
-                  <span>
-                    {profile.model.reason ||
-                      "Cần cài bộ model hợp lệ để phân tích."}
-                  </span>
-                </div>
-              )}
+              {profilesLoading && <p className="input-notice" role="status">Đang kiểm tra model NEU…</p>}
+              {profileError && <div className="notice error input-notice" role="alert">{profileError}</div>}
             </form>
 
             {/* Prediction Pane */}
@@ -672,48 +672,6 @@ export function SentenceDemo({
                 </div>
               )}
 
-              {/* Waiting State */}
-              {running && (
-                <div
-                  id="waiting-state"
-                  className="waiting-state"
-                  role="status"
-                  style={{ padding: "24px 0" }}
-                >
-                  <div
-                    className="wait-heading"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      marginBottom: 12,
-                    }}
-                  >
-                    <span className="pulse-dot" aria-hidden="true" />
-                    <h3 style={{ fontSize: "16px", fontWeight: 600 }}>
-                      {job.data?.status === "loading_model"
-                        ? "Đang nạp model vào bộ nhớ…"
-                        : "Đang phân tích câu…"}
-                    </h3>
-                  </div>
-                  <p style={{ fontSize: "14px", color: "var(--muted)" }}>
-                    Lần phân tích đầu có thể mất vài giây để model PhoBERT nạp vào
-                    bộ nhớ máy.
-                  </p>
-                  <div style={{ marginTop: 16 }}>
-                    <button
-                      type="button"
-                      id="cancel"
-                      className="button-secondary"
-                      disabled={job.data?.cancel_requested}
-                      onClick={() => void handleCancel()}
-                    >
-                      Hủy phân tích
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Polling Error */}
               {job.isError && (
                 <div
@@ -739,7 +697,7 @@ export function SentenceDemo({
               {jobId && !job.isError && job.data && ["failed", "cancelled", "interrupted", "completed_with_errors"].includes(job.data.status) && (
                 <div className="notice warning" role="status">
                   <p>Phân tích chưa hoàn tất. {job.data.error ?? "Có thể chạy lại tác vụ."}</p>
-                  <button type="button" className="button-secondary" disabled={busy} onClick={() => void handleRetryJob()}>
+                  <button type="button" className="button-secondary" disabled={busy || !canAnalyze} onClick={() => void handleRetryJob()}>
                     Chạy lại tác vụ này
                   </button>
                 </div>
@@ -801,6 +759,7 @@ export function SentenceDemo({
                     </div>
                   </div>
 
+                  {sentimentValid && <h3 className="score-distribution-title">Phân bố điểm cảm xúc</h3>}
                   {/* Score Stack Bar */}
                   {sentimentValid && (
                     <div
@@ -822,7 +781,7 @@ export function SentenceDemo({
                           <span
                             key={label.id}
                             className={segClass}
-                            style={{ width: `${Math.max(1, score * 100)}%` }}
+                            style={{ width: `${Math.max(0, score * 100)}%` }}
                             title={`${label.name}: ${formatPercent(score)}%`}
                           />
                         );
@@ -903,7 +862,6 @@ export function SentenceDemo({
           <div className="section-heading">
             <div>
               <h2 id="words-heading">Từ ngữ &amp; đóng góp</h2>
-              <p>Đối chiếu từng cụm từ với điểm cảm xúc.</p>
             </div>
             <div className="direction-legend">
               {isPolarity ? (
@@ -931,46 +889,6 @@ export function SentenceDemo({
               )}
             </div>
           </div>
-
-          {attributionLoading && (
-            <div
-              className="attribution-surface"
-              role="status"
-              aria-live="polite"
-              style={{ padding: "36px 24px", textAlign: "center" }}
-            >
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 12,
-                }}
-              >
-                <span className="pulse-dot" aria-hidden="true" />
-                <strong style={{ fontSize: "16px" }}>
-                  Đang tính trọng số Shapley cho từng cụm từ…
-                </strong>
-              </div>
-              <p
-                style={{
-                  color: "var(--muted)",
-                  fontSize: "14px",
-                  marginTop: 8,
-                }}
-              >
-                Ước lượng bằng 8 hoán vị trên mô hình local.
-              </p>
-              <div style={{ marginTop: 14 }}>
-                <button
-                  type="button"
-                  className="button-plain"
-                  onClick={() => void attribution.cancel()}
-                >
-                  Hủy tính toán
-                </button>
-              </div>
-            </div>
-          )}
 
           {!attributionLoading && attributionError && (
             <div
@@ -1075,6 +993,7 @@ export function SentenceDemo({
         )}
 
         {/* Section: Overview (P1 - R08) */}
+        {DEMO_EXTENDED_SECTIONS_ENABLED && <>
         <section
           id="overview"
           className="overview-section"
@@ -1448,6 +1367,7 @@ export function SentenceDemo({
         )}
 
         {/* Page Footer */}
+        </>}
         <footer className="page-footer">
           <span>
             NEU–ESC <span className="footer-divider">/</span> Phân tích phản hồi

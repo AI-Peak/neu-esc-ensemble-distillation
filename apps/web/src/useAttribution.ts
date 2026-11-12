@@ -21,8 +21,13 @@ type Operation = {
   timer?: ReturnType<typeof setTimeout>;
   wake?: () => void;
 };
-type State = { data: AttributionResponse | null; loading: boolean; error: string | null; status: string };
-const empty: State = { data: null, loading: false, error: null, status: "empty" };
+type Progress = AttributionResponse["progress"] | null;
+const validProgress = (progress: Progress): Progress => progress &&
+  Number.isSafeInteger(progress.completed_batches) && Number.isSafeInteger(progress.total_batches) &&
+  progress.total_batches > 0 && progress.completed_batches >= 0 &&
+  progress.completed_batches <= progress.total_batches ? { ...progress } : null;
+type State = { progress: Progress; data: AttributionResponse | null; loading: boolean; error: string | null; status: string };
+const empty: State = { progress: null, data: null, loading: false, error: null, status: "empty" };
 const terminal = new Set(["completed", "failed", "cancelled", "unsupported"]);
 const cancelQuietly = (id?: string) => { if (id) void cancelAttribution(id).catch(() => {}); };
 const recoverable = (error: unknown) => error instanceof ApiError && (!error.status || error.status >= 500);
@@ -65,15 +70,18 @@ export function useAttribution(
         !["queued", "running", ...terminal].includes(result.status)) throw new Error("Trạng thái đóng góp không hợp lệ.");
     op.id = result.attribution_id;
     if (result.status === "completed") {
+      setState({ ...empty, loading: true, status: "validating", progress: validProgress(result.progress) });
       await validateAttribution(result, op.source, op.target);
       if (!current(op) || op.cancelled || op.terminal || op.requestEpoch !== requestEpoch) return;
       op.terminal = true;
-      setState({ data: result, loading: false, error: null, status: result.status });
+      setState({ progress: null, data: result, loading: false, error: null, status: result.status });
     } else if (terminal.has(result.status)) {
       op.terminal = true;
       const detail = result.status === "cancelled" ? "Đã hủy tính đóng góp. Có thể thử lại." :
         result.error?.message || (result.status === "unsupported" ? "Chưa hỗ trợ ánh xạ từ ngữ của đầu vào này." : "Không thể tính đóng góp từ ngữ.");
-      setState({ data: null, loading: false, error: detail, status: result.status });
+      setState({ progress: null, data: null, loading: false, error: detail, status: result.status });
+    } else {
+      setState({ ...empty, loading: true, status: result.status, progress: validProgress(result.progress) });
     }
   }, [current]);
 
@@ -105,7 +113,7 @@ export function useAttribution(
         // HTTP source errors and malformed payloads are final. A transport error can resume
         // the same GET/POST and idempotency key without creating another prediction.
         op.terminal = !recoverable(error);
-        setState({ data: null, loading: false, error: message(error), status:
+        setState({ progress: null, data: null, loading: false, error: message(error), status:
           error instanceof ApiError && [404, 410, 409, 422].includes(error.status ?? 0) ? "source_error" : "error" });
         return;
       }
@@ -121,7 +129,7 @@ export function useAttribution(
     const op: Operation = { source: next, target, generation: generation.current, key: crypto.randomUUID(),
       abandoned: false, cancelled: false, terminal: false, stage: "post", sourceKey: sourceKey(next), inFlight: false, requestEpoch: 0 };
     operation.current = op;
-    setState({ data: null, loading: true, error: null, status: "queued" });
+    setState({ progress: null, data: null, loading: true, error: null, status: "submitting" });
     // React StrictMode can replay setup/cleanup in this tick. Only the surviving owner sends POST.
     queueMicrotask(() => { if (current(op)) void execute(op); });
   }, [current, discard, execute, generation]);
@@ -138,7 +146,7 @@ export function useAttribution(
   const retry = useCallback(() => {
     const op = operation.current;
     if (op && current(op) && !op.cancelled && !op.terminal) {
-      setState({ data: null, loading: true, error: null, status: "running" });
+      setState({ progress: null, data: null, loading: true, error: null, status: op.stage === "post" ? "submitting" : "checking" });
       void execute(op);
     } else if (sourceRef.current) start(sourceRef.current);
   }, [current, execute, start]);
@@ -151,7 +159,7 @@ export function useAttribution(
     op.cancelled = true;
     clearTimeout(op.timer);
     op.wake?.();
-    setState({ data: null, loading: false, error: "Đã hủy tính đóng góp. Có thể thử lại.", status: "cancelled" });
+    setState({ progress: null, data: null, loading: false, error: "Đã hủy tính đóng góp. Có thể thử lại.", status: "cancelled" });
     if (!op.id) return;
     try {
       const result = await cancelAttribution(op.id);
@@ -163,7 +171,7 @@ export function useAttribution(
         await consume(op, completed);
       }
     } catch (error) {
-      if (current(op) && !op.terminal) setState({ data: null, loading: false, error: message(error), status: "error" });
+      if (current(op) && !op.terminal) setState({ progress: null, data: null, loading: false, error: message(error), status: "error" });
     }
   }, [consume, current]);
   // Effects run after render. Never expose the previous owner's state during that interval.

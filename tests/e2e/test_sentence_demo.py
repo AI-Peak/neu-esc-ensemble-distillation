@@ -226,7 +226,7 @@ def test_u03_neu_profile_displays_all_10_topics_without_overflow(browser, demo_s
 # ============================================================================
 # U07: Xóa input hoặc đổi profile -> reset trạng thái kết quả
 # ============================================================================
-def test_u07_clear_input_or_change_profile_resets_results(browser, demo_server):
+def test_u07_clear_input_or_edit_resets_results(browser, demo_server):
     page: Page = browser.new_page()
     page.set_viewport_size({"width": 1440, "height": 900})
     page.goto(demo_server.url + "/#/demo")
@@ -256,7 +256,7 @@ def test_u07_clear_input_or_change_profile_resets_results(browser, demo_server):
     expect(page.locator("#result-content")).to_be_visible(timeout=60000)
 
     # Switch profile to "uit"
-    page.locator("#schema-select").select_option("uit")
+    page.locator("#sentence").fill("Nội dung mới thay kết quả cũ.")
 
     # Results should be reset
     expect(page.locator("#empty-state")).to_be_visible()
@@ -269,42 +269,15 @@ def test_u07_clear_input_or_change_profile_resets_results(browser, demo_server):
 # U09: Chuyển sang profile UIT (model chưa sẵn sàng) -> hiển thị cảnh báo
 # và disable nút phân tích
 # ============================================================================
-def test_u09_switch_to_uit_shows_warning_and_disables_analyze(browser, demo_server):
-    page: Page = browser.new_page()
-    page.set_viewport_size({"width": 1440, "height": 900})
+def test_u09_missing_neu_disables_analyze_without_uit_fallback(browser, demo_server):
+    page = browser.new_page()
+    profiles = httpx.get(demo_server.url + "/api/v1/profiles").json()
+    page.route("**/api/v1/profiles", lambda route: route.fulfill(json=[p for p in profiles if p["id"] == "uit"]))
     page.goto(demo_server.url + "/#/demo")
-
-    # Switch profile to UIT
-    profile_select = page.locator("#schema-select")
-    profile_select.select_option("uit")
-
-    # Verify warning banner is displayed
-    warning_notice = page.locator(".notice.warning.input-notice")
-    expect(warning_notice).to_be_visible()
-    expect(warning_notice).to_contain_text("Model chưa sẵn sàng")
-
-    # Type text into textarea
-    page.locator("#sentence").fill("Cơ sở vật chất phòng máy tính cần được nâng cấp.")
-
-    # Crucial: Analyze button MUST remain disabled even when text is present
-    analyze_btn = page.locator("#analyze")
-    expect(analyze_btn).to_be_disabled()
-
-    # Desktop screenshot
-    screenshot_uit_desktop = SCREENSHOT_DIR / "05_desktop_uit_unavailable_1440.png"
-    page.screenshot(path=str(screenshot_uit_desktop), full_page=True)
-    assert screenshot_uit_desktop.exists()
-
-    # Mobile 390px screenshot
-    page.set_viewport_size({"width": 390, "height": 844})
-    page.wait_for_timeout(200)
-    expect(warning_notice).to_be_visible()
-    expect(analyze_btn).to_be_disabled()
-
-    screenshot_uit_mobile = SCREENSHOT_DIR / "09_mobile_uit_unavailable_390.png"
-    page.screenshot(path=str(screenshot_uit_mobile), full_page=True)
-    assert screenshot_uit_mobile.exists()
-
+    page.locator("#sentence").fill("Cơ sở vật chất cần nâng cấp.")
+    expect(page.locator(".input-notice")).to_contain_text("Không tìm thấy profile NEU")
+    expect(page.locator("#analyze")).to_be_disabled()
+    expect(page.locator("#schema-select")).to_have_count(0)
     page.close()
 
 
@@ -442,9 +415,9 @@ def test_f09_poll_error_is_actionable_stops_polling_and_recovers(browser, demo_s
     page.locator("#analyze").click()
     expect(page.locator("#poll-error")).to_be_visible()
     expect(page.locator("#sentence")).to_be_enabled()
-    expect(page.locator("#schema-select")).to_be_enabled()
+    expect(page.locator("#schema-select")).to_have_count(0)
     expect(page.locator("#clear")).to_be_enabled()
-    expect(page.locator("#waiting-state")).to_have_count(0)
+    expect(page.locator("#analysis-progress")).to_have_count(0)
     # A clock advance deterministically proves a 404/410 does not schedule endless polls.
     page.clock.fast_forward(5000)
     assert len(calls) == 1
@@ -522,33 +495,22 @@ console.log('canonical NEU/UIT lengths and NaN/Infinity/range controls passed');
     assert response.returncode == 0, response.stdout + response.stderr
 
 
-def test_u03_uit_available_has_three_sentiments_four_topics(browser, tmp_path):
+def test_u03_uit_available_demo_still_submits_neu(browser, tmp_path):
     server = TestServer(tmp_path / "uit-runtime", demo_profile=True, uit_available=True).start()
     page = browser.new_page()
-    completed = []
-    def inspect_job(response):
-        if response.request.method == "GET" and "/api/v1/jobs/" in response.url and response.ok:
-            payload = response.json()
-            if payload.get("status") == "completed": completed.append(payload)
-    page.on("response", inspect_job)
+    submitted = []
+    page.on("request", lambda request: submitted.append(request.post_data_json) if request.url.endswith("/quick-analysis") and request.method == "POST" else None)
     try:
         page.goto(server.url + "/#/demo")
-        page.locator("#schema-select").select_option("uit")
+        expect(page.locator("#schema-select")).to_have_count(0)
         page.locator("#sentence").fill("Giảng viên giải thích rõ ràng.")
         page.locator("#analyze").click()
-        expect(page.locator("#scores .score-row")).to_have_count(3)
-        expect(page.locator("#topic-scores .score-row")).to_have_count(4)
-        expect(page.locator("#result-content")).to_be_visible()
-        canonical = next(profile for profile in httpx.get(server.url + "/api/v1/profiles").json() if profile["id"] == "uit")
-        assert completed
-        prediction = completed[-1]["result"]["prediction"]
-        for task, selector in [("sentiment", "#scores"), ("topic", "#topic-scores")]:
-            rows = page.locator(selector + " .score-row")
-            for index, label in enumerate(canonical[task]):
-                expect(rows.nth(index).locator("span").first).to_have_text(label["name"])
-                expected = f"{prediction[task]['scores'][label['id']]*100:.1f}".replace(".", ",") + "%"
-                expect(rows.nth(index).locator("strong")).to_have_text(expected)
-        page.screenshot(path=str(SCREENSHOT_DIR / "uit-available-success.png"), full_page=True)
+        expect(page.locator("#scores .score-row")).to_have_count(4)
+        expect(page.locator("#topic-scores .score-row")).to_have_count(10)
+        assert submitted[0]["profile"] == "neu"
+        # UIT remains available in the API/workspace contract.
+        uit = next(p for p in httpx.get(server.url + "/api/v1/profiles").json() if p["id"] == "uit")
+        assert uit["model"]["available"] and len(uit["topic"]) == 4
     finally:
         page.close()
         server.stop()
@@ -599,7 +561,7 @@ def test_f09_poll_failure_after_active_recovers_without_losing_context(browser, 
     page.goto(demo_server.url + "/#/demo")
     page.locator("#sentence").fill("Giữ context khi poll tạm lỗi.")
     page.locator("#analyze").click()
-    expect(page.locator("#waiting-state")).to_be_visible()
+    expect(page.locator("#analysis-progress")).to_be_visible()
     expect(page.locator("#poll-error")).to_be_visible(timeout=5000)
     expect(page.locator("#sentence")).to_be_enabled()
     assert len(calls) == 2
@@ -622,7 +584,7 @@ def test_f09_completed_result_survives_later_refetch_error(browser, demo_server)
     page.evaluate("window.dispatchEvent(new Event('visibilitychange'))")
     expect(page.locator("#poll-error")).to_contain_text("TERMINAL_REFETCH_FAILURE")
     expect(page.locator("#result-content")).to_be_visible()
-    expect(page.locator("#waiting-state")).to_have_count(0)
+    expect(page.locator("#analysis-progress")).to_have_count(0)
     expect(page.locator("#sentence")).to_be_enabled()
     page.close()
 
@@ -808,7 +770,7 @@ def test_u18_terminal_quick_job_retry_completes_one_snapshot_and_attribution(bro
             wait_until(lambda: (server.control_dir / "quick-entered").exists())
             entered = (server.control_dir / "quick-entered").read_text(encoding="utf-8")
             assert entered.strip() == "1"
-            expect(page.locator("#waiting-state")).to_be_visible()
+            expect(page.locator("#analysis-progress")).to_be_visible()
             if terminal_status == "cancelled":
                 page.get_by_role("button", name="Hủy phân tích", exact=True).click()
             else:

@@ -103,3 +103,10 @@ Invoke-RestMethod http://127.0.0.1:18765/api/v1/health
 ```
 
 URL18765 là phiên kiểm chứng Codex, không phải cổng mặc định cho mọi người. Health phải có worker.alive=true; kiểm profile NEU available và UIT unavailable nếu chưa có checkpoint. Không chạy setup/download/import lại model chỉ để test khi bundle local đủ. Tests đặt FEEDBACK_RUNTIME trước import main; real-model tests bắt buộc FEEDBACK_REAL_BUNDLE_TEMPLATE chỉ đọc để copy, chạy offline. API không nạp encoder; worker CPU FP32 eval cap4 threads, một encoder resident, microbatch8 nhường prediction giữa batches.
+
+## Cờ trình bày demo
+
+Công tắc nội bộ nằm ở `apps/web/src/demoConfig.ts`: `DEMO_EXTENDED_SECTIONS_ENABLED = false`.
+Mặc định ẩn ba phần **Câu vừa phân tích**, **Các từ đang kết nối với nhau**, **Phản hồi để đối chiếu**, cùng các liên kết header. Khi tắt, summary/network/evidence cũng không được tải. Phân tích câu, đóng góp từ ngữ và khám phá độ nhạy vẫn hoạt động; workspace không bị ảnh hưởng.
+
+Để bật lại, đổi cờ thành `true`, chạy `npm run build` trong `apps/web`, rồi tải lại trang. Để ẩn lại, đặt `false` và build lại. Không có nút bật/tắt trên webapp. Các kiểm thử cũ có assertion về ba phần mở rộng cần chạy với bản build đặt cờ `true`.

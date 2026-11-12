@@ -125,18 +125,14 @@ def test_r04_to_r07_desktop_attribution_table_and_interaction(browser, demo_serv
     expect(page.locator("#result-content")).to_be_visible(timeout=10000)
     # Layout/selection assertions wait through the real worker's cold NLP load;
     # they do not impose a 15-second attribution SLA.
-    expect(page.locator(".attribution-table")).to_be_visible(timeout=60000)
+    expect(page.locator("#attribution-content")).to_be_visible(timeout=60000)
 
-    # R04: 4 table headers match specifications
-    headers = page.locator(".attribution-table th")
-    expect(headers).to_have_count(4)
-    expect(headers.nth(0)).to_contain_text("Phản hồi")
-    expect(headers.nth(1)).to_contain_text("Từ quan trọng")
-    expect(headers.nth(2)).to_contain_text("Trọng số")
-    expect(headers.nth(3)).to_contain_text("Tổng đóng góp")
+    # Revised brief: feedback precedes a compact list; no merged table cells.
+    expect(page.locator("#attribution-content table")).to_have_count(0)
+    expect(page.locator(".contribution-columns")).to_be_visible()
 
     # R04: Feedback cell displays interactive quote words
-    word_marks = page.locator(".attribution-table .original-cell .word-mark")
+    word_marks = page.locator(".quote-container .word-mark")
     expect(word_marks.first).to_be_visible()
     assert word_marks.count() >= 3
 
@@ -151,7 +147,7 @@ def test_r04_to_r07_desktop_attribution_table_and_interaction(browser, demo_serv
     expect(page.locator(".selection-detail")).to_contain_text(term_text)
 
     # Corresponding table row button is also marked pressed
-    phrase_buttons = page.locator(".attribution-table .phrase-button")
+    phrase_buttons = page.locator("#attribution-content .phrase-button")
     expect(phrase_buttons.first).to_have_attribute("aria-pressed", "true")
 
     # 2. Click second phrase button in table -> highlights second word in quote
@@ -167,17 +163,17 @@ def test_r04_to_r07_desktop_attribution_table_and_interaction(browser, demo_serv
     expect(page.locator(".weight-meter i").first).to_be_attached()
 
     # R04: Single merged total cell displays total sign and unit
-    total_cell = page.locator(".total-cell")
+    total_cell = page.locator(".contribution-total")
     expect(total_cell).to_be_visible()
     expect(page.locator(".total-sign")).to_be_visible()
-    expect(page.locator(".total-unit")).to_contain_text("điểm phần trăm")
+    expect(total_cell).to_contain_text("điểm phần trăm")
 
     # R06: Expandable "Cách tính tổng" shows calculation details
     method_details = page.locator("details.method-details")
     expect(method_details).to_be_visible()
     method_details.locator("summary").click()
     expect(method_details).to_have_attribute("open", "")
-    expect(method_details).to_contain_text("Tổng đóng góp là tổng các trọng số trong bảng")
+    expect(method_details).to_contain_text("Tổng đóng góp là tổng các trọng số trong toàn bộ danh sách")
 
     # R07: Verify NO LLM explanation block is present and NO LLM request was made
     expect(page.locator("#ai-content")).to_have_count(0)

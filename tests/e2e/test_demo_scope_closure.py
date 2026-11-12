@@ -299,7 +299,7 @@ def test_demo_latest_quick_scope_ignores_durable_dataset_and_late_summary(browse
         expect(page.locator('.distribution-pane')).to_have_count(0)
         expect(page.locator('#evidence-list')).to_have_count(0)
         expect(page.locator('#dataset-select')).to_have_count(0)
-        page.locator('#schema-select').select_option('uit')
+        expect(page.locator('#schema-select')).to_have_count(0)
         expect(page.locator('.distribution-pane')).to_have_count(0)
         observe('latest-quick-scope', {'quick_a': quick_a, 'quick_b': quick_b,
                                       'durable_dataset': durable['id'], 'requests': calls})

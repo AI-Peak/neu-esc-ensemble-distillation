@@ -81,7 +81,7 @@ export const HighlightedFeedback: React.FC<HighlightedFeedbackProps> = ({
 
   // Selected group details description
   const selectedGroup = groups.find((g) => g.id === selectedGroupId);
-  let detailText = "Chọn cụm từ để đối chiếu với bảng.";
+  let detailText = "Chọn cụm từ để đối chiếu với danh sách.";
   if (selectedGroup) {
     const formattedSign =
       selectedGroup.contribution > 0

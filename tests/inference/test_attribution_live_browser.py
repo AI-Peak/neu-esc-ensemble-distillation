@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import sqlite3
 import time
@@ -33,7 +34,7 @@ def test_real_prediction_attribution_browser_and_dataset_snapshot():
             job_id=quick.value.json()['job_id']
             expect(page.locator('#result-content')).to_be_visible(timeout=60000)
             prediction_elapsed=time.perf_counter()-start
-            expect(page.locator('.attribution-table')).to_be_visible(timeout=60000)
+            expect(page.locator('#attribution-content')).to_be_visible(timeout=60000)
             job=httpx.get(base+'/api/v1/jobs/'+job_id).json()
             expect(page.locator('#contribution-donut')).to_be_visible(timeout=10000)
             expect(page.locator('#evidence-list .evidence-row')).to_have_count(1)
@@ -74,8 +75,8 @@ def test_real_prediction_attribution_browser_and_dataset_snapshot():
             page.locator('#word-analysis').screenshot(path=str(output/f'real-table-{width}-collapsed.png'))
         page.set_viewport_size(dict(width=1440,height=1000))
         page.screenshot(path=str(output/'real-page-desktop.png'),full_page=True)
-        if page.get_by_role('button',name='Xem đủ',exact=True).count():
-            page.get_by_role('button',name='Xem đủ',exact=True).click()
+        if page.get_by_role('button',name=re.compile(r'Xem tất cả ')).count():
+            page.get_by_role('button',name=re.compile(r'Xem tất cả ')).click()
             page.locator('#word-analysis').screenshot(path=str(output/'real-table-1440-expanded.png'))
             page.set_viewport_size(dict(width=390,height=1000))
             page.locator('#word-analysis').screenshot(path=str(output/'real-table-390-expanded.png'))
@@ -97,10 +98,10 @@ def test_real_prediction_attribution_browser_and_dataset_snapshot():
         page.locator('#sentence').fill('Cô hướng dẫn hồ sơ tận tình, nhưng trang đăng ký thường bị lỗi.')
         page.locator('#analyze').click()
         expect(page.get_by_role('button',name='Hủy tính toán')).to_be_visible(timeout=60000)
-        page.locator('#word-analysis').screenshot(path=str(output/'real-prediction-loading-attribution.png'))
+        page.locator('#analysis').screenshot(path=str(output/'real-prediction-loading-attribution.png'))
         assert held
         held[0].continue_();page.unroute('**/quick-analysis/*/attribution')
-        expect(page.locator('.attribution-table')).to_be_visible(timeout=60000)
+        expect(page.locator('#attribution-content')).to_be_visible(timeout=60000)
         # Real unsupported truncation.
         page.locator('#sentence').fill('Thư viện có tài liệu mới. '*55)
         page.locator('#analyze').click()

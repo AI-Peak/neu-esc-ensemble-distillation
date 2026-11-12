@@ -64,13 +64,13 @@ def test_mass_formula_all_groups_and_display_rounding(browser, contribution_serv
     double.mutate = mutate
     page.goto(contribution_server.url + '/#/demo')
     double.analyze(' '.join(f'cụm{i}' for i in range(len(values))))
-    expect(page.locator('.attribution-table')).to_be_visible()
+    expect(page.locator('#attribution-content')).to_be_visible()
     assert_shares(page, values)
     if len(values) > 6:
         expect(page.locator('.remaining-row')).to_be_visible()
-        page.get_by_role('button', name='Xem đủ', exact=True).click()
+        page.get_by_role('button', name=re.compile(r'Xem tất cả ')).click()
         assert_shares(page, values)
-        page.get_by_role('button', name='Thu gọn lại 6 từ chính').click()
+        page.get_by_role('button', name='Thu gọn', exact=True).first.click()
         assert_shares(page, values)
     if values == [30, 10, -80, -40]:
         expect(page.locator('.total-sign')).to_have_text('−80,0')
@@ -97,14 +97,14 @@ def test_nonfinite_never_renders_chart_or_table(browser, contribution_server, in
     page.goto(contribution_server.url + '/#/demo')
     double.analyze()
     expect(page.locator('#word-analysis .notice.error')).to_be_visible()
-    expect(page.locator('.attribution-table, #contribution-donut')).to_have_count(0)
+    expect(page.locator('#attribution-content, #contribution-donut')).to_have_count(0)
     expect(page.locator('#sentiment')).to_be_visible()
     expect(page.locator('.distribution-pane [role="status"]')).to_be_visible()
     page.close()
 
 
 @pytest.mark.parametrize('profile,winner,reorder', [('neu',1,False), ('neu',0,False),
-    ('neu',3,False), ('uit',1,False), ('uit',0,False), ('neu',1,True), ('neu',0,True)])
+    ('neu',3,False), ('neu',1,True), ('neu',0,True)])
 def test_target_labels_colors_accessibility_and_no_filter(browser, contribution_server, profile, winner, reorder):
     page = browser.new_page()
     double = AttributionDouble(page, profile=profile, winner=winner)
@@ -116,7 +116,6 @@ def test_target_labels_colors_accessibility_and_no_filter(browser, contribution_
         for index, label in enumerate(prof['sentiment']):
             label['id'] = index
     page.goto(contribution_server.url + '/#/demo')
-    if profile != 'neu': page.locator('#schema-select').select_option(profile)
     double.analyze()
     expect(page.locator('#contribution-donut')).to_be_visible()
     result = next(iter(double.results.values()))

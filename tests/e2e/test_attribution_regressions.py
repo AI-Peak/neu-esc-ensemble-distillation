@@ -162,16 +162,14 @@ def test_section_navigation_keeps_demo_route_and_input(browser, app_server):
 
 
 @pytest.mark.parametrize("profile,winner,kind", [("neu",0,"label_score"),("neu",1,"polarity_margin"),
-    ("neu",2,"polarity_margin"),("neu",3,"label_score"),("uit",0,"polarity_margin"),
-    ("uit",1,"label_score"),("uit",2,"polarity_margin")])
+    ("neu",2,"polarity_margin"),("neu",3,"label_score")])
 def test_all_profile_targets_match_request_number_and_legend(browser, app_server, profile, winner, kind):
     page = browser.new_page()
     double = AttributionDouble(page, profile=profile, winner=winner)
     page.goto(app_server.url + "/#/demo")
-    if profile != "neu": page.locator("#schema-select").select_option(profile)
     double.analyze()
-    expect(page.locator(".attribution-table")).to_be_visible()
-    assert page.locator(".attribution-table thead th").nth(2).evaluate("cell => cell.scrollWidth <= cell.clientWidth + 1")
+    expect(page.locator("#attribution-content")).to_be_visible()
+    expect(page.locator("#attribution-content table")).to_have_count(0)
     result = next(iter(double.results.values()))
     assert result["method"]["target"]["kind"] == kind
     assert uuid.UUID(double.keys[0]).version == 4
@@ -194,7 +192,7 @@ def test_late_post_a_does_not_replace_b_and_cancels_a_handle(browser, app_server
     double.hold_next = True
     page.goto(app_server.url + "/#/demo")
     double.analyze("Câu A đang chờ.")
-    expect(page.locator("#word-analysis")).to_contain_text("Đang tính")
+    expect(page.get_by_role("button", name="Hủy tính toán")).to_be_visible()
     page.wait_for_function("() => true")
     assert len(double.held) == 1
     double.analyze("Câu B hiện hành.")
@@ -213,23 +211,23 @@ def test_late_post_a_does_not_replace_b_and_cancels_a_handle(browser, app_server
     page.close()
 
 
-@pytest.mark.parametrize("action", ["clear", "profile", "unmount", "cancel"])
+@pytest.mark.parametrize("action", ["clear", "edit", "unmount", "cancel"])
 def test_pending_post_abandoned_operations_cancel_late_handle(browser, app_server, action):
     page = browser.new_page()
     double = AttributionDouble(page)
     double.hold_next = True
     page.goto(app_server.url + "/#/demo")
     double.analyze()
-    expect(page.locator("#word-analysis")).to_contain_text("Đang tính")
+    expect(page.get_by_role("button", name="Hủy tính toán")).to_be_visible()
     if action == "clear": page.locator("#clear").click()
-    elif action == "profile": page.locator("#schema-select").select_option("uit")
+    elif action == "edit": page.locator("#sentence").fill("Nội dung mới")
     elif action == "cancel": page.get_by_role("button", name="Hủy tính toán").click()
     else: page.goto(app_server.url + "/#/help")
     route, result = double.held.pop()
     route.fulfill(json=result)
     page.wait_for_timeout(250)
     assert result["attribution_id"] in double.cancels
-    expect(page.locator(".attribution-table")).to_have_count(0)
+    expect(page.locator("#attribution-content")).to_have_count(0)
     expect(page.locator('#contribution-donut')).to_have_count(0)
     page.close()
 
@@ -253,7 +251,7 @@ def test_terminal_and_http_errors_stop_polling_keep_prediction(browser, app_serv
     if http_status is None:
         double.get_status = None
         page.get_by_role("button", name="Thử lại tính đóng góp").click()
-        expect(page.locator(".attribution-table")).to_be_visible()
+        expect(page.locator("#attribution-content")).to_be_visible()
         assert len(set(double.keys)) == 2
         assert len(double.jobs) == 1
     else:
@@ -268,7 +266,7 @@ def test_transport_retry_reuses_uuid_double_submit_creates_one_operation(browser
     page.goto(app_server.url + "/#/demo")
     page.locator("#sentence").fill("Câu retry mạng.")
     page.locator("#analysis-form").evaluate("form => { form.requestSubmit(); form.requestSubmit(); }")
-    expect(page.locator(".attribution-table")).to_be_visible()
+    expect(page.locator("#attribution-content")).to_be_visible()
     assert len(double.jobs) == 1
     assert len(double.posts) == 2
     assert len(set(double.keys)) == 1
@@ -287,7 +285,7 @@ def test_get_transport_failure_recovers_existing_handle_without_new_prediction_o
     assert len(double.gets) == 3
     double.get_status = None
     page.get_by_role("button", name="Thử lại tính đóng góp").click()
-    expect(page.locator(".attribution-table")).to_be_visible()
+    expect(page.locator("#attribution-content")).to_be_visible()
     assert len(double.gets) == 4 and len(double.posts) == len(double.jobs) == 1
     page.close()
 
@@ -308,7 +306,7 @@ def test_cancel_active_attribution_stops_polling_and_retry_gets_new_handle(brows
     expect(page.locator("#sentiment")).to_be_visible()
     double.get_status = None
     page.get_by_role("button", name="Thử lại tính đóng góp").click()
-    expect(page.locator(".attribution-table")).to_be_visible()
+    expect(page.locator("#attribution-content")).to_be_visible()
     assert len(set(double.keys)) == 2
     page.close()
 
@@ -320,7 +318,7 @@ def test_late_cancel_of_completed_handle_restores_actual_completed_result(browse
     page.goto(app_server.url + "/#/demo")
     double.analyze()
     page.get_by_role("button", name="Hủy tính toán").click()
-    expect(page.locator(".attribution-table")).to_be_visible()
+    expect(page.locator("#attribution-content")).to_be_visible()
     assert len(double.posts) == 1
     page.close()
 
@@ -339,7 +337,7 @@ def test_old_poll_after_cancel_completed_cannot_erase_validated_result(browser, 
         page.wait_for_timeout(25)
     assert len(double.held_gets) == 1
     page.get_by_role("button", name="Hủy tính toán").click()
-    expect(page.locator(".attribution-table")).to_be_visible()
+    expect(page.locator("#attribution-content")).to_be_visible()
     expect(page.locator(".quote-text")).to_have_text("Câu giữ kết quả khi hủy muộn.")
     completed_total = page.locator(".total-sign").inner_text()
     route, result = double.held_gets.pop()
@@ -349,7 +347,7 @@ def test_old_poll_after_cancel_completed_cannot_erase_validated_result(browser, 
         result.update(status="failed", error=dict(code="LATE_POLL_FAILURE", message="Poll cũ failed"))
         route.fulfill(json=result)
     page.wait_for_timeout(1300)
-    expect(page.locator(".attribution-table")).to_be_visible()
+    expect(page.locator("#attribution-content")).to_be_visible()
     expect(page.locator(".total-sign")).to_have_text(completed_total)
     expect(page.locator('.contribution-layout')).to_have_attribute('data-attribution-id', 'attr1')
     expect(page.locator("#word-analysis .notice.error")).to_have_count(0)
@@ -381,7 +379,7 @@ def test_invalid_completed_payload_never_renders_zero_or_wrong_words(browser, ap
     page.goto(app_server.url + "/#/demo")
     double.analyze("Tốt 👍🏽 nhưng còn lỗi.")
     expect(page.locator("#word-analysis .notice.error")).to_contain_text("không khớp nguồn")
-    expect(page.locator(".attribution-table")).to_have_count(0)
+    expect(page.locator("#attribution-content")).to_have_count(0)
     expect(page.locator("#sentiment")).to_be_visible()
     expect(page.locator('#contribution-donut')).to_have_count(0)
     page.close()
@@ -396,17 +394,17 @@ def test_mobile_total_follows_every_row_expand_collapse_and_raw_snapshot(browser
     double.analyze("  " + text + "  ")
     expect(page.locator(".quote-text")).to_have_text(text)
     def check():
-        total = page.locator(".total-cell").bounding_box()
-        rows = page.locator(".weight-cell")
+        total = page.locator(".contribution-total").bounding_box()
+        rows = page.locator(".attribution-row")
         assert total and all((box := rows.nth(i).bounding_box()) and box["y"] + box["height"] <= total["y"] + 1 for i in range(rows.count()))
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         assert page.locator(".remaining-row .weight-meter").count() == 0
     check()
     if count > 6:
-        page.get_by_role("button", name="Xem đủ", exact=True).click()
+        page.get_by_role("button", name=re.compile(r"Xem tất cả ")).click()
         expect(page.locator(".phrase-button")).to_have_count(count)
         check()
-        page.get_by_role("button", name="Thu gọn lại 6 từ chính").click()
+        page.get_by_role("button", name="Thu gọn", exact=True).first.click()
         expect(page.locator(".phrase-button")).to_have_count(6)
         check()
     page.close()
